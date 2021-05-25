@@ -235,7 +235,7 @@ df.columns=["Model", "Scenario", "Region", "Variable", "Item", "Year", "Unit", "
 #   Get the unique scenario names and save to Excel
 
 Scenarios=pandas.DataFrame(df["Scenario"].unique())
-Scenarios.to_excel("v:/Python/" + model + "_Scenarios.xlsx", index=True)
+Scenarios.to_excel(model + "_Scenarios.xlsx", index=True)
 
 # Reset column labels
 
