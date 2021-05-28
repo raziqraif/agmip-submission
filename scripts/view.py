@@ -1,4 +1,5 @@
-from __future__ import annotations  # Delay the evaluation of undefined types
+from __future__ import annotations
+from re import M  # Delay the evaluation of undefined types
 
 import ipywidgets as ui
 from IPython.core.display import display
@@ -64,7 +65,8 @@ class View:
             width="100%", height="912px", border="1px solid " + DARK_BLUE, padding="0px 0px"
         )
         header_bar.add_class("c-header-bar")
-        body_container.layout = ui.Layout(width="100%", height="100%", align_items="center", padding="36px 48px")
+        body_container.layout = ui.Layout(flex="1", align_items="center", padding="36px 48px")
+        self.page_container.layout = ui.Layout(flex="1", width="100%")
         self.stepper.add_class("c-stepper")
 
         # Assign children widgets
@@ -95,7 +97,30 @@ class View:
         return app_container
 
     def _build_file_upload_page(self) -> ui.Box:
-        return ui.Box()
+        MAIN_INSTRUCTION = "<h3>Upload a file to be processed</h3>"
+        SUB_INSTRUCTION = "<span class=c-text-grey>File should be a CSV</span>"
+
+        # High-level page components
+        instructions = ui.HTML("<div>" + MAIN_INSTRUCTION + SUB_INSTRUCTION + "</div>")
+        upload_area = ui.Box()
+        page = ui.VBox(children=[instructions, upload_area])
+        page.layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center")
+
+        # Create upload area
+        upload_area_bg = ui.Box()
+        upload_area_bg.add_class("c-upload-area__background")
+        upload_area_bg.children = [
+            ui.HTML('<img src="upload_file.svg" width="80px" height="800px" class="c-upload-area-child"/>'),
+            ui.HTML('<div class=c-text-grey>Browse files from your computer</div>'),
+        ]
+        upload_area_overlay = ui.Button()
+        upload_area_overlay._dom_classes = ["c-upload-area__overlay-button"]
+        upload_area_overlay.on_click(lambda x: print("Clicked upload area"))
+        
+        upload_area.children = [upload_area_bg, upload_area_overlay]
+        upload_area._dom_classes = ["c-upload-area"]
+
+        return page
 
     def _build_data_specification_page(self) -> ui.Box:
         return ui.Box()
