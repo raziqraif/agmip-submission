@@ -1,5 +1,101 @@
 <!-- style.html: General app CSS -->
 <style>
+
+:root {
+    --dark-blue: #1E3A8A;
+    --blue: #60A5FA;
+    --light-blue: #93C5FD;
+    --green: #34D399;
+    --red: #F87171;
+    --grey: #718096;
+    --light-grey: #D3D3D3;
+}
+
+/* Style basic HTML elements */
+
+.selmono {
+    font-family: "Lucida Console", Monaco, monospace !important;
+    width: 100%;
+}
+
+hr{
+    border-color: inherit; /* It seems like there's no way to assign a CSS class to a <hr> element, since ipywidgets will
+                              always wrap it with <div>. So, we let it inherit from its parent element and style the 
+                              parent instead. */
+}
+
+/* CSS classes for custom components. To avoid name clashes with the existing classes used by ipywidgets, 
+   their names are prepended with "c" for "custom". The name also follows BEM convention. */
+
+/* Header bar */
+.c-header-bar {
+    background: var(--dark-blue);
+    color: white;
+    align-items: center;
+    font-weight: 500;
+    height: 56px;
+    padding: 0px 48px;
+    margin: 0px 0px;
+}
+
+/* Stepper */
+.c-stepper {
+    align-items: center;
+}
+.c-stepper__number {
+    color: white;
+    height: 40px;
+    width: 40px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    margin: 0px 4px;
+}
+.c-stepper__number--current {
+    background: var(--blue);
+    color: white;
+}
+.c-stepper__number--active {
+    background: var(--green);
+    color: white;
+}
+.c-stepper__number--inactive {
+    background: var(--light-grey);
+    color: white;
+}
+.c-stepper__title--active {
+    color: var(--dark-blue);
+    padding: 0px 4px;
+}
+.c-stepper__title--inactive {
+    color: var(--light-grey);
+    padding: 0px 4px;
+}
+.c-stepper__separator--active {
+    padding: 0px 4px;
+    color: var(--blue);
+}
+.c-stepper__separator--inactive {
+    padding: 0px 4px;
+    color: var(--light-grey);
+}
+
+/* Extend CSS classes used by native ipywidgets components */
+
+.widget-html-content {
+    /* These attributes were unset because they mess up flex stylings for ui.HTML components */
+    align-self: unset !important;       
+    flex-shrink: unset !important;
+    flex-grow: unset !important;
+}
+.widget-select > select {
+    font-family: monospace !important;
+}
+/* Cause plotly to display "modebar" */
+.container {
+    min-width: 1200px !important;
+}
+
 .jupyter-widgets.widget-tab > .p-TabBar .p-TabBar-tab {
     flex: 0 1 300px
 }
