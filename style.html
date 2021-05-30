@@ -32,6 +32,40 @@ hr{
    their names are prepended with "c" for "custom". The name also follows BEM convention. 
 ***/
 
+/* Snackbar */
+.c-snackbar {
+    width: 365px;
+    height: 36px;
+    padding: 0px 10px 0px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-flow: row nowrap;
+    border-radius: 4px;
+    background: var(--light-blue);
+    color: white;
+}
+.c-snackbar__text {
+    color: white;
+}
+
+/* Icon button */
+.c-icon-button {
+    height: 24px !important;
+    width: 24px !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    color: white;
+    font-size: 10px !important;
+    line-height: 10px !important;
+}
+.c-icon-button:active {
+    box-shadow: none !important;
+}
+.c-icon-button:hover{
+    box-shadow: none !important;
+}
+
 /* Text colors */
 .c-text-light-grey {
     color: var(--grey);
@@ -59,6 +93,7 @@ hr{
     align-items: center;
 }
 .c-stepper__number {
+    font-size: 15px;
     color: white;
     height: 40px;
     width: 40px;
@@ -105,9 +140,9 @@ hr{
 }
 .c-upload-area__background,
 .c-upload-area__overlay-button {
-    width: 99%;     /*99%, instead of 100%, to avoid overflow*/
-    height: 99%;
-    background: transparent;
+    width: 99% !important;     /*99%, instead of 100%, to avoid overflow*/
+    height: 99% !important;
+    background: transparent !important;
     border-radius: 15px;
     position: absolute;
     top: 0;
@@ -123,38 +158,66 @@ hr{
     justify-content: center !important;        
 }
 .c-upload-area__overlay-button {
+    color: transparent !important;
     z-index: 10;
 }
 .c-upload-area__overlay-button:hover {
     box-shadow: none !important;
 }
 .c-upload-area__overlay-button:active {
-    background: transparent;
-    color: grey;
+    color: transparent !important;
+    background: transparent !important;
     outline: none !important;
 }
 .c-upload-area__overlay-button:focus {
     box-shadow: none !important;
     outline: none !important;
 }
+.c-upload-area__overlay-button:drag {
+    box-shadow: none !important;
+    outline: none !important;
+}
 
 /*** Extend CSS classes used by native ipywidgets components ***/
 
+/* Change button style */
+.jupyter-button {
+    line-height: 36px;
+    height: 36px;
+    border-radius: 4px;
+    background: var(--blue);
+    color: white;
+}
+.jupyter-button:active:enabled {
+    background: #6072fa;
+    color: white;
+}
+.jupyter-button:active:disabled {
+    background: var(--light-grey);
+    color: white;
+}
+.jupyter-button:disabled {
+    background: var(--light-grey);
+    color: white;
+}
+
+/* Remove margin that jupyter widgets have*/
+.jupyter-widgets {
+    margin: 0px 0px;
+}
+
+/* Prevent display("style.html") or other "empty" display() from taking up screen space */
 div.output_subarea {
-    padding: 0px 0px;   /* Prevent display("style.html") or other "empty" display() from taking up screen space */
+    padding: 0px 0px;   
 }
 
+/* Position the component being displayed at the center of the output area */
 div.output_area {
-    justify-content: center !important;     /* Position the component being displayed at the center of the 
-                                               output area */
+    justify-content: center !important;     
 }
 
-.widget-box {
-    height: 
-}
-
+/* These attributes were unset because they mess up flex stylings for ui.HTML components */
 .widget-html-content {
-    /* These attributes were unset because they mess up flex stylings for ui.HTML components */
     align-self: unset !important;       
     flex-shrink: unset !important;
     flex-grow: unset !important;

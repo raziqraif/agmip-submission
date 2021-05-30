@@ -4,9 +4,13 @@ from re import M  # Delay the evaluation of undefined types
 import ipywidgets as ui
 from IPython.core.display import display
 
+ui.FileUpload
 
 DARK_BLUE = "#1E3A8A"
+LIGHT_GREY = "#D3D3D3"
 
+
+ui.Button().add_traits()
 
 # pyright: reportGeneralTypeIssues=false
 class View:
@@ -29,6 +33,8 @@ class View:
 
         # Widgets that controller does not need to access but still needs to be manipulated
         self.stepper: ui.Box
+        self.next_button: ui.Button
+        self.uploaded_file_snackbar: ui.Box
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore
         """Introduce MVC modules to each other"""
@@ -97,30 +103,84 @@ class View:
         return app_container
 
     def _build_file_upload_page(self) -> ui.Box:
-        MAIN_INSTRUCTION = "<h3>Upload a file to be processed</h3>"
-        SUB_INSTRUCTION = "<span class=c-text-grey>File should be a CSV</span>"
+        INSTRUCTION = '<h3 style="margin: 0px;">Upload file to be processed</h3>'
+        SUB_INSTRUCTION = '<span style="font-size: 15px; line-height: 20px; margin: 0px; color: var(--grey);">File should be in CSV format</span>'
+        UPLOADED_FILE = '<div style="width: 125px; line-height: 36px;">Uploaded file</div>'
+        SAMPLE_FILE = '<div style="width: 125px; line-height: 36px;">Sample file</div>'
+        NO_FILES_UPLOADED = '<div \
+            style="width: 365px; line-height: 36px; border-radius: 4px; padding: 0px 16px; background: var(--light-grey); color: white;">\
+            No files uploaded\
+        </div>'
 
-        # High-level page components
-        instructions = ui.HTML("<div>" + MAIN_INSTRUCTION + SUB_INSTRUCTION + "</div>")
-        upload_area = ui.Box()
-        page = ui.VBox(children=[instructions, upload_area])
-        page.layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center")
-
-        # Create upload area
-        upload_area_bg = ui.Box()
+        # Create file upload area
+        upload_area_bg = ui.Box(
+            [
+                ui.HTML('<img src="upload_file.svg" width="80px" height="800px"/>'),
+                ui.HTML("<div class=c-text-grey>Browse files from your computer</div>"),
+            ]
+        )
         upload_area_bg.add_class("c-upload-area__background")
-        upload_area_bg.children = [
-            ui.HTML('<img src="upload_file.svg" width="80px" height="800px" class="c-upload-area-child"/>'),
-            ui.HTML('<div class=c-text-grey>Browse files from your computer</div>'),
-        ]
-        upload_area_overlay = ui.Button()
+        upload_area_overlay = ui.FileUpload()
         upload_area_overlay._dom_classes = ["c-upload-area__overlay-button"]
-        upload_area_overlay.on_click(lambda x: print("Clicked upload area"))
-        
-        upload_area.children = [upload_area_bg, upload_area_overlay]
+        upload_area = ui.Box([upload_area_bg, upload_area_overlay], layout=ui.Layout(margin="28px 0px"))
         upload_area._dom_classes = ["c-upload-area"]
 
-        return page
+        # Create snackbar to show uploaded file
+        uploaded_file_title = ui.HTML("Test.csv")
+        uploaded_file_title.add_class("c-snackbar__text")
+        x_button = ui.Button(icon="times")
+        x_button.add_class("c-icon-button")
+        self.uploaded_file_snackbar = ui.Box(
+            [
+                uploaded_file_title,
+                x_button,
+            ],
+        )
+        self.uploaded_file_snackbar.add_class("c-snackbar")
+
+        # Buttons
+        download_button = ui.Button(description="Download", icon="download", button_style="info")
+        download_button.on_click(lambda x: print("clicked download"))
+        self.next_button = ui.Button(
+            description="Next", disabled=True, layout=ui.Layout(align_self="flex-end", justify_self="flex-end")
+        )
+
+        return ui.VBox(
+            [
+                ui.VBox(
+                    [
+                        ui.VBox(
+                            layout=ui.Layout(width="500px"),
+                            children=[
+                                ui.HTML(INSTRUCTION),
+                                ui.HTML(SUB_INSTRUCTION),
+                            ],
+                        ),
+                        upload_area,
+                        ui.HBox(
+                            [
+                                ui.HTML(UPLOADED_FILE),
+                                self.uploaded_file_snackbar,
+                                # ui.HTML(NO_FILES_UPLOADED),
+                            ],
+                            layout=ui.Layout(width="500px", margin="0px 0px 4px 0px"),
+                        ),
+                        ui.HBox(
+                            [ui.HTML(SAMPLE_FILE), download_button],
+                            layout=ui.Layout(width="500px"),
+                        ),
+                    ],
+                    layout=ui.Layout(flex="1", justify_content="center"),
+                ),
+                ui.VBox(
+                    [
+                        self.next_button,
+                    ],
+                    layout=ui.Layout(align_self="flex-end"),
+                ),
+            ],
+            layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
+        )
 
     def _build_data_specification_page(self) -> ui.Box:
         return ui.Box()
