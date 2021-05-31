@@ -7,7 +7,7 @@
     --light-blue: #93C5FD;
     --green: #34D399;
     --red: #F87171;
-    --grey: #718096;
+    --grey: #757575;
     --light-grey: #D3D3D3;
 }
 
@@ -20,9 +20,114 @@
 }
 
 hr{
-    border-color: inherit; /* It seems like there's no way to assign a CSS class to a <hr> element, since ipywidgets will
-                              always wrap it with <div>. So, we let it inherit from its parent element and style the 
-                              parent instead. */
+    border-color: inherit; /* It seems like there's no way to assign a CSS class to a <hr> element, since ipywidgets 
+                              will always wrap it with <div>. So, we let it inherit from its parent element and style
+                              the parent instead. */
+}
+
+
+/*** Extend CSS classes used by native ipywidgets components
+
+    Note: Make sure this section appear first before the section that contains classes for custom CSS components. 
+    Else, the styling defined in this section might override the styling defined in the custom section
+***/
+
+/* Change button style */
+.jupyter-button {
+    line-height: 36px;
+    height: 36px;
+    border-radius: 4px;
+    background: var(--blue);
+    color: white;
+}
+.jupyter-button:active:enabled {
+    background: #6072fa;
+    color: white;
+}
+.jupyter-button:active:disabled {
+    background: var(--light-grey);
+    color: white;
+}
+.jupyter-button:disabled {
+    background: var(--light-grey);
+    color: white;
+}
+.jupyter-button:focus:enabled {
+    outline: none;
+}
+.jupyter-button.mod-info:active {  /*button with info variant*/
+    background: #00b4d4;
+}
+/* Remove margin that jupyter widgets have*/
+.jupyter-widgets {
+    margin: 0px 0px;
+}
+
+/* Prevent display("style.html") or other "empty" display() from taking up screen space */
+div.output_subarea {
+    padding: 0px 0px;   
+}
+
+/* Position the component being displayed at the center of the output area */
+div.output_area {
+    justify-content: center !important;     
+}
+
+/* These attributes were unset because they mess up flex stylings for ui.HTML components */
+.widget-html-content {
+    align-self: unset !important;       
+    flex-shrink: unset !important;
+    flex-grow: unset !important;
+}
+
+/*The following modification were made by the scsa project, which this project is based on*/
+
+.widget-select > select {
+    font-family: monospace !important;
+}
+/* Cause plotly to display "modebar" */
+.container {
+    min-width: 1200px !important;
+}
+
+.jupyter-widgets.widget-tab > .p-TabBar .p-TabBar-tab {
+    flex: 0 1 300px
+}
+.p-Collapse-header {
+    color: white !important;
+    background-color: steelblue !important;
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+.p-TabBar-tabLabel {
+    font-weight: bold !important;
+    color: steelblue !important;
+    margin-top: 1em !important;
+    margin-bottom: 1em !important;
+}
+.widget-label {
+    text-align: left !important;
+}
+p {
+    line-height: 1.2em;
+    margin-bottom: 1em;
+}
+/* Avoid output scrollbars (sub-windowing) */
+.output_wrapper, .output {
+    height: auto !important;
+    max-height: 99999px;
+}
+.output_scroll {
+    box-shadow: none !important;
+}
+#site {
+    height: 100% !important;
+}
+.prompt {
+    min-width: 1px !important; /* Collapse left margin */
+}
+pre {
+    user-select: all;
 }
 
 
@@ -36,7 +141,7 @@ hr{
 .c-snackbar {
     width: 365px;
     height: 36px;
-    padding: 0px 10px 0px 16px;
+    padding: 0px 6px 0px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -51,19 +156,22 @@ hr{
 
 /* Icon button */
 .c-icon-button {
-    height: 24px !important;
-    width: 24px !important;
+    height: 28px !important;
+    width: 28px !important;
     border-radius: 50% !important;
     background: transparent !important;
     color: white;
     font-size: 10px !important;
     line-height: 10px !important;
+    text-align: center;
+}
+.c-icon-button:hover, 
+.c-icon-button:active,
+.c-icon-button:focus {
+    box-shadow: none !important;
 }
 .c-icon-button:active {
-    box-shadow: none !important;
-}
-.c-icon-button:hover{
-    box-shadow: none !important;
+    color: var(--blue) !important;
 }
 
 /* Text colors */
@@ -176,100 +284,5 @@ hr{
 .c-upload-area__overlay-button:drag {
     box-shadow: none !important;
     outline: none !important;
-}
-
-/*** Extend CSS classes used by native ipywidgets components ***/
-
-/* Change button style */
-.jupyter-button {
-    line-height: 36px;
-    height: 36px;
-    border-radius: 4px;
-    background: var(--blue);
-    color: white;
-}
-.jupyter-button:active:enabled {
-    background: #6072fa;
-    color: white;
-}
-.jupyter-button:active:disabled {
-    background: var(--light-grey);
-    color: white;
-}
-.jupyter-button:disabled {
-    background: var(--light-grey);
-    color: white;
-}
-
-/* Remove margin that jupyter widgets have*/
-.jupyter-widgets {
-    margin: 0px 0px;
-}
-
-/* Prevent display("style.html") or other "empty" display() from taking up screen space */
-div.output_subarea {
-    padding: 0px 0px;   
-}
-
-/* Position the component being displayed at the center of the output area */
-div.output_area {
-    justify-content: center !important;     
-}
-
-/* These attributes were unset because they mess up flex stylings for ui.HTML components */
-.widget-html-content {
-    align-self: unset !important;       
-    flex-shrink: unset !important;
-    flex-grow: unset !important;
-}
-
-/*The following modification were made by the scsa project, which this project is based on*/
-
-.widget-select > select {
-    font-family: monospace !important;
-}
-/* Cause plotly to display "modebar" */
-.container {
-    min-width: 1200px !important;
-}
-
-.jupyter-widgets.widget-tab > .p-TabBar .p-TabBar-tab {
-    flex: 0 1 300px
-}
-.p-Collapse-header {
-    color: white !important;
-    background-color: steelblue !important;
-    padding-top: 3px;
-    padding-bottom: 3px;
-}
-.p-TabBar-tabLabel {
-    font-weight: bold !important;
-    color: steelblue !important;
-    margin-top: 1em !important;
-    margin-bottom: 1em !important;
-}
-.widget-label {
-    text-align: left !important;
-}
-p {
-    line-height: 1.2em;
-    margin-bottom: 1em;
-}
-/* Avoid output scrollbars (sub-windowing) */
-.output_wrapper, .output {
-    height: auto !important;
-    max-height: 99999px;
-}
-.output_scroll {
-    box-shadow: none !important;
-}
-#site {
-    height: 100% !important;
-}
-.prompt {
-    min-width: 1px !important; /* Collapse left margin */
-}
-pre {
-    user-select: all;
 }
 </style>
