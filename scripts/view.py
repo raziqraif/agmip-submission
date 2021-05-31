@@ -85,9 +85,9 @@ class View:
 
         return ui.VBox(  # app container
             [
-                header_bar,
+                header_bar,  # -header bar
                 ui.VBox(  # -body container
-                    children=[self.stepper, self.page_container],
+                    children=[self.stepper, self.page_container],  # --stepper, page container
                     layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
                 ),
             ],
@@ -97,8 +97,8 @@ class View:
     def _build_file_upload_page(self) -> ui.Box:
         INSTRUCTION = '<h3 style="margin: 0px;">Upload file to be processed</h3>'
         SUB_INSTRUCTION = (
-            '<span style="font-size: 15px; line-height: 20px; margin: 0px; color: var(--grey);">File should be in CSV'
-            " format</span>"
+            '<span style="font-size: 15px; line-height: 20px; margin: 0px; color: var(--grey);">'
+            'File should be in CSV format</span>'
         )
         UPLOADED_FILE = '<div style="width: 125px; line-height: 36px;">Uploaded file</div>'
         SAMPLE_FILE = '<div style="width: 125px; line-height: 36px;">Sample file</div>'
@@ -117,7 +117,7 @@ class View:
         upload_area_bg.add_class("c-upload-area__background")
         upload_area_overlay = ui.FileUpload()
         upload_area_overlay._dom_classes = ["c-upload-area__overlay-button"]
-        upload_area = ui.Box([upload_area_bg, upload_area_overlay], layout=ui.Layout(margin="28px 0px"))
+        upload_area = ui.Box([upload_area_bg, upload_area_overlay], layout=ui.Layout(margin="32px 0px"))
         upload_area._dom_classes = ["c-upload-area"]
 
         # Create snackbar to show uploaded file
@@ -147,7 +147,7 @@ class View:
                         ui.VBox(  # --instruction container
                             layout=ui.Layout(width="500px"), children=[ui.HTML(INSTRUCTION), ui.HTML(SUB_INSTRUCTION)]
                         ),
-                        upload_area,
+                        upload_area,  # --upload area
                         ui.HBox(  # --uploaded file container
                             [ui.HTML(UPLOADED_FILE), self.uploaded_file_snackbar],
                             layout=ui.Layout(width="500px", margin="0px 0px 4px 0px"),
