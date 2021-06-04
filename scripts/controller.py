@@ -1,5 +1,7 @@
 from __future__ import annotations  # Delay the evaluation of undefined types
 
+import ipywidgets as ui
+
 
 class Controller:
     def __init__(self):
@@ -18,3 +20,8 @@ class Controller:
     def start(self) -> None:
         """Load data, build UI"""
         self.view.display()
+
+    def onupload_file(self, widget: ui.FileUpload):
+        """ User has uploaded a file """
+        print('test')
+        print(widget)
