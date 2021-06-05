@@ -23,7 +23,7 @@ def get_notebook_auth_token() -> str:
 class Model:
 
     NOTEBOOK_AUTH_TOKEN: str = get_notebook_auth_token()
-    UPLOAD_DIR: Path = Path("workingdir")
+    UPLOAD_DIR: Path = Path(__name__).parent.parent / Path("uploads")  # <PROJECT_DIR>/uploads
 
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
