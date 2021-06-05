@@ -1,6 +1,5 @@
 <!-- style.html: General app CSS -->
 <style>
-
 	:root {
 	    --dark-blue: #1E3A8A;
 	    --blue: #60A5FA;
@@ -24,23 +23,11 @@
 	                              the parent instead. */
 	}
 
-    input[type="file" i] {
-        cursor: unset;      /* Unset cursor so that we can manipulate it directly in Javascript */
-    }
-
-
 	/*** Extend CSS classes used by native ipywidgets components
 
 	    Note: Make sure this section appear first before the section that contains classes for custom CSS components.
 	    Else, the styling defined in this section might override the styling defined in the custom section
 	***/
-
-    /* Unset cursor style because it prevents Javascript from manipulating the cursor for any ipywidgets element
-	   However, note that this override the cursor style set in ALL ipywidgets classes, including for buttons, etc. 
-	 */
-    .p-Widget {
-        cursor: inherit;
-    }
 
 	/* Change button style */
 	.jupyter-button {
@@ -147,12 +134,18 @@
 	   their names are prepended with "c" for "custom". The name also follows BEM convention.
 	***/
 
-	   .app-container {
-	       width: 100%;
-	       height: 912px;
-	       border: 1px solid var(--dark-blue);
-	       padding: 0px 0px;
-	   }
+	/* App */
+	.app-container {
+		width: 100%;
+		height: 912px;
+		border: 1px solid var(--dark-blue);
+		padding: 0px 0px;
+	}
+
+	/* Cursor manipulation */	
+	.c-cursor-mod--progress * {				
+		cursor: progress !important;
+	}
 
 	/* Snackbar */
 	.c-snackbar {
@@ -173,13 +166,13 @@
 
 	/* Icon button */
 	.c-icon-button {
-	    height: 28px !important;
-	    width: 28px !important;
-	    border-radius: 50% !important;
+	    height: 28px;
+	    width: 28px;
+	    border-radius: 50%;
 	    background: transparent !important;
 	    color: white;
-	    font-size: 10px !important;
-	    line-height: 10px !important;
+	    font-size: 10px;
+	    line-height: 10px;
 	    text-align: center;
 	}
 	.c-icon-button:hover,
@@ -267,7 +260,7 @@
 	.c-upload-area__overlay {
 	    width: 99% !important;     /*99%, instead of 100%, to avoid overflow*/
 	    height: 99% !important;
-	    background: transparent !important;
+	    background: transparent;
 	    border-radius: 15px;
 	    position: absolute;
 	    top: 0;
@@ -277,25 +270,22 @@
 	.c-upload-area__background {
 	    color: var(--grey);
 	    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='15' ry='15' stroke='%23757575' stroke-width='2' stroke-dasharray='6%2c 6' stroke-dashoffset='0' stroke-linecap='butt'/%3e%3c/svg%3e") !important;
-	    display: flex !important;
-	    flex-flow: column nowrap !important;
-	    align-items: center !important;
-	    justify-content: center !important;
+	    display: flex;
+	    flex-flow: column nowrap;
+	    align-items: center;
+	    justify-content: center;
 	}
 	.c-upload-area__overlay {
-	    color: transparent !important;
+	    color: transparent;
 	    z-index: 10;
 	}
-	   #c-file-uploader {
-	       width: 500px;
-	       height: 200px;
-	       opacity: 0;
-	       color: transparent;
-	   }
-	   #c-file-uploader:enabled {
-	       cursor: pointer;
-	   }
-	   #c-file-uploader:disabled {     /* We disable the element when a file is being uploaded */
-	       cursor: progress;
-	   }
+	#c-file-uploader {
+		width: 500px;
+		height: 200px;
+		opacity: 0;
+		color: transparent;
+	}
+	#c-file-uploader:enabled {
+		cursor: pointer;
+	}
 </style>
