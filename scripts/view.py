@@ -10,8 +10,6 @@ DARK_BLUE = "#1E3A8A"
 LIGHT_GREY = "#D3D3D3"
 
 
-from notebook.services.contents.largefilemanager import LargeFileManager
-
 # pyright: reportGeneralTypeIssues=false
 class View:
     def __init__(self):
@@ -45,91 +43,12 @@ class View:
         """Build and show notebook user interface"""
         app_container = self.build()
 
+        display(HTML(filename="style.html"))
         display(app_container)
 
-        # Store Jupyter's auth token in Javascript's context
-        display(
-            HTML(
-                """
-                <script>
-                    const JUPYTER_AUTH_TOKEN= "{}"
-                    console.log(JUPYTER_AUTH_TOKEN)
-                </script>
-                """.format(
-                    self.model.JUPYTER_AUTH_TOKEN
-                )
-            )
-        )
-
-        # Javascript code to:
-        #   1. get the file that user had selected to upload
-        #   2. encode the file in Base64 string
-        #   3. break the file into chunks
-        #   4. upload the file in chunks (using Jupyter's upload API)
-        display(
-            HTML(
-                """
-                <script> 
-                    document.getElementById("c-file-uploader").onchange = function () {
-                        // Get file
-                        var file = this.files[0]
-
-                        // Encode file in Base64 (by converting it into a DataURL)
-                        let reader = new FileReader()
-                        reader.readAsDataURL(file);
-
-                        // Proceed to upload file if encoding was successful 
-                        reader.onload = function () {
-                            var base64FileString = reader.result
-                                .replace("data:", "")       // Replace unnecessary characters in DataURL
-                                .replace(/^.+,/, "")        // https://pqina.nl/blog/convert-a-file-to-a-base64-string-with-javascript/
-
-                            // Break file into chunks 
-                            let startIndex = 0
-                            let endIndex = file.size
-                            let chunkSize = 1024 * 1024     // 1MB
-                            let chunks = []
-
-                            while(startIndex < endIndex) {
-                                let newStartIndex = startIndex + chunkSize
-                                chunks.push(encodedFile.slice(startIndex, newStartIndex))
-                                startIndex = newStartIndex
-                            }
-                            console.log({chunks})
-
-                            // Upload file in chunks 
-                            for (let i = 0; i < chunks.length; i++) {
-                                // Jupyter's upload API requires chunk number to start with 1 and end with -1
-                                let chunk_number = i + 1
-                                if (i == chunks.length - 1) chunk_number = -1
-
-                                let fileDestinationPath = file.name
-                                let url = "/api/contents/" + fileDestinationPath
-                                let data = {
-                                    content: chunks[i],
-                                    name: file.name,
-                                    path: fileDestinationPath,
-                                    format: "base64",
-                                    type: "file",
-                                    chunk: chunk_number, 
-                                }
-                                console.log({i}, {data})
-
-                                var http = new XMLHttpRequest()
-                                http.open("PUT", url, true)
-                                http.setRequestHeader("Authorization", "token " + JUPYTER_AUTH_TOKEN)
-                                http.send(JSON.stringify(data))
-                            }
-                        }
-
-                        // Display error message if encoding fails
-                        reader.onerror = function () {
-                            alert("Fail to encode file in Base64") }
-                    }
-                </script>
-            """
-            )
-        )
+        # Pass noteboook server's auth token in Javascript's context
+        display(HTML('<script>var NOTEBOOK_AUTH_TOKEN= "{}"</script>'.format(self.model.NOTEBOOK_AUTH_TOKEN)))
+        display(HTML(filename="script.html"))
 
     def build(self) -> ui.Box:
         """Build the application"""
@@ -168,7 +87,7 @@ class View:
             [self.file_upload_page], layout=ui.Layout(flex="1", width="100%")  # page container stores the current page
         )
 
-        return ui.VBox(  # app container
+        app = ui.VBox(  # app container
             [
                 header_bar,  # -header bar
                 ui.VBox(  # -body container
@@ -176,8 +95,9 @@ class View:
                     layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
                 ),
             ],
-            layout=ui.Layout(width="100%", height="912px", border="1px solid " + DARK_BLUE, padding="0px 0px"),
         )
+        app.add_class("app-container")
+        return app
 
     def _build_file_upload_page(self) -> ui.Box:
         INSTRUCTION = '<h3 style="margin: 0px;">Upload file to be processed</h3>'
@@ -201,11 +121,12 @@ class View:
         )
         upload_area_bg.add_class("c-upload-area__background")
         upload_area_overlay = ui.HTML(
+            # title=" " is set to prevent tooltip from showing upon hover
             """
-            <input id="c-file-uploader" type="file" accept=".csv">
+            <input id="c-file-uploader" type="file" title=" " accept=".csv">
             """
         )
-        upload_area_overlay._dom_classes = ["c-upload-area__overlay-button"]
+        upload_area_overlay._dom_classes = ["c-upload-area__overlay"]
         # upload_area_overlay.observe(self.ctrl.onupload_file, "value")
         upload_area = ui.Box([upload_area_bg, upload_area_overlay], layout=ui.Layout(margin="32px 0px"))
         upload_area._dom_classes = ["c-upload-area"]

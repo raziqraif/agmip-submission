@@ -1,290 +1,301 @@
 <!-- style.html: General app CSS -->
 <style>
 
-:root {
-    --dark-blue: #1E3A8A;
-    --blue: #60A5FA;
-    --light-blue: #93C5FD;
-    --green: #34D399;
-    --red: #F87171;
-    --grey: #757575;
-    --light-grey: #D3D3D3;
-}
+	:root {
+	    --dark-blue: #1E3A8A;
+	    --blue: #60A5FA;
+	    --light-blue: #93C5FD;
+	    --green: #34D399;
+	    --red: #F87171;
+	    --grey: #757575;
+	    --light-grey: #D3D3D3;
+	}
+
+	/*** Style basic HTML elements ***/
+
+	.selmono {
+	    font-family: "Lucida Console", Monaco, monospace !important;
+	    width: 100%;
+	}
+
+	hr{
+	    border-color: inherit; /* It seems like there's no way to assign a CSS class to a <hr> element, since ipywidgets
+	                              will always wrap it with <div>. So, we let it inherit from its parent element and style
+	                              the parent instead. */
+	}
+
+    input[type="file" i] {
+        cursor: unset;      /* Unset cursor so that we can manipulate it directly in Javascript */
+    }
 
 
-/*** Style basic HTML elements ***/
+	/*** Extend CSS classes used by native ipywidgets components
 
-.selmono {
-    font-family: "Lucida Console", Monaco, monospace !important;
-    width: 100%;
-}
+	    Note: Make sure this section appear first before the section that contains classes for custom CSS components.
+	    Else, the styling defined in this section might override the styling defined in the custom section
+	***/
 
-hr{
-    border-color: inherit; /* It seems like there's no way to assign a CSS class to a <hr> element, since ipywidgets 
-                              will always wrap it with <div>. So, we let it inherit from its parent element and style
-                              the parent instead. */
-}
+    /* Unset cursor style because it prevents Javascript from manipulating the cursor for any ipywidgets element
+	   However, note that this override the cursor style set in ALL ipywidgets classes, including for buttons, etc. 
+	 */
+    .p-Widget {
+        cursor: inherit;
+    }
 
+	/* Change button style */
+	.jupyter-button {
+	    line-height: 36px;
+	    height: 36px;
+	    border-radius: 4px;
+	    background: var(--blue);
+	    color: white;
+	}
+	.jupyter-button:active:enabled {
+	    background: #6072fa;
+	    color: white;
+	}
+	.jupyter-button:active:disabled {
+	    background: var(--light-grey);
+	    color: white;
+	}
+	.jupyter-button:disabled {
+	    background: var(--light-grey);
+	    color: white;
+	}
+	.jupyter-button:focus:enabled {
+	    outline: none;
+	}
+	.jupyter-button.mod-info:active {  /*button with info variant*/
+	    background: #00b4d4;
+	}
+	/* Remove margin that jupyter widgets have*/
+	.jupyter-widgets {
+	    margin: 0px 0px;
+	}
 
-/*** Extend CSS classes used by native ipywidgets components
+	/* Prevent display("style.html") or other "empty" display() from taking up screen space */
+	div.output_subarea {
+	    padding: 0px 0px;
+	}
 
-    Note: Make sure this section appear first before the section that contains classes for custom CSS components. 
-    Else, the styling defined in this section might override the styling defined in the custom section
-***/
+	/* Position the component being displayed at the center of the output area */
+	div.output_area {
+	    justify-content: center !important;
+	}
 
-/* Change button style */
-.jupyter-button {
-    line-height: 36px;
-    height: 36px;
-    border-radius: 4px;
-    background: var(--blue);
-    color: white;
-}
-.jupyter-button:active:enabled {
-    background: #6072fa;
-    color: white;
-}
-.jupyter-button:active:disabled {
-    background: var(--light-grey);
-    color: white;
-}
-.jupyter-button:disabled {
-    background: var(--light-grey);
-    color: white;
-}
-.jupyter-button:focus:enabled {
-    outline: none;
-}
-.jupyter-button.mod-info:active {  /*button with info variant*/
-    background: #00b4d4;
-}
-/* Remove margin that jupyter widgets have*/
-.jupyter-widgets {
-    margin: 0px 0px;
-}
+	/* These attributes were unset because they mess up flex stylings for ui.HTML components */
+	.widget-html-content {
+	    align-self: unset !important;
+	    flex-shrink: unset !important;
+	    flex-grow: unset !important;
+	}
 
-/* Prevent display("style.html") or other "empty" display() from taking up screen space */
-div.output_subarea {
-    padding: 0px 0px;   
-}
+	/*The following modification were made by the scsa project, which this project is based on*/
 
-/* Position the component being displayed at the center of the output area */
-div.output_area {
-    justify-content: center !important;     
-}
+	.widget-select > select {
+	    font-family: monospace !important;
+	}
+	/* Cause plotly to display "modebar" */
+	.container {
+	    min-width: 1200px !important;
+	}
 
-/* These attributes were unset because they mess up flex stylings for ui.HTML components */
-.widget-html-content {
-    align-self: unset !important;       
-    flex-shrink: unset !important;
-    flex-grow: unset !important;
-}
-
-/*The following modification were made by the scsa project, which this project is based on*/
-
-.widget-select > select {
-    font-family: monospace !important;
-}
-/* Cause plotly to display "modebar" */
-.container {
-    min-width: 1200px !important;
-}
-
-.jupyter-widgets.widget-tab > .p-TabBar .p-TabBar-tab {
-    flex: 0 1 300px
-}
-.p-Collapse-header {
-    color: white !important;
-    background-color: steelblue !important;
-    padding-top: 3px;
-    padding-bottom: 3px;
-}
-.p-TabBar-tabLabel {
-    font-weight: bold !important;
-    color: steelblue !important;
-    margin-top: 1em !important;
-    margin-bottom: 1em !important;
-}
-.widget-label {
-    text-align: left !important;
-}
-p {
-    line-height: 1.2em;
-    margin-bottom: 1em;
-}
-/* Avoid output scrollbars (sub-windowing) */
-.output_wrapper, .output {
-    height: auto !important;
-    max-height: 99999px;
-}
-.output_scroll {
-    box-shadow: none !important;
-}
-#site {
-    height: 100% !important;
-}
-.prompt {
-    min-width: 1px !important; /* Collapse left margin */
-}
-pre {
-    user-select: all;
-}
+	.jupyter-widgets.widget-tab > .p-TabBar .p-TabBar-tab {
+	    flex: 0 1 300px
+	}
+	.p-Collapse-header {
+	    color: white !important;
+	    background-color: steelblue !important;
+	    padding-top: 3px;
+	    padding-bottom: 3px;
+	}
+	.p-TabBar-tabLabel {
+	    font-weight: bold !important;
+	    color: steelblue !important;
+	    margin-top: 1em !important;
+	    margin-bottom: 1em !important;
+	}
+	.widget-label {
+	    text-align: left !important;
+	}
+	p {
+	    line-height: 1.2em;
+	    margin-bottom: 1em;
+	}
+	/* Avoid output scrollbars (sub-windowing) */
+	.output_wrapper, .output {
+	    height: auto !important;
+	    max-height: 99999px;
+	}
+	.output_scroll {
+	    box-shadow: none !important;
+	}
+	#site {
+	    height: 100% !important;
+	}
+	.prompt {
+	    min-width: 1px !important; /* Collapse left margin */
+	}
+	pre {
+	    user-select: all;
+	}
 
 
-/*** CSS classes for custom components. 
-   
-   To avoid name clashes with the existing classes used by ipywidgets, 
-   their names are prepended with "c" for "custom". The name also follows BEM convention. 
-***/
+	/*** CSS classes for custom components.
 
-/* Snackbar */
-.c-snackbar {
-    width: 365px;
-    height: 36px;
-    padding: 0px 6px 0px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-flow: row nowrap;
-    border-radius: 4px;
-    background: var(--light-blue);
-    color: white;
-}
-.c-snackbar__text {
-    color: white;
-}
+	   To avoid name clashes with the existing classes used by ipywidgets,
+	   their names are prepended with "c" for "custom". The name also follows BEM convention.
+	***/
 
-/* Icon button */
-.c-icon-button {
-    height: 28px !important;
-    width: 28px !important;
-    border-radius: 50% !important;
-    background: transparent !important;
-    color: white;
-    font-size: 10px !important;
-    line-height: 10px !important;
-    text-align: center;
-}
-.c-icon-button:hover, 
-.c-icon-button:active,
-.c-icon-button:focus {
-    box-shadow: none !important;
-}
-.c-icon-button:active {
-    color: var(--blue) !important;
-}
+	   .app-container {
+	       width: 100%;
+	       height: 912px;
+	       border: 1px solid var(--dark-blue);
+	       padding: 0px 0px;
+	   }
 
-/* Text colors */
-.c-text-light-grey {
-    color: var(--grey);
-}
-.c-text-grey {
-    color: var(--grey);
-}
-.c-text-white{
-    color: white);
-}
+	/* Snackbar */
+	.c-snackbar {
+	    width: 365px;
+	    height: 36px;
+	    padding: 0px 6px 0px 16px;
+	    display: flex;
+	    justify-content: space-between;
+	    align-items: center;
+	    flex-flow: row nowrap;
+	    border-radius: 4px;
+	    background: var(--light-blue);
+	    color: white;
+	}
+	.c-snackbar__text {
+	    color: white;
+	}
 
-/* Header bar */
-.c-header-bar {
-    background: var(--dark-blue);
-    color: white;
-    align-items: center;
-    font-weight: 500;
-    height: 56px;
-    padding: 0px 48px;
-    margin: 0px 0px;
-}
+	/* Icon button */
+	.c-icon-button {
+	    height: 28px !important;
+	    width: 28px !important;
+	    border-radius: 50% !important;
+	    background: transparent !important;
+	    color: white;
+	    font-size: 10px !important;
+	    line-height: 10px !important;
+	    text-align: center;
+	}
+	.c-icon-button:hover,
+	.c-icon-button:active,
+	.c-icon-button:focus {
+	    box-shadow: none !important;
+	}
+	.c-icon-button:active {
+	    color: var(--blue) !important;
+	}
 
-/* Stepper */
-.c-stepper {
-    align-items: center;
-}
-.c-stepper__number {
-    font-size: 15px;
-    color: white;
-    height: 40px;
-    width: 40px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    margin: 0px 4px;
-}
-.c-stepper__number--current {
-    background: var(--blue);
-    color: white;
-}
-.c-stepper__number--active {
-    background: var(--green);
-    color: white;
-}
-.c-stepper__number--inactive {
-    background: var(--light-grey);
-    color: white;
-}
-.c-stepper__title--active {
-    color: var(--dark-blue);
-    padding: 0px 4px;
-}
-.c-stepper__title--inactive {
-    color: var(--light-grey);
-    padding: 0px 4px;
-}
-.c-stepper__separator--active {
-    padding: 0px 4px;
-    color: var(--blue);
-}
-.c-stepper__separator--inactive {
-    padding: 0px 4px;
-    color: var(--light-grey);
-}
+	/* Text colors */
+	.c-text-light-grey {
+	    color: var(--grey);
+	}
+	.c-text-grey {
+	    color: var(--grey);
+	}
+	.c-text-white{
+	    color: white);
+	}
 
-/* File upload area */
-.c-upload-area {
-    background: transparent;
-    width: 500px;
-    height: 200px;
-    position: relative;
-}
-.c-upload-area__background,
-.c-upload-area__overlay-button {
-    width: 99% !important;     /*99%, instead of 100%, to avoid overflow*/
-    height: 99% !important;
-    background: transparent !important;
-    border-radius: 15px;
-    position: absolute;
-    top: 0;
-    left: 0;
-    align-self: center;
-}
-.c-upload-area__background {
-    color: var(--grey);
-    /* border: 1px dashed var(--grey); */   /* If bg img doesn't work, uncomment this*/
-    /* URL for bg img is generated by https://kovart.github.io/dashed-border-generator/*/
-    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='15' ry='15' stroke='%23757575' stroke-width='2' stroke-dasharray='6%2c 6' stroke-dashoffset='0' stroke-linecap='butt'/%3e%3c/svg%3e") !important;
-    display: flex !important;
-    flex-flow: column nowrap !important;
-    align-items: center !important;
-    justify-content: center !important;        
-}
-.c-upload-area__overlay-button {
-    color: transparent !important;
-    z-index: 10;
-}
-.c-upload-area__overlay-button:hover {
-    box-shadow: none !important;
-}
-.c-upload-area__overlay-button:active {
-    color: transparent !important;
-    background: transparent !important;
-    outline: none !important;
-}
-.c-upload-area__overlay-button:focus {
-    box-shadow: none !important;
-    outline: none !important;
-}
-.c-upload-area__overlay-button:drag {
-    box-shadow: none !important;
-    outline: none !important;
-}
+	/* Header bar */
+	.c-header-bar {
+	    background: var(--dark-blue);
+	    color: white;
+	    align-items: center;
+	    font-weight: 500;
+	    height: 56px;
+	    padding: 0px 48px;
+	    margin: 0px 0px;
+	}
+
+	/* Stepper */
+	.c-stepper {
+	    align-items: center;
+	}
+	.c-stepper__number {
+	    font-size: 15px;
+	    color: white;
+	    height: 40px;
+	    width: 40px;
+	    border-radius: 50%;
+	    align-items: center;
+	    justify-content: center;
+	    margin: 0px 4px;
+	}
+	.c-stepper__number--current {
+	    background: var(--blue);
+	    color: white;
+	}
+	.c-stepper__number--active {
+	    background: var(--green);
+	    color: white;
+	}
+	.c-stepper__number--inactive {
+	    background: var(--light-grey);
+	    color: white;
+	}
+	.c-stepper__title--active {
+	    color: var(--dark-blue);
+	    padding: 0px 4px;
+	}
+	.c-stepper__title--inactive {
+	    color: var(--light-grey);
+	    padding: 0px 4px;
+	}
+	.c-stepper__separator--active {
+	    padding: 0px 4px;
+	    color: var(--blue);
+	}
+	.c-stepper__separator--inactive {
+	    padding: 0px 4px;
+	    color: var(--light-grey);
+	}
+
+	/* File upload area */
+	.c-upload-area {
+	    background: transparent;
+	    width: 500px;
+	    height: 200px;
+	    position: relative;
+	}
+	.c-upload-area__background,
+	.c-upload-area__overlay {
+	    width: 99% !important;     /*99%, instead of 100%, to avoid overflow*/
+	    height: 99% !important;
+	    background: transparent !important;
+	    border-radius: 15px;
+	    position: absolute;
+	    top: 0;
+	    left: 0;
+	    align-self: center;
+	}
+	.c-upload-area__background {
+	    color: var(--grey);
+	    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='15' ry='15' stroke='%23757575' stroke-width='2' stroke-dasharray='6%2c 6' stroke-dashoffset='0' stroke-linecap='butt'/%3e%3c/svg%3e") !important;
+	    display: flex !important;
+	    flex-flow: column nowrap !important;
+	    align-items: center !important;
+	    justify-content: center !important;
+	}
+	.c-upload-area__overlay {
+	    color: transparent !important;
+	    z-index: 10;
+	}
+	   #c-file-uploader {
+	       width: 500px;
+	       height: 200px;
+	       opacity: 0;
+	       color: transparent;
+	   }
+	   #c-file-uploader:enabled {
+	       cursor: pointer;
+	   }
+	   #c-file-uploader:disabled {     /* We disable the element when a file is being uploaded */
+	       cursor: progress;
+	   }
 </style>
