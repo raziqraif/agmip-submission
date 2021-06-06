@@ -17,7 +17,8 @@ def nbserver_raw_info() -> Optional[str]:
     LAUNCH_DIRPATH -> /../../LAUNCH_DIR
     """
 
-    # Conda activation doesn't work well with vscode, so hard code this for now
+    # Vscode doesn't run the tests in the correct environment, so hard code jupyter location for now
+    # TODO: Find a better way to do this
     stream = os.popen("/Users/raziqraif/opt/anaconda3/envs/agmip/bin/jupyter notebook list")
 
     # output -> <title>:\nNBSERVER_RAW_INFO\nNBSERVER_RAW_INFO\n...
@@ -72,34 +73,37 @@ def test_nbserver_launch_dirpath(launch_dirpath):
 
 
 def test_jupyter_file_upload_api(nbserver_baseurl, nbserver_token):
-    if nbserver_url is None:  # No server is running
+    # Test file upload method that we're using in the Javascript env
+
+    if nbserver_baseurl is None:  # No server is running
         return
 
-    # Prepare file to upload
+    # Prepare file to upload 
 
-    TEMP_FILE_NAME = "abcdefghij123"
-    if Path(TEMP_FILE_NAME).exists():
-        Path(TEMP_FILE_NAME).unlink()
+    TEMPFILE_NAME = "abcdefghij123"
 
-    temp_file_path = Path(TEMP_FILE_NAME)
-    temp_file = open(TEMP_FILE_NAME, "w+")
-    assert temp_file
+    tempfile_path = Path(TEMPFILE_NAME)
+    if tempfile_path.exists():
+        tempfile_path.unlink()
 
-    uploads_dirpath = Path(__name__).parent.parent / Path("uploads")  # <project_dir>/uploads
-    uploaded_temp_filepath = Path(uploads_dirpath / TEMP_FILE_NAME)
+    tempfile = open(TEMPFILE_NAME, "w+")
+    assert tempfile
 
-    if uploaded_temp_filepath.exists():
-        uploaded_temp_filepath.unlink()
-    assert uploaded_temp_filepath.exists() == False
+    uploaddir_path = Path(__name__).parent.parent / Path("uploads")  # <project_dir>/uploads
+    tempfiledest_path = Path(uploaddir_path / TEMPFILE_NAME)
+
+    if tempfiledest_path.exists():
+        tempfiledest_path.unlink()
+    assert tempfiledest_path.exists() == False
 
     # Upload file
 
-    file_destination_path = "uploads/" + TEMP_FILE_NAME
-    url = nbserver_baseurl + "/api/contents/" + file_destination_path
+    fileupload_dest = "uploads/" + TEMPFILE_NAME  
+    url = nbserver_baseurl + "/api/contents/" + fileupload_dest
     print("url =", url)
     headers = {}
     headers["authorization"] = "token " + nbserver_token
-    file_content = temp_file.read()
+    file_content = tempfile.read()
     file_content = file_content.encode("ascii")
     base64_file_content = base64.b64encode(file_content)
     base64_file_content = base64_file_content.decode("ascii")
@@ -107,15 +111,15 @@ def test_jupyter_file_upload_api(nbserver_baseurl, nbserver_token):
     body = json.dumps(
         {
             "content": base64_file_content,
-            "name": TEMP_FILE_NAME,
-            "path": file_destination_path,
+            "name": TEMPFILE_NAME,
+            "path": fileupload_dest,
             "format": "base64",
             "type": "file",
         }
     )
     response = requests.put(url, data=body, headers=headers, verify=True)
-    
-    assert response.status_code == 201
-    assert uploaded_temp_filepath.exists() == True
-    temp_file_path.unlink()
-    uploaded_temp_filepath.unlink()
+
+    assert response.status_code == 201      # HTTP created
+    assert tempfiledest_path.exists() == True
+    tempfile_path.unlink()
+    tempfiledest_path.unlink()
