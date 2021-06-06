@@ -12,7 +12,7 @@ class Controller:
         self.model: Model
         self.view: View
 
-    def intro(self, model: Model, view: View) -> None:      # type: ignore
+    def intro(self, model: Model, view: View) -> None:      # type: ignore # noqa
         """Introduce MVC modules to each other"""
         self.model = model
         self.view = view

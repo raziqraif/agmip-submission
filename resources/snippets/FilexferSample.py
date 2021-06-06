@@ -1,3 +1,4 @@
+from IPython.core.display import display
 from IPython.core.display import HTML
 import ipywidgets as ui
 

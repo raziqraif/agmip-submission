@@ -35,7 +35,7 @@ class Model:
 
         self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-    def intro(self, view: View, controller: Controller) -> None:  # type: ignore
+    def intro(self, view: View, controller: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
         self.view = view
         self.controller = controller

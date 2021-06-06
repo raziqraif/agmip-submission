@@ -1,5 +1,4 @@
 from __future__ import annotations  # Delay the evaluation of undefined types
-import os
 
 import ipywidgets as ui
 from IPython.core.display import display
@@ -34,7 +33,7 @@ class View:
         self.next_button: ui.Button
         self.uploaded_file_snackbar: ui.Box
 
-    def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore
+    def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
         self.model = model
         self.ctrl = ctrl
