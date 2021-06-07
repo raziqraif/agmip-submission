@@ -33,6 +33,8 @@ class View:
         self.next_button: ui.Button
         self.uploaded_file_snackbar: ui.Box
 
+        self._uploaded_file_name = None
+
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
         self.model = model
@@ -45,12 +47,13 @@ class View:
         display(HTML(filename="style.html"))
         display(app_container)
 
-        # Pass noteboook server's auth token in Javascript's context
+        # Embed noteboook server's auth token in Javascript context
         display(HTML('<script>var NOTEBOOK_AUTH_TOKEN= "{}"</script>'.format(self.model.NOTEBOOK_AUTH_TOKEN)))
         display(HTML(filename="script.html"))
 
     def build(self) -> ui.Box:
         """Build the application"""
+
         # Constants
         APP_TITLE = "AgMIP Model Submission Pipeline"
         PAGE_TITLES = ["File Upload", "Data Specification", "Integrity Checking", "Plausibility Checking"]
@@ -99,6 +102,7 @@ class View:
         return app
 
     def _build_file_upload_page(self) -> ui.Box:
+        """Build the file upload page"""
         INSTRUCTION = '<h3 style="margin: 0px;">Upload file to be processed</h3>'
         SUB_INSTRUCTION = (
             '<span style="font-size: 15px; line-height: 20px; margin: 0px; color: var(--grey);">'
@@ -106,38 +110,55 @@ class View:
         )
         UPLOADED_FILE = '<div style="width: 125px; line-height: 36px;">Uploaded file</div>'
         SAMPLE_FILE = '<div style="width: 125px; line-height: 36px;">Sample file</div>'
-        NO_FILES_UPLOADED = (
+        NO_FILE_UPLOADED = (
             '<div style="width: 365px; line-height: 36px; border-radius: 4px; padding: 0px 16px;'
             ' background: var(--light-grey); color: white;"> No files uploaded </div>'
         )
 
-        # Create file upload area
-        upload_area_bg = ui.Box(
+        # Create file upload area / ua
+        ua_background = ui.Box(
             [
                 ui.HTML('<img src="upload_file.svg" width="80px" height="800px"/>'),
                 ui.HTML("<div class=c-text-grey>Browse files from your computer</div>"),
             ]
         )
-        upload_area_bg.add_class("c-upload-area__background")
-        upload_area_overlay = ui.HTML(
+        ua_background.add_class("c-upload-area__background")
+        ua_overlay = ui.HTML(
             # title=" " is set to prevent tooltip from showing upon hover
             """
-            <input id="c-file-uploader" type="file" title=" " accept=".csv">
+            <input class="c-upload-area__file-uploader" type="file" title=" " accept=".csv">
             """
         )
-        upload_area_overlay._dom_classes = ["c-upload-area__overlay"]
-        # upload_area_overlay.observe(self.ctrl.onupload_file, "value")
-        upload_area = ui.Box([upload_area_bg, upload_area_overlay], layout=ui.Layout(margin="32px 0px"))
+        ua_overlay.add_class("c-upload-area__overlay")
+        ua_uploaded_file_name = ui.Label("No file uploaded")
+        ua_uploaded_file_name.add_class("c-upload-area__uploaded-file-name")
+        # Embed the label's model id in Javascript context
+        display(
+            HTML(
+                """<script>
+                        var C_UPLOAD_AREA__UPLOADED_FILE_NAME__MODEL_ID = '{}'
+                    </script>
+                """.format(
+                    ua_uploaded_file_name.model_id
+                )
+            )
+        )
+        upload_area = ui.Box(
+            [ua_background, ua_overlay, ua_uploaded_file_name],
+            layout=ui.Layout(margin="32px 0px"),
+        )
         upload_area._dom_classes = ["c-upload-area"]
 
         # Create snackbar to show uploaded file
-        uploaded_file_title = ui.HTML("Test.csv")
-        uploaded_file_title.add_class("c-snackbar__text")
+        uploaded_file_name = ui.Label("No file uploaded")
+        ui.jslink((uploaded_file_name, "value"), (ua_uploaded_file_name, "value"))
+        uploaded_file_name.add_class("c-snackbar__text")
+
         x_button = ui.Button(icon="times")
         x_button.add_class("c-icon-button")
         self.uploaded_file_snackbar = ui.Box(
             [
-                uploaded_file_title,
+                uploaded_file_name,
                 x_button,
             ],
         )
@@ -145,7 +166,7 @@ class View:
 
         # Buttons
         download_button = ui.Button(description="Download", icon="download", button_style="info")
-        download_button.on_click(lambda x: print("clicked download"))
+        download_button.on_click(self.ctrl.onclick_download)
         self.next_button = ui.Button(
             description="Next", disabled=True, layout=ui.Layout(align_self="flex-end", justify_self="flex-end")
         )
@@ -159,7 +180,7 @@ class View:
                         ),
                         upload_area,  # --upload area
                         ui.HBox(  # --uploaded file container
-                            [ui.HTML(UPLOADED_FILE), self.uploaded_file_snackbar],
+                            [ui.HTML(UPLOADED_FILE), ui.HTML(NO_FILE_UPLOADED)],
                             layout=ui.Layout(width="500px", margin="0px 0px 4px 0px"),
                         ),
                         ui.HBox(  # --sample file container

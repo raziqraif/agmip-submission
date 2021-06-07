@@ -279,13 +279,19 @@
 	    color: transparent;
 	    z-index: 10;
 	}
-	#c-file-uploader {
+	.c-upload-area__uploaded-file-name{
+		display: none;
+	}
+	.c-upload-area__file-uploader {
 		width: 500px;
 		height: 200px;
 		opacity: 0;
 		color: transparent;
 	}
-	#c-file-uploader:enabled {
+	.c-upload-area__file-uploader:enabled {
 		cursor: pointer;
+	}
+	.c-upload-area__file-uploader:disabled {
+		cursor: progress;
 	}
 </style>

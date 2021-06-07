@@ -6,13 +6,13 @@ import ipywidgets as ui
 class Controller:
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
-        from .model import Model 
-        from .view import View 
-        
+        from .model import Model
+        from .view import View
+
         self.model: Model
         self.view: View
 
-    def intro(self, model: Model, view: View) -> None:      # type: ignore # noqa
+    def intro(self, model: Model, view: View) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
         self.model = model
         self.view = view
@@ -21,7 +21,7 @@ class Controller:
         """Load data, build UI"""
         self.view.display()
 
-    def onupload_file(self, widget: ui.FileUpload):
-        """ User has uploaded a file """
-        print('test')
-        print(widget)
+    def onclick_download(self, widget: ui.Button) -> None:
+        """User clicked on the download button"""
+
+        pass
