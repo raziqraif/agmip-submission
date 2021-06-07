@@ -17,13 +17,12 @@ def nbserver_raw_info() -> Optional[str]:
     LAUNCH_DIRPATH -> /../../LAUNCH_DIR
     """
 
-    # Vscode doesn't run the tests in the correct environment, so hard code jupyter location for now
-    # TODO: Find a better way to do this
-    stream = os.popen("/Users/raziqraif/opt/anaconda3/envs/agmip/bin/jupyter notebook list")
-
+    # Assumption: 'jupyter' can be found by system without having to activate conda environment explicitly
+    stream = os.popen("jupyter notebook list")
     # output -> <title>:\nNBSERVER_RAW_INFO\nNBSERVER_RAW_INFO\n...
     output: str = stream.read()
 
+    print("command output =", output)
     if "http" not in output:  # No server is running
         return None
 
@@ -33,77 +32,72 @@ def nbserver_raw_info() -> Optional[str]:
 
 
 @pytest.fixture
-def nbserver_url(nbserver_raw_info) -> Optional[str]:
+def nbserver_url(nbserver_raw_info: str) -> Optional[str]:
     if nbserver_raw_info:
         return nbserver_raw_info.split(" :: ")[0]
     return None  # No server is running
 
 
 @pytest.fixture
-def nbserver_baseurl(nbserver_url) -> Optional[str]:
+def nbserver_baseurl(nbserver_url: str) -> Optional[str]:
     if nbserver_url:
         return nbserver_url.split("/?token=")[0]
     return None  # No server is running
 
 
 @pytest.fixture
-def nbserver_token(nbserver_url) -> Optional[str]:
+def nbserver_token(nbserver_url: str) -> Optional[str]:
     if nbserver_url:
         return nbserver_url.split("/?token=")[1]
     return None  # No server is running
 
 
 @pytest.fixture
-def launch_dirpath(nbserver_raw_info) -> Optional[str]:
+def nbserver_launch_dirpath(nbserver_raw_info: str) -> Optional[Path]:
     if nbserver_raw_info:
-        return nbserver_raw_info.split(" :: ")[1]
+        return Path(nbserver_raw_info.split(" :: ")[1])
     return None
 
 
-def test_nbserver_launch_dirpath(launch_dirpath):
+def test_nbserver_launch_dirpath(nbserver_launch_dirpath: Path) -> None:
     """
     If notebook server is not launched from proj directory, file upload will fail
     """
 
-    project_dir: Path = Path(__file__).parent.parent
-    if launch_dirpath is None:  # No server is running
+    project_dirpath: Path = Path(__file__).parent.parent
+    if nbserver_launch_dirpath is None:  # No server is running
         return
-    launch_dir: Path = Path(launch_dirpath)
-    assert launch_dir == project_dir
+    assert nbserver_launch_dirpath == project_dirpath
 
 
-def test_jupyter_file_upload_api(nbserver_baseurl, nbserver_token):
+def test_jupyter_file_upload_api(nbserver_baseurl: str, nbserver_token: str) -> None:
     # Test file upload method that we're using in the Javascript env
 
     if nbserver_baseurl is None:  # No server is running
         return
 
-    # Prepare file to upload 
+    # Create new file
+    NEWFILE_NAME = "abcdefghij123"
 
-    TEMPFILE_NAME = "abcdefghij123"
+    newfile_path = Path(NEWFILE_NAME)
+    newfile = open(NEWFILE_NAME, "w+")
+    assert newfile
 
-    tempfile_path = Path(TEMPFILE_NAME)
-    if tempfile_path.exists():
-        tempfile_path.unlink()
-
-    tempfile = open(TEMPFILE_NAME, "w+")
-    assert tempfile
-
+    # Check upload destination
     uploaddir_path = Path(__name__).parent.parent / Path("uploads")  # <project_dir>/uploads
-    tempfiledest_path = Path(uploaddir_path / TEMPFILE_NAME)
+    newfiledest_path = Path(uploaddir_path / NEWFILE_NAME)
 
-    if tempfiledest_path.exists():
-        tempfiledest_path.unlink()
-    assert tempfiledest_path.exists() == False
+    if newfiledest_path.exists():
+        newfiledest_path.unlink()
+    assert newfiledest_path.exists() == False
 
     # Upload file
-
-    fileupload_dest = "uploads/" + TEMPFILE_NAME  
+    fileupload_dest = "uploads/" + NEWFILE_NAME
     url = nbserver_baseurl + "/api/contents/" + fileupload_dest
     print("url =", url)
     headers = {}
     headers["authorization"] = "token " + nbserver_token
-    file_content = tempfile.read()
+    file_content = newfile.read()
     file_content = file_content.encode("ascii")
     base64_file_content = base64.b64encode(file_content)
     base64_file_content = base64_file_content.decode("ascii")
@@ -111,7 +105,7 @@ def test_jupyter_file_upload_api(nbserver_baseurl, nbserver_token):
     body = json.dumps(
         {
             "content": base64_file_content,
-            "name": TEMPFILE_NAME,
+            "name": NEWFILE_NAME,
             "path": fileupload_dest,
             "format": "base64",
             "type": "file",
@@ -119,7 +113,8 @@ def test_jupyter_file_upload_api(nbserver_baseurl, nbserver_token):
     )
     response = requests.put(url, data=body, headers=headers, verify=True)
 
-    assert response.status_code == 201      # HTTP created
-    assert tempfiledest_path.exists() == True
-    tempfile_path.unlink()
-    tempfiledest_path.unlink()
+    # Test & cleanup
+    assert response.status_code == 201  # HTTP created
+    assert newfiledest_path.exists() == True
+    newfile_path.unlink()
+    newfiledest_path.unlink()
