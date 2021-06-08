@@ -33,8 +33,6 @@ class View:
         self.next_button: ui.Button
         self.uploaded_file_snackbar: ui.Box
 
-        self._uploaded_file_name = None
-
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
         self.model = model
@@ -47,8 +45,8 @@ class View:
         display(HTML(filename="style.html"))
         display(app_container)
 
-        # Embed noteboook server's auth token in Javascript context
-        display(HTML('<script>var NOTEBOOK_AUTH_TOKEN= "{}"</script>'.format(self.model.NOTEBOOK_AUTH_TOKEN)))
+        # Embed app model in Javascript context
+        display(HTML(f"<script> APP_MODEL = {self.model.javascript_app_model()}</script>"))
         display(HTML(filename="script.html"))
 
     def build(self) -> ui.Box:
@@ -130,28 +128,19 @@ class View:
             """
         )
         ua_overlay.add_class("c-upload-area__overlay")
-        ua_uploaded_file_name = ui.Label("No file uploaded")
-        ua_uploaded_file_name.add_class("c-upload-area__uploaded-file-name")
-        # Embed the label's model id in Javascript context
-        display(
-            HTML(
-                """<script>
-                        var C_UPLOAD_AREA__UPLOADED_FILE_NAME__MODEL_ID = '{}'
-                    </script>
-                """.format(
-                    ua_uploaded_file_name.model_id
-                )
-            )
-        )
+        ua_file_name_label = ui.Label("No file uploaded")
+        ua_file_name_label.add_class("c-upload-area__uploaded-file-name")
+        self.model.update_javascript_app_model("ua_label_model_id", ua_file_name_label.model_id)
+
         upload_area = ui.Box(
-            [ua_background, ua_overlay, ua_uploaded_file_name],
+            [ua_background, ua_overlay, ua_file_name_label],
             layout=ui.Layout(margin="32px 0px"),
         )
         upload_area._dom_classes = ["c-upload-area"]
 
         # Create snackbar to show uploaded file
         uploaded_file_name = ui.Label("No file uploaded")
-        ui.jslink((uploaded_file_name, "value"), (ua_uploaded_file_name, "value"))
+        ui.jslink((uploaded_file_name, "value"), (ua_file_name_label, "value"))
         uploaded_file_name.add_class("c-snackbar__text")
 
         x_button = ui.Button(icon="times")

@@ -90,7 +90,7 @@
 				http.open("PUT", url, true);
 
 				// NOTEBOOK_AUTH_TOKEN is defined in view.py & this code can be removed before deployment to MyGeoHub 
-				http.setRequestHeader("Authorization", "token " + window.NOTEBOOK_AUTH_TOKEN);
+				http.setRequestHeader("Authorization", "token " + window.APP_MODEL.nbserver_auth_token);
 
 				http.send(JSON.stringify(payload));
 
@@ -102,11 +102,11 @@
 							document.getElementsByClassName("c-upload-area__file-uploader")[0].disabled = false;
 
 							// Communicate the name of the uploaded file to the Python backend
-							// We do so by manipulating the model of a designated widget & change the widgets value
+							// We do so by manipulating the model of a designated label widget (change the label's value)
 							// 
 							// https://github.com/jupyter-widgets/ipywidgets/issues/2777#issuecomment-585094635
 							let manager = window.IPython.WidgetManager._managers[0]
-							let model_promise = manager.get_model(window.C_UPLOAD_AREA__UPLOADED_FILE_NAME__MODEL_ID)
+							let model_promise = manager.get_model(window.APP_MODEL.ua_label_model_id)
 							model_promise.then(function(model) {
 								model.set('value', file.name)
 								model.save_changes();

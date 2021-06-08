@@ -1,6 +1,7 @@
 from __future__ import annotations  # Delay the evaluation of undefined types
 import os
 from pathlib import Path
+from typing import Union
 
 
 def get_notebook_auth_token() -> str:
@@ -20,9 +21,17 @@ def get_notebook_auth_token() -> str:
     return token
 
 
-class Model:
+class JSAppModel:
+    def __init__(self):
+        # Auth token of notebook server
+        self.nbserver_auth_token: str = get_notebook_auth_token()
 
-    NOTEBOOK_AUTH_TOKEN: str = get_notebook_auth_token()
+        # Model ID of the label in "UA" (upload area) which displays the most recently uploaded file name.
+        # This label is actually hidden and only used for communication between js & python.
+        self.ua_label_model_id: str = ""
+
+
+class Model:
     UPLOAD_DIR: Path = Path(__name__).parent.parent / Path("uploads")  # <PROJECT_DIR>/uploads
 
     def __init__(self):
@@ -33,9 +42,20 @@ class Model:
         self.view: View
         self.controller: Controller
 
+        self._js_app_model = JSAppModel()
+
         self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
     def intro(self, view: View, controller: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
         self.view = view
         self.controller = controller
+
+    def update_javascript_app_model(self, attr_name: str, attr_value: str) -> None:
+        """Update an attribute of the app model in Javascript"""
+        assert attr_name in vars(self._js_app_model).keys()
+        setattr(self._js_app_model, attr_name, attr_value)
+
+    def javascript_app_model(self) -> str:
+        """Get the string representation of the app model in Javascript"""
+        return str(vars(self._js_app_model))
