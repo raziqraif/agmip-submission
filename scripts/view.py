@@ -35,8 +35,11 @@ class View:
         self.plausibility_checking_page: ui.Box
 
         self.stepper: ui.Box
-        self.next_button: ui.Button
+
+        # Widgets in file upload page that needs to be manipulated
+        self.ua_file_label: ui.Label        # ua here stands for "upload area"
         self.uploaded_file_name_box: ui.Box
+        self.next_button: ui.Button
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -54,23 +57,30 @@ class View:
         display(HTML(f"<script> APP_MODEL = {self.model.javascript_app_model()}</script>"))
         display(HTML(filename="script.html"))
 
-    def set_uploaded_filename(self, file_name: Union[str, None]) -> None:
-        """Display uploaded filename
-        To display "No file uploaded", pass None as an argument
+    def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
+        """
+        File upload page has two states:
+        1) when file was uploaded
+        2) when file was not uploaded yet / uploaded file is removed
+
+        To display state 2), pass a None as argument
         """
         children: tuple(ui.HTML, ui.Box) = self.uploaded_file_name_box.children
         no_file_uploaded_widget = children[0]
         file_uploaded_widget = children[1]
 
-        if file_name:
+        if uploaded_file_name:
             no_file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
             file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
             children: tuple(ui.Label, ui.Button) = file_uploaded_widget.children
             label_widget = children[0]
-            label_widget.value = file_name
+            label_widget.value = uploaded_file_name
+            self.next_button.disabled = False
         else:
             file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
             no_file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
+            self.ua_file_label.value = ""
+            self.next_button.disabled = True
 
     def build(self) -> ui.Box:
         """Build the application"""
@@ -145,14 +155,12 @@ class View:
             """
         )
         ua_overlay.add_class("c-upload-area__overlay")
-        ua_file_label = ui.Label("No file uploaded")
-        ua_file_label.add_class("c-upload-area__uploaded-file-name")
-        ua_file_label.observe(self.ctrl.onchange_ua_file_label, "value")
-        self.model.update_javascript_app_model("ua_file_label_model_id", ua_file_label.model_id)
-        self.file_label = ua_file_label  # TODO: remove this
-        self.file_label.observe = ua_file_label  # TODO: remove this
+        self.ua_file_label = ui.Label("No file uploaded")
+        self.ua_file_label.add_class("c-upload-area__uploaded-file-name")
+        self.ua_file_label.observe(self.ctrl.onchange_ua_file_label, "value")
+        self.model.update_javascript_app_model("ua_file_label_model_id", self.ua_file_label.model_id)
         upload_area = ui.Box(
-            [ua_background, ua_overlay, ua_file_label],
+            [ua_background, ua_overlay, self.ua_file_label],
             layout=ui.Layout(margin="32px 0px"),
         )
         upload_area._dom_classes = ["c-upload-area"]

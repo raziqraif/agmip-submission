@@ -24,8 +24,8 @@ class Controller:
     def onchange_ua_file_label(self, change: dict) -> None:
         """Value of the hidden file label in upload area (ua) changed"""
         file_name = change["new"]
-        self.view.set_uploaded_filename(file_name)
+        self.view.update_file_upload_page(file_name)
 
     def onclick_remove_file(self, widget: ui.Button) -> None:
         """'x' button in the file upload snackbar was clicked"""
-        self.view.set_uploaded_filename(None)
+        self.view.update_file_upload_page(None)
