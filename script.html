@@ -1,5 +1,7 @@
 <script>
-
+	// Assert APP_MODEL properties
+	console.assert(window.APP_MODEL.hasOwnProperty('ua_file_label_model_id'))
+	console.assert(window.APP_MODEL.hasOwnProperty('nbserver_auth_token'))
 	
 	/* Helper functions */
 
@@ -89,28 +91,43 @@
 				let http = new XMLHttpRequest();
 				http.open("PUT", url, true);
 
-				// NOTEBOOK_AUTH_TOKEN is defined in view.py & this code can be removed before deployment to MyGeoHub 
+				// This code can be removed before deployment to MyGeoHub 
 				http.setRequestHeader("Authorization", "token " + window.APP_MODEL.nbserver_auth_token);
 
 				http.send(JSON.stringify(payload));
 
-				// Reset state after sending the last payload
+				// Manage state after sending the last payload
 				if (i == chunks.length - 1) {			
 					http.onreadystatechange = function () {
-						if (http.readyState === XMLHttpRequest.DONE) {
+						if (http.readyState != XMLHttpRequest.DONE) {
+							return;
+						}
+						// OK or CREATED
+						if ((http.status == 200) || (http.status == 201)) {
 							document.body.classList.remove("c-cursor-mod--progress")
-							document.getElementsByClassName("c-upload-area__file-uploader")[0].disabled = false;
+							fileUploader = document.getElementsByClassName("c-upload-area__file-uploader")[0];
+							fileUploader.disabled = false;
+							fileUploader.value = null;
 
-							// Communicate the name of the uploaded file to the Python backend
-							// We do so by manipulating the model of a designated label widget (change the label's value)
+							// Communicate the name of uploaded file to the Python backend by manipulating the model of  
+							// a label associated with the file upload area (and change the label's value) 
 							// 
 							// https://github.com/jupyter-widgets/ipywidgets/issues/2777#issuecomment-585094635
+							// https://github.com/jupyter-widgets/ipywidgets/issues/1783#issuecomment-340365890
 							let manager = window.IPython.WidgetManager._managers[0]
-							let model_promise = manager.get_model(window.APP_MODEL.ua_label_model_id)
+							let model_promise = manager.get_model(window.APP_MODEL.ua_file_label_model_id)
 							model_promise.then(function(model) {
-								model.set('value', file.name)
-								model.save_changes();
+								// model.views is an object containing multiple Promise attributes 
+								// Assume model has only 1 view
+								view_promise = model.views[Object.keys(model.views)[0]]
+								view_promise.then(function(view) {
+									view.model.set('value', file.name)
+									view.touch()
+								})
 							})
+						}
+						else {
+							alert("Fail to upload file. HTTP status: " + http.status);
 						}
 					};
 				}

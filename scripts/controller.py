@@ -21,6 +21,10 @@ class Controller:
         """Load data, build UI"""
         self.view.display()
 
+    def onchange_ua_file_label(self, change) -> None:
+        """ Value of file label in upload area (ua) changed """
+        print(change)
+
     def onclick_download(self, widget: ui.Button) -> None:
         """User clicked on the download button"""
 

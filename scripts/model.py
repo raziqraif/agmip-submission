@@ -28,7 +28,7 @@ class JSAppModel:
 
         # Model ID of the label in "UA" (upload area) which displays the most recently uploaded file name.
         # This label is actually hidden and only used for communication between js & python.
-        self.ua_label_model_id: str = ""
+        self.ua_file_label_model_id: str = ""
 
 
 class Model:

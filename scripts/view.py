@@ -26,9 +26,7 @@ class View:
         self.data_specification_page: ui.Box
         self.integrity_checking_page: ui.Box
         self.plausibility_checking_page: ui.Box
-        # Widgets that controller needs to access
 
-        # Widgets that controller does not need to access but still needs to be manipulated
         self.stepper: ui.Box
         self.next_button: ui.Button
         self.uploaded_file_snackbar: ui.Box
@@ -122,25 +120,26 @@ class View:
         )
         ua_background.add_class("c-upload-area__background")
         ua_overlay = ui.HTML(
-            # title=" " is set to prevent tooltip from showing upon hover
             """
-            <input class="c-upload-area__file-uploader" type="file" title=" " accept=".csv">
+            <input class="c-upload-area__file-uploader" type="file" title="Click to browse" accept=".csv">
             """
         )
         ua_overlay.add_class("c-upload-area__overlay")
-        ua_file_name_label = ui.Label("No file uploaded")
-        ua_file_name_label.add_class("c-upload-area__uploaded-file-name")
-        self.model.update_javascript_app_model("ua_label_model_id", ua_file_name_label.model_id)
-
+        ua_file_label = ui.Label("No file uploaded")
+        ua_file_label.add_class("c-upload-area__uploaded-file-name")
+        ua_file_label.observe(self.ctrl.onchange_ua_file_label, "value")
+        self.model.update_javascript_app_model("ua_file_label_model_id", ua_file_label.model_id)
+        self.file_label = ua_file_label  # TODO: remove this
+        self.file_label.observe = ua_file_label  # TODO: remove this
         upload_area = ui.Box(
-            [ua_background, ua_overlay, ua_file_name_label],
+            [ua_background, ua_overlay, ua_file_label],
             layout=ui.Layout(margin="32px 0px"),
         )
         upload_area._dom_classes = ["c-upload-area"]
 
         # Create snackbar to show uploaded file
         uploaded_file_name = ui.Label("No file uploaded")
-        ui.jslink((uploaded_file_name, "value"), (ua_file_name_label, "value"))
+        ui.jslink((uploaded_file_name, "value"), (ua_file_label, "value"))
         uploaded_file_name.add_class("c-snackbar__text")
 
         x_button = ui.Button(icon="times")
