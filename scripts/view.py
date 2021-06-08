@@ -169,6 +169,7 @@ class View:
         uploaded_file_name.add_class("c-snackbar__text")
         x_button = ui.Button(icon="times")
         x_button.add_class("c-icon-button")
+        x_button.on_click(self.ctrl.onclick_remove_file)
         uploaded_file_snackbar = ui.Box(
             [
                 uploaded_file_name,
