@@ -1,4 +1,5 @@
-from __future__ import annotations  # Delay the evaluation of undefined types
+from __future__ import annotations
+from typing import Union  # Delay the evaluation of undefined types
 
 import ipywidgets as ui
 from IPython.core.display import display
@@ -7,6 +8,12 @@ from IPython.core.display import HTML
 
 DARK_BLUE = "#1E3A8A"
 LIGHT_GREY = "#D3D3D3"
+
+
+class CSS:
+    """Namespace for CSS classes declared in style.html"""
+
+    DISPLAY_MOD__NONE = "c-display-mod--none"
 
 
 # pyright: reportGeneralTypeIssues=false
@@ -29,7 +36,7 @@ class View:
 
         self.stepper: ui.Box
         self.next_button: ui.Button
-        self.uploaded_file_snackbar: ui.Box
+        self.uploaded_file_name_box: ui.Box
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -46,6 +53,24 @@ class View:
         # Embed app model in Javascript context
         display(HTML(f"<script> APP_MODEL = {self.model.javascript_app_model()}</script>"))
         display(HTML(filename="script.html"))
+
+    def set_uploaded_filename(self, file_name: Union[str, None]) -> None:
+        """Display uploaded filename
+        To display "No file uploaded", pass None as an argument
+        """
+        children: tuple(ui.HTML, ui.Box) = self.uploaded_file_name_box.children
+        no_file_uploaded_widget = children[0]
+        file_uploaded_widget = children[1]
+
+        if file_name:
+            no_file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
+            file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
+            children: tuple(ui.Label, ui.Button) = file_uploaded_widget.children
+            label_widget = children[0]
+            label_widget.value = file_name
+        else:
+            file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
+            no_file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
 
     def build(self) -> ui.Box:
         """Build the application"""
@@ -106,10 +131,6 @@ class View:
         )
         UPLOADED_FILE = '<div style="width: 125px; line-height: 36px;">Uploaded file</div>'
         SAMPLE_FILE = '<div style="width: 125px; line-height: 36px;">Sample file</div>'
-        NO_FILE_UPLOADED = (
-            '<div style="width: 365px; line-height: 36px; border-radius: 4px; padding: 0px 16px;'
-            ' background: var(--light-grey); color: white;"> No files uploaded </div>'
-        )
 
         # Create file upload area / ua
         ua_background = ui.Box(
@@ -137,20 +158,27 @@ class View:
         )
         upload_area._dom_classes = ["c-upload-area"]
 
-        # Create snackbar to show uploaded file
-        uploaded_file_name = ui.Label("No file uploaded")
-        ui.jslink((uploaded_file_name, "value"), (ua_file_label, "value"))
+        # Create a box to show that there's no file uploaded or to show the the uploaded file's name
+        # -Create snackbar to tell the user that no file has been uploaded
+        no_file_uploaded = ui.HTML(
+            '<div style="width: 365px; line-height: 36px; border-radius: 4px; padding: 0px 16px;'
+            ' background: var(--light-grey); color: white;"> No files uploaded </div>'
+        )
+        # -Create snackbar to show the uploaded file's name
+        uploaded_file_name = ui.Label("<filename>")
         uploaded_file_name.add_class("c-snackbar__text")
-
         x_button = ui.Button(icon="times")
         x_button.add_class("c-icon-button")
-        self.uploaded_file_snackbar = ui.Box(
+        uploaded_file_snackbar = ui.Box(
             [
                 uploaded_file_name,
                 x_button,
             ],
         )
-        self.uploaded_file_snackbar.add_class("c-snackbar")
+        uploaded_file_snackbar.add_class("c-snackbar")
+        uploaded_file_snackbar.add_class("c-display-mod--none")  # By default this snackbar is hidden
+        # -Create the box
+        self.uploaded_file_name_box = ui.Box([no_file_uploaded, uploaded_file_snackbar])
 
         # Buttons
         download_button = ui.Button(description="Download", icon="download", button_style="info")
@@ -168,7 +196,7 @@ class View:
                         ),
                         upload_area,  # --upload area
                         ui.HBox(  # --uploaded file container
-                            [ui.HTML(UPLOADED_FILE), ui.HTML(NO_FILE_UPLOADED)],
+                            [ui.HTML(UPLOADED_FILE), self.uploaded_file_name_box],
                             layout=ui.Layout(width="500px", margin="0px 0px 4px 0px"),
                         ),
                         ui.HBox(  # --sample file container
