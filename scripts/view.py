@@ -83,7 +83,6 @@ class View:
         # Create header bar
         header_bar = ui.HTML(APP_TITLE)
         header_bar.add_class("c-header-bar")
-
         # Create stepper
         stepper_children = []
         for i in range(0, NUM_OF_PAGES):
@@ -182,8 +181,19 @@ class View:
         self.uploaded_file_name_box = ui.Box([no_file_uploaded, uploaded_file_snackbar])
 
         # Buttons
-        download_button = ui.Button(description="Download", icon="download", button_style="info")
-        download_button.on_click(self.ctrl.onclick_download)
+        download_button = ui.HTML(
+            """
+                <a
+                    href="SampleData.csv" 
+                    download="SampleData.csv"
+                    class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-info" 
+                    title=""
+                >
+                    Download
+                    <i class="fa fa-download" style="margin-left: 4px;"></i>
+                </a>
+            """
+        )
         self.next_button = ui.Button(
             description="Next", disabled=True, layout=ui.Layout(align_self="flex-end", justify_self="flex-end")
         )

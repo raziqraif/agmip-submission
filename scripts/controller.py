@@ -29,7 +29,3 @@ class Controller:
     def onclick_remove_file(self, widget: ui.Button) -> None:
         """'x' button in the file upload snackbar was clicked"""
         self.view.set_uploaded_filename(None)
-
-    def onclick_download(self, widget: ui.Button) -> None:
-        """User clicked on the download button"""
-        pass
