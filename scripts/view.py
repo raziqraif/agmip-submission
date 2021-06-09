@@ -97,7 +97,6 @@ class View:
         # Widgets in file upload page that needs to be manipulated
         self.ua_file_label: ui.Label  # ua here stands for "upload area"
         self.uploaded_file_name_box: ui.Box
-        self.next_button: ui.Button
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -306,10 +305,10 @@ class View:
                 </a>
             """
         )
-        self.next_button = ui.Button(
+        next_button = ui.Button(
             description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end")
         )
-        self.next_button.on_click(self.ctrl.onclick_next_from_page_1)
+        next_button.on_click(self.ctrl.onclick_next_from_page_1)
         return ui.VBox(  # page
             [
                 ui.VBox(  # -container to fill up the space above navigation button area
@@ -328,7 +327,7 @@ class View:
                     ],
                     layout=ui.Layout(flex="1", justify_content="center"),
                 ),
-                ui.VBox([self.next_button], layout=ui.Layout(align_self="flex-end")),  # -container for navgation button
+                ui.VBox([next_button], layout=ui.Layout(align_self="flex-end")),  # -container for navgation button
             ],
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
         )

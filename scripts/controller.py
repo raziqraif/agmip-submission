@@ -54,6 +54,5 @@ class Controller:
 
     def onclick_next_from_page_1(self, widget: ui.Button) -> None:
         """'Next' button on the file upload page was clicked"""
-
         if len(self._uploaded_filename) == 0:
             self.view.show_notification(Notification.INFO, "Please upload a CSV file first")
