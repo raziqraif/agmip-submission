@@ -1,0 +1,158 @@
+<script>
+	/* Assert APP_MODEL properties */
+
+	console.assert(window.APP_MODEL.hasOwnProperty('ua_file_label_model_id'))
+	console.assert(window.APP_MODEL.hasOwnProperty('nbserver_auth_token'))
+
+	/* Clickaway listener for notification */
+
+	document.addEventListener('click', function(event) {
+		notification = document.getElementsByClassName('c-notification')[0]
+		// Ignore if user clicks inside notification
+		if (notification.contains(event.target)) {
+			return;
+		}
+		// Hide the notification
+		// Note that doing this will only modify the notification view, without changing the notification model. The 
+		// model will still think that the removed CSS class is present in the view
+		// We will reset the model's CSS classes in the server-side the next time the notification is being shown again.
+		notification.classList.remove("c-notification--show")
+	})
+	
+	/* Helper functions for file upload */
+
+	function _breakFileStringIntoChunks(fileString) {
+		let startIndex = 0;
+		let endIndex = fileString.length;
+		let chunkSize = 1024 * 1024; // 1MB
+		let chunks = [];
+
+		while (startIndex < endIndex) {
+			let newStartIndex = startIndex + chunkSize;
+			chunks.push(fileString.slice(startIndex, newStartIndex));
+			startIndex = newStartIndex;
+		}
+		return chunks;
+	}
+
+	function _getUploadInfo(chunks, chunk_index, filename) {
+		/* Return upload URL and payload */
+
+		// Format: <BASE_URL>/notebooks/<PATH_TO_CURRENT_NOTEBOOK>
+		const CURRENT_URL = window.location.href;
+		const BASE_URL = CURRENT_URL.split("/notebooks/")[0];
+
+		let fileDestinationPath = "uploads/" + filename;
+		let url = BASE_URL + "/api/contents/" + fileDestinationPath;
+
+		// Jupyter's upload API requires chunk number to start with 1 and end with -1
+		let chunk_number = chunk_index + 1;
+		if (chunk_index == chunks.length - 1) chunk_number = -1;
+
+		let payload = {
+			content: chunks[chunk_index],
+			name: filename,
+			path: fileDestinationPath,
+			format: "base64",
+			type: "file",
+		};
+		if (chunks.length > 1) payload.chunk = chunk_number;
+
+		return { url, payload };
+	}
+
+	/* Manage file uploading */
+
+	document.getElementsByClassName("c-upload-area__file-uploader")[0].onchange = function () {
+		/**
+		 * Upload selected file to Jupyter notebook server
+		 *
+		 * This function uses the file upload API exposed by Jupyter notebook server. The signature of the API is
+		 * <NB_SERVER_BASE_URL>/api/contents/<FILE_DESTINATION_PATH>
+		 *
+		 * To use the API:
+		 *  1. Include the notebook server's auth token in the HTTP header
+		 *  2. Encode the file in Base64
+		 *  3. Break a large file into smaller chunks (and upload them separately)
+		 *
+		 * Exception:
+		 *  When using a Jupyter notebook on MyGeoHub, API requests to the notebook server will reach a middleware
+		 * 	first. The middleware will handle authentication (through cookies) and redirect the request to the server. 
+		 *
+		 *  As a consequence, when calling the file upload API from a notebook on MyGeoHub, step 1 mentioned above is 
+		 *  not needed.
+		 */
+
+		var file = this.files[0];
+		if (!file) return;
+
+		this.disabled = true;
+		document.body.classList.add("c-cursor-mod--progress")
+		// Encode file in Base64 (by reading it as a Data URL)
+		let reader = new FileReader();
+		reader.readAsDataURL(file);
+
+		// Proceed to upload file if encoding was successful
+		reader.onload = function () {
+			var base64FileString = reader.result
+				.replace("data:", "") // Replace unneeded characters in Data URL
+				.replace(/^.+,/, ""); // https://pqina.nl/blog/convert-a-file-to-a-base64-string-with-javascript/
+
+			var chunks = _breakFileStringIntoChunks(base64FileString);
+
+			// Upload files in chunks
+			for (let i = 0; i < chunks.length; i++) {
+				let { url, payload } = _getUploadInfo(chunks, i, file.name);
+
+				let http = new XMLHttpRequest();
+				http.open("PUT", url, true);
+
+				// This code can be removed before deployment to MyGeoHub 
+				http.setRequestHeader("Authorization", "token " + window.APP_MODEL.nbserver_auth_token);
+
+				http.send(JSON.stringify(payload));
+
+				// Manage state after sending the last payload
+				if (i == chunks.length - 1) {			
+					http.onreadystatechange = function () {
+						if (http.readyState != XMLHttpRequest.DONE) {
+							return;
+						}
+						// OK or CREATED
+						if ((http.status == 200) || (http.status == 201)) {
+							document.body.classList.remove("c-cursor-mod--progress")
+							fileUploader = document.getElementsByClassName("c-upload-area__file-uploader")[0];
+							fileUploader.disabled = false;
+							fileUploader.value = null;
+
+							// Communicate the name of uploaded file to the Python backend by manipulating the model of  
+							// a label associated with the file upload area (and change the label's value) 
+							// 
+							// https://github.com/jupyter-widgets/ipywidgets/issues/2777#issuecomment-585094635
+							// https://github.com/jupyter-widgets/ipywidgets/issues/1783#issuecomment-340365890
+							let manager = window.IPython.WidgetManager._managers[0]
+							let model_promise = manager.get_model(window.APP_MODEL.ua_file_label_model_id)
+							model_promise.then(function(model) {
+								// model.views is an object containing multiple Promise attributes 
+								// Assume model has only 1 view
+								view_promise = model.views[Object.keys(model.views)[0]]
+								view_promise.then(function(view) {
+									view.model.set('value', file.name)
+									view.touch()
+								})
+							})
+						}
+						else {
+							alert("Fail to upload file. HTTP status: " + http.status);
+						}
+					};
+				}
+			}
+		};
+
+		// Display error message if encoding fails
+		reader.onerror = function () {
+			alert("Fail to encode file in Base64");
+		};
+	};
+</script>

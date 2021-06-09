@@ -1,212 +1,365 @@
 <!-- style.html: General app CSS -->
 <style>
+	:root {
+	    --dark-blue: #1E3A8A;
+	    --blue: #60A5FA;
+	    --light-blue: #93C5FD;
+	    --grey: #757575;
+	    --light-grey: #D3D3D3;
+		--alert-blue: #007bff;
+	    --alert-red: #DC3545;
+	    --alert-green: #28a745;
+		--alert-yellow: #ffc107;
+	}
 
-:root {
-    --dark-blue: #1E3A8A;
-    --blue: #60A5FA;
-    --light-blue: #93C5FD;
-    --green: #34D399;
-    --red: #F87171;
-    --grey: #718096;
-    --light-grey: #D3D3D3;
-}
+	/*** Style basic HTML elements ***/
+
+	.selmono {
+	    font-family: "Lucida Console", Monaco, monospace !important;
+	    width: 100%;
+	}
+
+	hr{
+	    border-color: inherit; /* It seems like there's no way to assign a CSS class to a <hr> element, since ipywidgets
+	                              will always wrap it with <div>. So, we let it inherit from its parent element and style
+	                              the parent instead. */
+	}
+
+	/*** Extend CSS classes used by native ipywidgets components
+
+	    Note: Make sure this section appear first before the section that contains classes for custom CSS components.
+	    Else, the styling defined in this section might override the styling defined in the custom section
+	***/
+
+	/* Change button style */
+	.jupyter-button {
+	    line-height: 36px;
+	    height: 36px;
+	    border-radius: 4px;
+	    background: var(--blue);
+	    color: white;
+	}
+	.jupyter-button:active:enabled {
+	    background: #6072fa;
+	    color: white;
+	}
+	.jupyter-button:active:disabled {
+	    background: var(--light-grey);
+	    color: white;
+	}
+	.jupyter-button:disabled {
+	    background: var(--light-grey);
+	    color: white;
+	}
+	.jupyter-button:focus:enabled {
+	    outline: none;
+	}
+	.jupyter-button.mod-info:active {  /*button with info variant*/
+	    background: #00b4d4;
+	}
+	/* Remove margin that jupyter widgets have*/
+	.jupyter-widgets {
+	    margin: 0px 0px;
+	}
+
+	/* Prevent display("style.html") or other "empty" display() from taking up screen space */
+	div.output_subarea {
+	    padding: 0px 0px;
+	}
+
+	/* Position the component being displayed at the center of the output area */
+	div.output_area {
+	    justify-content: center !important;
+	}
+
+	/* These attributes were unset because they mess up flex stylings for ui.HTML components */
+	.widget-html-content {
+	    align-self: unset !important;
+	    flex-shrink: unset !important;
+	    flex-grow: unset !important;
+		display: flex !important;
+	}
+
+	/*The following modification were made by the scsa project, which this project is based on*/
+
+	.widget-select > select {
+	    font-family: monospace !important;
+	}
+	/* Cause plotly to display "modebar" */
+	.container {
+	    min-width: 1200px !important;
+	}
+
+	.jupyter-widgets.widget-tab > .p-TabBar .p-TabBar-tab {
+	    flex: 0 1 300px
+	}
+	.p-Collapse-header {
+	    color: white !important;
+	    background-color: steelblue !important;
+	    padding-top: 3px;
+	    padding-bottom: 3px;
+	}
+	.p-TabBar-tabLabel {
+	    font-weight: bold !important;
+	    color: steelblue !important;
+	    margin-top: 1em !important;
+	    margin-bottom: 1em !important;
+	}
+	.widget-label {
+	    text-align: left !important;
+	}
+	p {
+	    line-height: 1.2em;
+	    margin-bottom: 1em;
+	}
+	/* Avoid output scrollbars (sub-windowing) */
+	.output_wrapper, .output {
+	    height: auto !important;
+	    max-height: 99999px;
+	}
+	.output_scroll {
+	    box-shadow: none !important;
+	}
+	#site {
+	    height: 100% !important;
+	}
+	.prompt {
+	    min-width: 1px !important; /* Collapse left margin */
+	}
+	pre {
+	    user-select: all;
+	}
 
 
-/*** Style basic HTML elements ***/
+	/*** CSS classes for custom components.
 
-.selmono {
-    font-family: "Lucida Console", Monaco, monospace !important;
-    width: 100%;
-}
+	   To avoid name clashes with the existing classes used by ipywidgets,
+	   their names are prepended with "c" for "custom". The name also follows BEM convention.
+	***/
 
-hr{
-    border-color: inherit; /* It seems like there's no way to assign a CSS class to a <hr> element, since ipywidgets will
-                              always wrap it with <div>. So, we let it inherit from its parent element and style the 
-                              parent instead. */
-}
+	/* App */
+	.app-container {
+		width: 100%;
+		height: 912px;
+		border: 1px solid var(--dark-blue);
+		padding: 0px 0px;
+	}
 
+	/* Cursor modification */	
+	.c-cursor-mod--progress * {				
+		cursor: progress !important;
+	}
+	
+	/* Display modification */
+	.c-display-mod--none {
+		display: none !important;
+	}
 
-/*** CSS classes for custom components. 
-   
-   To avoid name clashes with the existing classes used by ipywidgets, 
-   their names are prepended with "c" for "custom". The name also follows BEM convention. 
-***/
+	/* Color modification */
+	.c-color-mod--white {
+		color: white;
+	}
+	.c-color-mod--black{
+		color: black;
+	}
 
-/* Text colors */
-.c-text-light-grey {
-    color: var(--grey);
-}
-.c-text-grey {
-    color: var(--grey);
-}
-.c-text-white{
-    color: white);
-}
+	/* Snackbar */
+	.c-snackbar {
+	    width: 365px;
+	    height: 36px;
+	    padding: 0px 6px 0px 16px;
+	    display: flex;
+	    justify-content: space-between;
+	    align-items: center;
+	    flex-flow: row nowrap;
+	    border-radius: 4px;
+	    background: var(--light-blue);
+	    color: white;
+	}
+	.c-snackbar__text {
+	    color: white;
+	}
 
-/* Header bar */
-.c-header-bar {
-    background: var(--dark-blue);
-    color: white;
-    align-items: center;
-    font-weight: 500;
-    height: 56px;
-    padding: 0px 48px;
-    margin: 0px 0px;
-}
+	/* Icon button */
+	.c-icon-button {
+	    height: 28px;
+	    width: 28px;
+	    border-radius: 50%;
+	    background: transparent !important;
+	    color: white;
+	    font-size: 10px;
+	    line-height: 10px;
+	    text-align: center;
+	}
+	.c-icon-button:hover,
+	.c-icon-button:active,
+	.c-icon-button:focus {
+	    box-shadow: none !important;
+	}
+	.c-icon-button:active {
+	    color: var(--blue) !important;
+	}
 
-/* Stepper */
-.c-stepper {
-    align-items: center;
-}
-.c-stepper__number {
-    color: white;
-    height: 40px;
-    width: 40px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    margin: 0px 4px;
-}
-.c-stepper__number--current {
-    background: var(--blue);
-    color: white;
-}
-.c-stepper__number--active {
-    background: var(--green);
-    color: white;
-}
-.c-stepper__number--inactive {
-    background: var(--light-grey);
-    color: white;
-}
-.c-stepper__title--active {
-    color: var(--dark-blue);
-    padding: 0px 4px;
-}
-.c-stepper__title--inactive {
-    color: var(--light-grey);
-    padding: 0px 4px;
-}
-.c-stepper__separator--active {
-    padding: 0px 4px;
-    color: var(--blue);
-}
-.c-stepper__separator--inactive {
-    padding: 0px 4px;
-    color: var(--light-grey);
-}
+	/* Text colors */
+	.c-text-light-grey {
+	    color: var(--grey);
+	}
+	.c-text-grey {
+	    color: var(--grey);
+	}
+	.c-text-white{
+	    color: white);
+	}
 
-/* File upload area */
-.c-upload-area {
-    background: transparent;
-    width: 500px;
-    height: 200px;
-    position: relative;
-}
-.c-upload-area__background,
-.c-upload-area__overlay-button {
-    width: 99%;     /*99%, instead of 100%, to avoid overflow*/
-    height: 99%;
-    background: transparent;
-    border-radius: 15px;
-    position: absolute;
-    top: 0;
-    left: 0;
-    align-self: center;
-}
-.c-upload-area__background {
-    color: var(--grey);
-    border: 1px dashed var(--grey);
-    display: flex !important;
-    flex-flow: column nowrap !important;
-    align-items: center !important;
-    justify-content: center !important;        
-}
-.c-upload-area__overlay-button {
-    z-index: 10;
-}
-.c-upload-area__overlay-button:hover {
-    box-shadow: none !important;
-}
-.c-upload-area__overlay-button:active {
-    background: transparent;
-    color: grey;
-    outline: none !important;
-}
-.c-upload-area__overlay-button:focus {
-    box-shadow: none !important;
-    outline: none !important;
-}
+	/* Header bar */
+	.c-header-bar {
+	    background: var(--dark-blue);
+	    color: white;
+	    align-items: center;
+	    font-weight: 500;
+	    height: 56px;
+	    padding: 0px 48px;
+	    margin: 0px 0px;
+	}
 
-/*** Extend CSS classes used by native ipywidgets components ***/
+	/* Stepper */
+	.c-stepper {
+	    align-items: center;
+	}
+	.c-stepper__number {
+	    font-size: 15px;
+	    color: white;
+	    height: 40px;
+	    width: 40px;
+	    border-radius: 50%;
+	    align-items: center;
+	    justify-content: center;
+	    margin: 0px 4px;
+	}
+	.c-stepper__number--current {
+	    background: var(--blue);
+	    color: white;
+	}
+	.c-stepper__number--active {
+	    background: var(--green);
+	    color: white;
+	}
+	.c-stepper__number--inactive {
+	    background: var(--light-grey);
+	    color: white;
+	}
+	.c-stepper__title--active {
+	    color: var(--dark-blue);
+	    padding: 0px 4px;
+	}
+	.c-stepper__title--inactive {
+	    color: var(--light-grey);
+	    padding: 0px 4px;
+	}
+	.c-stepper__separator--active {
+	    padding: 0px 4px;
+	    color: var(--blue);
+	}
+	.c-stepper__separator--inactive {
+	    padding: 0px 4px;
+	    color: var(--light-grey);
+	}
 
-div.output_subarea {
-    padding: 0px 0px;   /* Prevent display("style.html") or other "empty" display() from taking up screen space */
-}
+	/* File upload area */
+	.c-upload-area {
+	    background: transparent;
+	    width: 500px;
+	    height: 200px;
+	    position: relative;
+	}
+	.c-upload-area__background,
+	.c-upload-area__overlay {
+	    width: 99% !important;     /*99%, instead of 100%, to avoid overflow*/
+	    height: 99% !important;
+	    background: transparent;
+	    border-radius: 15px;
+	    position: absolute;
+	    top: 0;
+	    left: 0;
+	    align-self: center;
+	}
+	.c-upload-area__background {
+	    color: var(--grey);
+	    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='15' ry='15' stroke='%23757575' stroke-width='2' stroke-dasharray='6%2c 6' stroke-dashoffset='0' stroke-linecap='butt'/%3e%3c/svg%3e") !important;
+	    display: flex;
+	    flex-flow: column nowrap;
+	    align-items: center;
+	    justify-content: center;
+	}
+	.c-upload-area__overlay {
+	    color: transparent;
+	    z-index: 10;
+	}
+	.c-upload-area__uploaded-file-name{
+		display: none;
+	}
+	.c-upload-area__file-uploader {
+		width: 500px;
+		height: 200px;
+		opacity: 0;
+		color: transparent;
+	}
+	.c-upload-area__file-uploader:enabled {
+		cursor: pointer;
+	}
+	.c-upload-area__file-uploader:disabled {
+		cursor: progress;
+	}
 
-div.output_area {
-    justify-content: center !important;     /* Position the component being displayed at the center of the 
-                                               output area */
-}
+	/* Notification */
+	.c-notification {
+		visibility: hidden; /*Hidden by default */
+		min-width: 32%; /* Set a default minimum width */
+		margin-left: -16%; /* Divide value of min-width by 2 */
+		align-items: center;
+		text-align: center; /* Centered text */
+		border-radius: 4px; /* Rounded borders */
+		padding: 12px 20px; /* Padding */
+		position: absolute; /* Sit on top of the application */
+		z-index: 1; /* Add a z-index */
+		left: 50%; /* Center the notification */
+		top: 84px; /* 30px from the bottom */
+	}
+	.c-notification--show {
+		visibility: visible; /* Show the notification */
+		/* Add animation: Take 0.5 seconds to fade in and out the notification. */
+		/* However, delay the fade out process for 2.5 seconds  */
+		-webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s; 
+		animation: fadein 0.5s, fadeout 0.5s 2.5s;
+	}
+	.c-notification--success {
+		background: var(--alert-green)
+	}
+	.c-notification--warning {
+		background: var(--alert-yellow)
+	}
+	.c-notification--error{
+		background: var(--alert-red)
+	}
+	.c-notification--info{
+		background: var(--alert-blue)
+	}
+	/* Animations to fade the notification in and out */
+	@-webkit-keyframes fadein {
+	from {top: 84px; opacity: 0;}
+	to {top: 84px; opacity: 1;}
+	}
+	@keyframes fadein {
+	from {top: 84px; opacity: 0;}
+	to {top: 84px; opacity: 1;}
+	}
+	@-webkit-keyframes fadeout {
+	from {top: 84px; opacity: 1;}
+	to {top: 84px; opacity: 0;}
+	}
+	@keyframes fadeout {
+	from {top: 84px; opacity: 1;}
+	to {top: 84px; opacity: 0;}
+	}
 
-.widget-box {
-    height: 
-}
-
-.widget-html-content {
-    /* These attributes were unset because they mess up flex stylings for ui.HTML components */
-    align-self: unset !important;       
-    flex-shrink: unset !important;
-    flex-grow: unset !important;
-}
-
-/*The following modification were made by the scsa project, which this project is based on*/
-
-.widget-select > select {
-    font-family: monospace !important;
-}
-/* Cause plotly to display "modebar" */
-.container {
-    min-width: 1200px !important;
-}
-
-.jupyter-widgets.widget-tab > .p-TabBar .p-TabBar-tab {
-    flex: 0 1 300px
-}
-.p-Collapse-header {
-    color: white !important;
-    background-color: steelblue !important;
-    padding-top: 3px;
-    padding-bottom: 3px;
-}
-.p-TabBar-tabLabel {
-    font-weight: bold !important;
-    color: steelblue !important;
-    margin-top: 1em !important;
-    margin-bottom: 1em !important;
-}
-.widget-label {
-    text-align: left !important;
-}
-p {
-    line-height: 1.2em;
-    margin-bottom: 1em;
-}
-/* Avoid output scrollbars (sub-windowing) */
-.output_wrapper, .output {
-    height: auto !important;
-    max-height: 99999px;
-}
-.output_scroll {
-    box-shadow: none !important;
-}
-#site {
-    height: 100% !important;
-}
-.prompt {
-    min-width: 1px !important; /* Collapse left margin */
-}
-pre {
-    user-select: all;
-}
 </style>
