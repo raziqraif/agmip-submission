@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Union  # Delay the evaluation of undefined types
+from threading import Timer
 
 import ipywidgets as ui
 from IPython.core.display import display
@@ -10,10 +11,65 @@ DARK_BLUE = "#1E3A8A"
 LIGHT_GREY = "#D3D3D3"
 
 
+class Icon:
+    """Namespace for icon constants"""
+
+    WARNING = ui.HTML(
+        """
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-exclamation-triangle" viewBox="0 0 18 18"
+            style="color: black; margin-right: 4px;" 
+        >
+            <path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.146.146 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.163.163 0 0 1-.054.06.116.116 0 0 1-.066.017H1.146a.115.115 0 0 1-.066-.017.163.163 0 0 1-.054-.06.176.176 0 0 1 .002-.183L7.884 2.073a.147.147 0 0 1 .054-.057zm1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566z"/>
+            <path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995z"/>
+        </svg>
+        """
+    )
+    ERROR = ui.HTML(
+        """
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-exclamation-triangle" viewBox="0 0 18 18"
+            style="color: white; margin-right: 4px;" 
+        >
+            <path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.146.146 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.163.163 0 0 1-.054.06.116.116 0 0 1-.066.017H1.146a.115.115 0 0 1-.066-.017.163.163 0 0 1-.054-.06.176.176 0 0 1 .002-.183L7.884 2.073a.147.147 0 0 1 .054-.057zm1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566z"/>
+            <path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995z"/>
+        </svg>
+        """
+    )
+    INFO = ERROR
+    SUCCESS = ui.HTML(
+        """
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-check-circle" viewBox="0 0 18 18"
+            style="color: white; margin-right: 4px;" 
+        >
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+            <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+        </svg>
+        """
+    )
+
+
+class Notification:
+    """Namespace for notification variants"""
+
+    ERROR = "error"
+    SUCCESS = "success"
+    WARNING = "warning"
+    INFO = "info"
+
+    _VARIANTS = [ERROR, SUCCESS, WARNING, INFO]
+
+
 class CSS:
     """Namespace for CSS classes declared in style.html"""
 
     DISPLAY_MOD__NONE = "c-display-mod--none"
+    COLOR_MOD__WHITE = "c-color-mod--white"
+    COLOR_MOD__BLACK = "c-color-mod--black"
+    NOTIFICATION = "c-notification"
+    NOTIFICATION__SHOW = "c-notification--show"
+    NOTIFICATION__SUCCESS = "c-notification--success"
+    NOTIFICATION__INFO = "c-notification--info"
+    NOTIFICATION__WARNING = "c-notification--warning"
+    NOTIFICATION__ERROR = "c-notification--error"
 
 
 # pyright: reportGeneralTypeIssues=false
@@ -35,9 +91,11 @@ class View:
         self.plausibility_checking_page: ui.Box
 
         self.stepper: ui.Box
+        self.notification: ui.Box
+        self.notification_timer: Timer = Timer(0.0, None)
 
         # Widgets in file upload page that needs to be manipulated
-        self.ua_file_label: ui.Label        # ua here stands for "upload area"
+        self.ua_file_label: ui.Label  # ua here stands for "upload area"
         self.uploaded_file_name_box: ui.Box
         self.next_button: ui.Button
 
@@ -49,38 +107,12 @@ class View:
     def display(self) -> None:
         """Build and show notebook user interface"""
         app_container = self.build()
-
         display(HTML(filename="style.html"))
         display(app_container)
 
         # Embed app model in Javascript context
         display(HTML(f"<script> APP_MODEL = {self.model.javascript_app_model()}</script>"))
         display(HTML(filename="script.html"))
-
-    def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
-        """
-        File upload page has two states:
-        1) when file was uploaded
-        2) when file was not uploaded yet / uploaded file is removed
-
-        To display state 2), pass a None as argument
-        """
-        children: tuple(ui.HTML, ui.Box) = self.uploaded_file_name_box.children
-        no_file_uploaded_widget = children[0]
-        file_uploaded_widget = children[1]
-
-        if uploaded_file_name:
-            no_file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
-            file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
-            children: tuple(ui.Label, ui.Button) = file_uploaded_widget.children
-            label_widget = children[0]
-            label_widget.value = uploaded_file_name
-            self.next_button.disabled = False
-        else:
-            file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
-            no_file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
-            self.ua_file_label.value = ""
-            self.next_button.disabled = True
 
     def build(self) -> ui.Box:
         """Build the application"""
@@ -90,6 +122,10 @@ class View:
         PAGE_TITLES = ["File Upload", "Data Specification", "Integrity Checking", "Plausibility Checking"]
         NUM_OF_PAGES = 4
 
+        # Create notification widget
+        notification_text = ui.Label("")
+        self.notification = ui.HBox(children=(Icon.SUCCESS, notification_text))
+        self.notification.add_class("c-notification")
         # Create header bar
         header_bar = ui.HTML(APP_TITLE)
         header_bar.add_class("c-header-bar")
@@ -121,6 +157,7 @@ class View:
 
         app = ui.VBox(  # app container
             [
+                self.notification,
                 header_bar,  # -header bar
                 ui.VBox(  # -body container
                     children=[self.stepper, self.page_container],  # --stepper, page container
@@ -130,6 +167,73 @@ class View:
         )
         app.add_class("app-container")
         return app
+
+    counter = 0
+
+    def show_notification(self, variant: str, content: str) -> None:
+        """Display a notification to the user"""
+        assert variant in Notification._VARIANTS
+
+        # Cancel existing timer if it's still running
+        self.notification_timer.cancel()
+
+        # Reset the notification's DOM classes
+        # This is important because we implement a clickaway listener in JS which will remove a DOM class from the
+        # notification view without informing the notification model. Doing this will reset the DOM classes that the
+        # notification models in both server-side & client-side are maintaining
+        self.notification._dom_classes = (CSS.NOTIFICATION,)
+
+        # Update notification content
+        notification_text = self.notification.children[1]
+        assert isinstance(notification_text, ui.Label)
+        notification_text.value = content
+
+        # Update notification visibility & style
+        if variant == Notification.SUCCESS:
+            self.notification.children = (Icon.SUCCESS, notification_text)
+            self.notification._dom_classes = (CSS.NOTIFICATION, CSS.NOTIFICATION__SHOW, CSS.NOTIFICATION__SUCCESS)
+            notification_text._dom_classes = (CSS.COLOR_MOD__WHITE,)
+        elif variant == Notification.INFO:
+            self.notification.children = (Icon.INFO, notification_text)
+            self.notification._dom_classes = (CSS.NOTIFICATION, CSS.NOTIFICATION__SHOW, CSS.NOTIFICATION__INFO)
+            notification_text._dom_classes = (CSS.COLOR_MOD__WHITE,)
+        elif variant == Notification.WARNING:
+            self.notification.children = (Icon.WARNING, notification_text)
+            self.notification._dom_classes = (CSS.NOTIFICATION, CSS.NOTIFICATION__SHOW, CSS.NOTIFICATION__WARNING)
+            notification_text._dom_classes = (CSS.COLOR_MOD__BLACK,)
+        elif variant == Notification.ERROR:
+            self.notification.children = (Icon.ERROR, notification_text)
+            self.notification._dom_classes = (CSS.NOTIFICATION, CSS.NOTIFICATION__SHOW, CSS.NOTIFICATION__ERROR)
+            notification_text._dom_classes = (CSS.COLOR_MOD__WHITE,)
+        else:
+            assert len("Variant does not exists") == 0
+
+        # Create a timer to hide notification after X seconds
+        self.notification_timer = Timer(3.0, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
+        self.notification_timer.start()
+
+    def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
+        """
+        File upload page has two states:
+        1) when file was uploaded
+        2) when file was not uploaded yet / uploaded file is removed
+
+        To display state 2), pass a None as argument
+        """
+        children: tuple(ui.HTML, ui.Box) = self.uploaded_file_name_box.children
+        no_file_uploaded_widget = children[0]
+        file_uploaded_widget = children[1]
+
+        if uploaded_file_name:
+            no_file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
+            file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
+            children: tuple(ui.Label, ui.Button) = file_uploaded_widget.children
+            label_widget = children[0]
+            label_widget.value = uploaded_file_name
+        else:
+            file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
+            no_file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
+            self.ua_file_label.value = ""
 
     def _build_file_upload_page(self) -> ui.Box:
         """Build the file upload page"""
@@ -155,7 +259,7 @@ class View:
             """
         )
         ua_overlay.add_class("c-upload-area__overlay")
-        self.ua_file_label = ui.Label("No file uploaded")
+        self.ua_file_label = ui.Label("")
         self.ua_file_label.add_class("c-upload-area__uploaded-file-name")
         self.ua_file_label.observe(self.ctrl.onchange_ua_file_label, "value")
         self.model.update_javascript_app_model("ua_file_label_model_id", self.ua_file_label.model_id)
@@ -169,7 +273,7 @@ class View:
         # -Create snackbar to tell the user that no file has been uploaded
         no_file_uploaded = ui.HTML(
             '<div style="width: 365px; line-height: 36px; border-radius: 4px; padding: 0px 16px;'
-            ' background: var(--light-grey); color: white;"> No files uploaded </div>'
+            ' background: var(--light-grey); color: white;"> No file uploaded </div>'
         )
         # -Create snackbar to show the uploaded file's name
         uploaded_file_name = ui.Label("<filename>")
@@ -203,9 +307,9 @@ class View:
             """
         )
         self.next_button = ui.Button(
-            description="Next", disabled=True, layout=ui.Layout(align_self="flex-end", justify_self="flex-end")
+            description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end")
         )
-
+        self.next_button.on_click(self.ctrl.onclick_next_from_page_1)
         return ui.VBox(  # page
             [
                 ui.VBox(  # -container to fill up the space above navigation button area

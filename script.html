@@ -1,9 +1,25 @@
 <script>
-	// Assert APP_MODEL properties
+	/* Assert APP_MODEL properties */
+
 	console.assert(window.APP_MODEL.hasOwnProperty('ua_file_label_model_id'))
 	console.assert(window.APP_MODEL.hasOwnProperty('nbserver_auth_token'))
+
+	/* Clickaway listener for notification */
+
+	document.addEventListener('click', function(event) {
+		notification = document.getElementsByClassName('c-notification')[0]
+		// Ignore if user clicks inside notification
+		if (notification.contains(event.target)) {
+			return;
+		}
+		// Hide the notification
+		// Note that doing this will only modify the notification view, without changing the notification model. The 
+		// model will still think that the removed CSS class is present in the view
+		// We will reset the model's CSS classes in the server-side the next time the notification is being shown again.
+		notification.classList.remove("c-notification--show")
+	})
 	
-	/* Helper functions */
+	/* Helper functions for file upload */
 
 	function _breakFileStringIntoChunks(fileString) {
 		let startIndex = 0;

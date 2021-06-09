@@ -59,3 +59,10 @@ class Model:
     def javascript_app_model(self) -> str:
         """Get the string representation of the app model in Javascript"""
         return str(vars(self._js_app_model))
+
+    def remove_file(self, file_name: str) -> None:
+        """Remove uploaded file from the upload directory"""
+        assert len(file_name) > 0
+        file_path = self.UPLOAD_DIR / Path(file_name)
+        assert file_path.is_file()
+        file_path.unlink()
