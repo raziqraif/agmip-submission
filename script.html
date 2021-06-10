@@ -9,7 +9,7 @@
 	document.addEventListener('click', function(event) {
 		notification = document.getElementsByClassName('c-notification')[0]
 		// Ignore if user clicks inside notification
-		if (notification.contains(event.target)) {
+		if (notification === undefined || notification.contains(event.target)) {
 			return;
 		}
 		// Hide the notification
@@ -32,6 +32,7 @@
 			chunks.push(fileString.slice(startIndex, newStartIndex));
 			startIndex = newStartIndex;
 		}
+		if (chunks.length == 0) chunks = [""]
 		return chunks;
 	}
 
@@ -57,7 +58,7 @@
 			type: "file",
 		};
 		if (chunks.length > 1) payload.chunk = chunk_number;
-
+		
 		return { url, payload };
 	}
 
@@ -84,7 +85,8 @@
 		 */
 
 		var file = this.files[0];
-		if (!file) return;
+		console.log(this.files)
+		console.log({file})
 
 		this.disabled = true;
 		document.body.classList.add("c-cursor-mod--progress")
