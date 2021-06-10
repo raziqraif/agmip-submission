@@ -31,15 +31,15 @@ class Controller:
         """Value of the hidden file label in upload area (ua) changed"""
         CSV = ".csv"
         file_name: str = change["new"]
-        self._uploaded_filename = file_name
-
         if len(file_name) == 0:  # This change was triggered by View's internal operation, so no View update is needed
             return
+
+        self._uploaded_filename = file_name
         if file_name.endswith(CSV):
-            self.view.show_notification(Notification.SUCCESS, "File uploaded successfully")
+            self.view.show_notification(Notification.SUCCESS, Notification.FILE_UPLOAD_SUCCESS)
             self.view.update_file_upload_page(file_name)
         else:
-            self.view.show_notification(Notification.ERROR, "File format must be CSV")
+            self.view.show_notification(Notification.ERROR, Notification.INVALID_FILE_FORMAT)
             self.model.remove_file(file_name)
             self._uploaded_filename = ""
 
@@ -55,4 +55,4 @@ class Controller:
     def onclick_next_from_page_1(self, widget: ui.Button) -> None:
         """'Next' button on the file upload page was clicked"""
         if len(self._uploaded_filename) == 0:
-            self.view.show_notification(Notification.INFO, "Please upload a CSV file first")
+            self.view.show_notification(Notification.INFO, Notification.PLEASE_UPLOAD)

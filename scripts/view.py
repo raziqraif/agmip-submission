@@ -54,13 +54,17 @@ class Notification:
     SUCCESS = "success"
     WARNING = "warning"
     INFO = "info"
-
     _VARIANTS = [ERROR, SUCCESS, WARNING, INFO]
+
+    FILE_UPLOAD_SUCCESS = "File uploaded successfully"
+    INVALID_FILE_FORMAT = "File format must be CSV"
+    PLEASE_UPLOAD = "Please upload a CSV file first"
 
 
 class CSS:
     """Namespace for CSS classes declared in style.html"""
 
+    APP = "c-app-container"
     DISPLAY_MOD__NONE = "c-display-mod--none"
     COLOR_MOD__WHITE = "c-color-mod--white"
     COLOR_MOD__BLACK = "c-color-mod--black"
@@ -70,6 +74,9 @@ class CSS:
     NOTIFICATION__INFO = "c-notification--info"
     NOTIFICATION__WARNING = "c-notification--warning"
     NOTIFICATION__ERROR = "c-notification--error"
+    FILENAME_SNACKBAR = "c-filename-snackbar"
+    FILENAME_SNACKBAR__TEXT = "c-filename-snackbar__text"
+    UA_FILE_UPLOADER = "c-upload-area__file-uploader"
 
 
 # pyright: reportGeneralTypeIssues=false
@@ -232,7 +239,9 @@ class View:
         else:
             file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
             no_file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
-            self.ua_file_label.value = ""
+
+        # Reset the hidden filename value
+        self.ua_file_label.value = ""
 
     def _build_file_upload_page(self) -> ui.Box:
         """Build the file upload page"""
@@ -305,9 +314,7 @@ class View:
                 </a>
             """
         )
-        next_button = ui.Button(
-            description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end")
-        )
+        next_button = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_button.on_click(self.ctrl.onclick_next_from_page_1)
         return ui.VBox(  # page
             [
