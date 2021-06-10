@@ -164,7 +164,7 @@ class View:
                 ),
             ],
         )
-        app.add_class("app-container")
+        app.add_class("c-app-container")
         return app
 
     counter = 0
@@ -275,8 +275,8 @@ class View:
             ' background: var(--light-grey); color: white;"> No file uploaded </div>'
         )
         # -Create snackbar to show the uploaded file's name
-        uploaded_file_name = ui.Label("<filename>")
-        uploaded_file_name.add_class("c-snackbar__text")
+        uploaded_file_name = ui.Label("")
+        uploaded_file_name.add_class("c-filename-snackbar__text")
         x_button = ui.Button(icon="times")
         x_button.add_class("c-icon-button")
         x_button.on_click(self.ctrl.onclick_remove_file)
@@ -286,7 +286,7 @@ class View:
                 x_button,
             ],
         )
-        uploaded_file_snackbar.add_class("c-snackbar")
+        uploaded_file_snackbar.add_class("c-filename-snackbar")
         uploaded_file_snackbar.add_class("c-display-mod--none")  # By default this snackbar is hidden
         # -Create the box
         self.uploaded_file_name_box = ui.Box([no_file_uploaded, uploaded_file_snackbar])
