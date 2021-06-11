@@ -32,7 +32,11 @@ def invalid_file_ext_spath() -> str:
 
 class TestFileUploadSuite:
     def setup_method(self, method):
-        self.driver = webdriver.Chrome()
+        options = webdriver.ChromeOptions() 
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--headless")
+        self.driver = webdriver.Chrome(options=options)
         self.wait = WebDriverWait(self.driver, 10)  # Set explicit wait time to 10 seconds
         self.driver.implicitly_wait(10)  # Set implicit wait time to 10 seconds
         self.driver.get(nb_url())

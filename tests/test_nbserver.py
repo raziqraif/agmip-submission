@@ -22,6 +22,7 @@ def nbserver_raw_info() -> Optional[str]:
     output: str = stream.read()
 
     if "http" not in output:  # No server is running
+        print("running servers =", output)
         return None
 
     # output -> NBSERVER_RAW_INFO
@@ -77,6 +78,10 @@ def nb_url() -> Optional[str]:
     return None
 
 
+def test_nbserver_running():
+    assert nbserver_raw_info() is not None
+
+
 def test_nbserver_launch_dirpath(nbserver_launch_dirpath: Path) -> None:
     """
     If notebook server is not launched from proj directory, file upload will fail
@@ -84,15 +89,14 @@ def test_nbserver_launch_dirpath(nbserver_launch_dirpath: Path) -> None:
 
     project_dirpath: Path = Path(__file__).parent.parent
     if nbserver_launch_dirpath is None:  # No server is running
-        return
+        assert False
     assert nbserver_launch_dirpath == project_dirpath
 
 
 def test_jupyter_file_upload_api(nbserver_baseurl_f: str, nbserver_token_f: str) -> None:
     # Test file upload method that we're using in the Javascript env
-
     if nbserver_baseurl_f is None:  # No server is running
-        return
+        assert False
 
     # Create new file
     NEWFILE_NAME = "abcdefghij123"
