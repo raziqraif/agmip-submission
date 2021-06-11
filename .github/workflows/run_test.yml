@@ -1,12 +1,10 @@
-name: Main tests
+name: Run tests
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 5
 
     steps:
     - uses: actions/checkout@v2
@@ -18,23 +16,32 @@ jobs:
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         echo $CONDA/bin >> $GITHUB_PATH
+        conda info
+        conda env list
     - name: Set up cache
       uses: actions/cache@v2
+      id: conda
+      env:
+        CACHE_NUMBER: 2
       with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ hashFiles('environment.yml') }}
-    - name: Install dependencies
+        path: |
+          # ${{ env.pythonLocation }}
+          # ~/.cache/pip
+          /usr/share/miniconda/envs/agmip
+        key: ${{ runner.os }}-${{ hashFiles('environment.yml') }}-v${{ env.CACHE_NUMBER }}
+    - name: Create or update conda environment when there's a cache miss
+      if: steps.conda.outputs.cache-hit != 'true'
       run: |
-        conda env update --file environment.yml --name base
+        conda env create -f environment.yml -n agmip  || conda env update -f environment.yml -n agmip
     - name: Prepare selenium 
-      uses: nanasess/setup-chromedriver@master
+      uses: nanasess/setup-chromedriver@v1.0.5
     - name: Run headless chrome driver for selenium
       run: |
         chromedriver --url-base=/wd/hub &
     - name: Run Jupyter notebook server
       run: |
-        jupyter notebook &
-        sleep 3 
+        conda run -n agmip jupyter notebook &
     - name: Test with pytest
       run: |
-        pytest
+        conda run -n agmip pytest tests/test_nbserver.py
+

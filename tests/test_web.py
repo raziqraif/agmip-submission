@@ -4,7 +4,7 @@ import sys
 import pytest
 from selenium import webdriver
 import selenium
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions
@@ -34,7 +34,7 @@ def invalid_file_ext_spath() -> str:
 
 class TestFileUploadSuite:
     def setup_method(self, method):
-        # Note: With the current CI environment, chrome needs to be in headless mode before pushing to github 
+        # Note: With the current CI environment, chrome needs to be in headless mode before pushing to github
         options = webdriver.ChromeOptions()
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
@@ -54,10 +54,10 @@ class TestFileUploadSuite:
         self.driver.find_element_by_id("kernellink").click()
         self.driver.find_element_by_link_text("Restart & Run All").click()
         try:
-            confirmation_button_locator = (By.CLASS_NAME, "btn-danger") 
+            confirmation_button_locator = (By.CLASS_NAME, "btn-danger")
             self.wait.until(expected_conditions.visibility_of_element_located(confirmation_button_locator))
             self.driver.find_element(*confirmation_button_locator).click()
-        except NoSuchElementException:
+        except (NoSuchElementException, TimeoutException) as e:
             print("Problem locating confirmation button for kernel restart")
 
     def _test_notification_appear_correctly(self, content: str):
