@@ -30,6 +30,10 @@ class JSAppModel:
         # This label is actually hidden and only used for communication between js & python.
         self.ua_file_label_model_id: str = ""
 
+    def serialize(self) -> str:
+        """Serialize self into a format that can be embedded into the Javascript context"""
+        return str(vars(self))
+
 
 class Model:
     UPLOAD_DIR: Path = Path(__name__).parent.parent / Path("uploads")  # <PROJECT_DIR>/uploads
@@ -42,7 +46,7 @@ class Model:
         self.view: View
         self.controller: Controller
 
-        self._js_app_model = JSAppModel()
+        self.javascript_model = JSAppModel()
 
         self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -53,12 +57,12 @@ class Model:
 
     def update_javascript_app_model(self, attr_name: str, attr_value: str) -> None:
         """Update an attribute of the app model in Javascript"""
-        assert attr_name in vars(self._js_app_model).keys()
-        setattr(self._js_app_model, attr_name, attr_value)
+        assert attr_name in vars(self.javascript_model).keys()
+        setattr(self.javascript_model, attr_name, attr_value)
 
-    def javascript_app_model(self) -> str:
+    def javascript_model(self) -> str:
         """Get the string representation of the app model in Javascript"""
-        return str(vars(self._js_app_model))
+        return str(vars(self.javascript_model))
 
     def remove_file(self, file_name: str) -> None:
         """Remove uploaded file from the upload directory"""

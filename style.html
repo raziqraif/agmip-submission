@@ -138,7 +138,7 @@
 	***/
 
 	/* App */
-	.app-container {
+	.c-app-container {
 		width: 100%;
 		height: 912px;
 		border: 1px solid var(--dark-blue);
@@ -146,7 +146,7 @@
 	}
 
 	/* Cursor modification */	
-	.c-cursor-mod--progress * {				
+	.c-cursor-mod--progress * {
 		cursor: progress !important;
 	}
 	
@@ -162,9 +162,12 @@
 	.c-color-mod--black{
 		color: black;
 	}
+	.c-color-mode--grey {
+	    color: var(--grey);
+	}
 
-	/* Snackbar */
-	.c-snackbar {
+	/* Snackbar to show the name of the uploaded file */
+	.c-filename-snackbar {
 	    width: 365px;
 	    height: 36px;
 	    padding: 0px 6px 0px 16px;
@@ -176,7 +179,7 @@
 	    background: var(--light-blue);
 	    color: white;
 	}
-	.c-snackbar__text {
+	.c-filename-snackbar__text {
 	    color: white;
 	}
 
@@ -198,17 +201,6 @@
 	}
 	.c-icon-button:active {
 	    color: var(--blue) !important;
-	}
-
-	/* Text colors */
-	.c-text-light-grey {
-	    color: var(--grey);
-	}
-	.c-text-grey {
-	    color: var(--grey);
-	}
-	.c-text-white{
-	    color: white);
 	}
 
 	/* Header bar */
@@ -295,7 +287,7 @@
 	    color: transparent;
 	    z-index: 10;
 	}
-	.c-upload-area__uploaded-file-name{
+	.c-upload-area__file-label {
 		display: none;
 	}
 	.c-upload-area__file-uploader {

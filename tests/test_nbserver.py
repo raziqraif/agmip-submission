@@ -8,7 +8,6 @@ from pathlib import Path
 import requests
 
 
-@pytest.fixture
 def nbserver_raw_info() -> Optional[str]:
     """
     Format:
@@ -22,8 +21,8 @@ def nbserver_raw_info() -> Optional[str]:
     # output -> <title>:\nNBSERVER_RAW_INFO\nNBSERVER_RAW_INFO\n...
     output: str = stream.read()
 
-    print("command output =", output)
     if "http" not in output:  # No server is running
+        print("running servers =", output)
         return None
 
     # output -> NBSERVER_RAW_INFO
@@ -31,32 +30,56 @@ def nbserver_raw_info() -> Optional[str]:
     return output
 
 
-@pytest.fixture
-def nbserver_url(nbserver_raw_info: str) -> Optional[str]:
-    if nbserver_raw_info:
-        return nbserver_raw_info.split(" :: ")[0]
+def nbserver_url() -> Optional[str]:
+    raw_info = nbserver_raw_info()
+    if raw_info:
+        return raw_info.split(" :: ")[0]
+    return None  # No server is running
+
+
+def nbserver_baseurl() -> Optional[str]:
+    server_full_url = nbserver_url()
+    if server_full_url:
+        return server_full_url.split("/?token=")[0]
     return None  # No server is running
 
 
 @pytest.fixture
-def nbserver_baseurl(nbserver_url: str) -> Optional[str]:
-    if nbserver_url:
-        return nbserver_url.split("/?token=")[0]
+def nbserver_baseurl_f() -> Optional[str]:
+    return nbserver_baseurl()
+
+
+def nbserver_token() -> Optional[str]:
+    server_full_url = nbserver_url()
+    if server_full_url:
+        return server_full_url.split("/?token=")[1]
     return None  # No server is running
 
 
 @pytest.fixture
-def nbserver_token(nbserver_url: str) -> Optional[str]:
-    if nbserver_url:
-        return nbserver_url.split("/?token=")[1]
-    return None  # No server is running
+def nbserver_token_f() -> Optional[str]:
+    return nbserver_token()
 
 
 @pytest.fixture
-def nbserver_launch_dirpath(nbserver_raw_info: str) -> Optional[Path]:
-    if nbserver_raw_info:
-        return Path(nbserver_raw_info.split(" :: ")[1])
+def nbserver_launch_dirpath() -> Optional[Path]:
+    raw_info = nbserver_raw_info()
+    if raw_info:
+        return Path(raw_info.split(" :: ")[1])
     return None
+
+
+def nb_url() -> Optional[str]:
+    server_baseurl = nbserver_baseurl()
+    server_token = nbserver_token()
+    if server_baseurl and server_token:
+        NOTEBOOK_TITLE = "agmip-submission.ipynb"
+        return server_baseurl + "/notebooks/" + NOTEBOOK_TITLE + "?token=" + server_token
+    return None
+
+
+def test_nbserver_running():
+    assert nbserver_raw_info() is not None
 
 
 def test_nbserver_launch_dirpath(nbserver_launch_dirpath: Path) -> None:
@@ -66,15 +89,14 @@ def test_nbserver_launch_dirpath(nbserver_launch_dirpath: Path) -> None:
 
     project_dirpath: Path = Path(__file__).parent.parent
     if nbserver_launch_dirpath is None:  # No server is running
-        return
+        assert False
     assert nbserver_launch_dirpath == project_dirpath
 
 
-def test_jupyter_file_upload_api(nbserver_baseurl: str, nbserver_token: str) -> None:
+def test_jupyter_file_upload_api(nbserver_baseurl_f: str, nbserver_token_f: str) -> None:
     # Test file upload method that we're using in the Javascript env
-
-    if nbserver_baseurl is None:  # No server is running
-        return
+    if nbserver_baseurl_f is None:  # No server is running
+        assert False
 
     # Create new file
     NEWFILE_NAME = "abcdefghij123"
@@ -93,10 +115,10 @@ def test_jupyter_file_upload_api(nbserver_baseurl: str, nbserver_token: str) -> 
 
     # Upload file
     fileupload_dest = "uploads/" + NEWFILE_NAME
-    url = nbserver_baseurl + "/api/contents/" + fileupload_dest
+    url = nbserver_baseurl_f + "/api/contents/" + fileupload_dest
     print("url =", url)
     headers = {}
-    headers["authorization"] = "token " + nbserver_token
+    headers["authorization"] = "token " + nbserver_token_f
     file_content = newfile.read()
     file_content = file_content.encode("ascii")
     base64_file_content = base64.b64encode(file_content)

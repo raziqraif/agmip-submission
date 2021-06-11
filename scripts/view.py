@@ -1,4 +1,5 @@
 from __future__ import annotations
+from scripts.model import JSAppModel
 from typing import Union  # Delay the evaluation of undefined types
 from threading import Timer
 
@@ -12,7 +13,7 @@ LIGHT_GREY = "#D3D3D3"
 
 
 class Icon:
-    """Namespace for icon constants"""
+    """Namespace for icon html objects"""
 
     WARNING = ui.HTML(
         """
@@ -51,25 +52,48 @@ class Notification:
     """Namespace for notification variants"""
 
     ERROR = "error"
+    INFO = "info"
     SUCCESS = "success"
     WARNING = "warning"
-    INFO = "info"
+    _VARIANTS = [ERROR, INFO, SUCCESS, WARNING]
 
-    _VARIANTS = [ERROR, SUCCESS, WARNING, INFO]
+    FILE_UPLOAD_SUCCESS = "File uploaded successfully"
+    INVALID_FILE_FORMAT = "File format must be CSV"
+    PLEASE_UPLOAD = "Please upload a CSV file first"
 
 
 class CSS:
-    """Namespace for CSS classes declared in style.html"""
+    """Namespace for CSS classes declared in style.html and used in Python"""
 
-    DISPLAY_MOD__NONE = "c-display-mod--none"
+    APP = "c-app-container"
     COLOR_MOD__WHITE = "c-color-mod--white"
     COLOR_MOD__BLACK = "c-color-mod--black"
+    COLOR_MOD__GREY = "c-color-mod--grey"
+    DISPLAY_MOD__NONE = "c-display-mod--none"
+    FILENAME_SNACKBAR = "c-filename-snackbar"
+    FILENAME_SNACKBAR__TEXT = "c-filename-snackbar__text"
+    HEADER_BAR = "c-header-bar"
+    ICON_BUTTON = "c-icon-button"
     NOTIFICATION = "c-notification"
+    NOTIFICATION__ERROR = "c-notification--error"
+    NOTIFICATION__INFO = "c-notification--info"
     NOTIFICATION__SHOW = "c-notification--show"
     NOTIFICATION__SUCCESS = "c-notification--success"
-    NOTIFICATION__INFO = "c-notification--info"
     NOTIFICATION__WARNING = "c-notification--warning"
-    NOTIFICATION__ERROR = "c-notification--error"
+    STEPPER = "c-stepper"
+    STEPPER__NUMBER = "c-stepper__number"
+    STEPPER__NUMBER__ACTIVE = "c-stepper__number--active"
+    STEPPER__NUMBER__CURRENT = "c-stepper__number--current"
+    STEPPER__NUMBER__INACTIVE = "c-stepper__number--inactive"
+    STEPPER__SEPARATOR__ACTIVE = "c-stepper__separator--active"
+    STEPPER__SEPARATOR__INACTIVE = "c-stepper__separator--inactive"
+    STEPPER__TITLE__ACTIVE = "c-stepper__title--active"
+    STEPPER__TITLE__INACTIVE = "c-stepper__title--inactive"
+    UA = "c-upload-area"
+    UA__BACKGROUND = "c-upload-area__background"
+    UA__FILE_UPLOADER = "c-upload-area__file-uploader"
+    UA__OVERLAY = "c-upload-area__overlay"
+    UA__FILE_LABEL = "c-upload-area__file-label"
 
 
 # pyright: reportGeneralTypeIssues=false
@@ -106,45 +130,43 @@ class View:
     def display(self) -> None:
         """Build and show notebook user interface"""
         app_container = self.build()
+        # Display the appropriate html files and our ipywidgets app
         display(HTML(filename="style.html"))
         display(app_container)
-
-        # Embed app model in Javascript context
-        display(HTML(f"<script> APP_MODEL = {self.model.javascript_app_model()}</script>"))
+        # Embed Javascript app model in Javascript context
+        javascript_model: JSAppModel = self.model.javascript_model
+        display(HTML(f"<script> APP_MODEL = {javascript_model.serialize()}</script>"))
         display(HTML(filename="script.html"))
 
     def build(self) -> ui.Box:
         """Build the application"""
-
         # Constants
         APP_TITLE = "AgMIP Model Submission Pipeline"
         PAGE_TITLES = ["File Upload", "Data Specification", "Integrity Checking", "Plausibility Checking"]
         NUM_OF_PAGES = 4
-
         # Create notification widget
         notification_text = ui.Label("")
         self.notification = ui.HBox(children=(Icon.SUCCESS, notification_text))
-        self.notification.add_class("c-notification")
+        self.notification.add_class(CSS.NOTIFICATION)
         # Create header bar
         header_bar = ui.HTML(APP_TITLE)
-        header_bar.add_class("c-header-bar")
+        header_bar.add_class(CSS.HEADER_BAR)
         # Create stepper
         stepper_children = []
         for i in range(0, NUM_OF_PAGES):
             page_number = ui.HTML(value=str(i + 1))
-            page_number.add_class("c-stepper__number")  # Available modifiers are current, active, inactive
-            page_number.add_class("c-stepper__number--current" if i == 0 else "c-stepper__number--inactive")
+            page_number.add_class(CSS.STEPPER__NUMBER)
+            page_number.add_class(CSS.STEPPER__NUMBER__CURRENT if i == 0 else CSS.STEPPER__NUMBER__INACTIVE)
 
-            page_title = ui.HTML(PAGE_TITLES[i])  # Available modifiers are active, inactive
-            page_title.add_class("c-stepper__title--active" if i == 0 else "c-stepper__title--inactive")
-            separator = ui.HTML("<hr width=48px/>")  # Available modifiers are active, inactive
-            separator.add_class("c-stepper__separator--inactive")
+            page_title = ui.HTML(PAGE_TITLES[i])
+            page_title.add_class(CSS.STEPPER__TITLE__ACTIVE if i == 0 else CSS.STEPPER__TITLE__INACTIVE)
+            separator = ui.HTML("<hr width=48px/>")
+            separator.add_class(CSS.STEPPER__SEPARATOR__INACTIVE)
 
             is_last_page = i == NUM_OF_PAGES - 1
             stepper_children += [page_number, page_title] if is_last_page else [page_number, page_title, separator]
         self.stepper = ui.HBox(stepper_children)
-        self.stepper.add_class("c-stepper")
-
+        self.stepper.add_class(CSS.STEPPER)
         # Create app pages & page container
         self.file_upload_page = self._build_file_upload_page()
         self.data_specification_page = self._build_data_specification_page()
@@ -164,7 +186,7 @@ class View:
                 ),
             ],
         )
-        app.add_class("app-container")
+        app.add_class(CSS.APP)
         return app
 
     counter = 0
@@ -177,8 +199,8 @@ class View:
         self.notification_timer.cancel()
 
         # Reset the notification's DOM classes
-        # This is important because we implement a clickaway listener in JS which will remove a DOM class from the
-        # notification view without informing the notification model. Doing this will reset the DOM classes that the
+        # This is important because we implement a clickaway listener in JS which removes a DOM class from the
+        # notification view without notifying the notification model. Doing this will reset the DOM classes that the
         # notification models in both server-side & client-side are maintaining
         self.notification._dom_classes = (CSS.NOTIFICATION,)
 
@@ -232,7 +254,9 @@ class View:
         else:
             file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
             no_file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
-            self.ua_file_label.value = ""
+
+        # Reset the hidden filename value
+        self.ua_file_label.value = ""
 
     def _build_file_upload_page(self) -> ui.Box:
         """Build the file upload page"""
@@ -248,25 +272,27 @@ class View:
         ua_background = ui.Box(
             [
                 ui.HTML('<img src="upload_file.svg" width="80px" height="800px"/>'),
-                ui.HTML("<div class=c-text-grey>Browse files from your computer</div>"),
+                ui.HTML(f'<div class="{CSS.COLOR_MOD__GREY}"">Browse files from your computer</div>'),
             ]
         )
-        ua_background.add_class("c-upload-area__background")
+        ua_background.add_class(CSS.UA__BACKGROUND)
         ua_overlay = ui.HTML(
-            """
-            <input class="c-upload-area__file-uploader" type="file" title="Click to browse" accept=".csv">
+            f"""
+            <input class="{CSS.UA__FILE_UPLOADER}" type="file" title="Click to browse" accept=".csv">
             """
         )
-        ua_overlay.add_class("c-upload-area__overlay")
+        ua_overlay.add_class(CSS.UA__OVERLAY)
         self.ua_file_label = ui.Label("")
-        self.ua_file_label.add_class("c-upload-area__uploaded-file-name")
+        self.ua_file_label.add_class(CSS.UA__FILE_LABEL)
         self.ua_file_label.observe(self.ctrl.onchange_ua_file_label, "value")
-        self.model.update_javascript_app_model("ua_file_label_model_id", self.ua_file_label.model_id)
+        # Store the model id of file label in the js model (so that the label can be manipulated within js context)
+        javascript_model: JSAppModel = self.model.javascript_model
+        javascript_model.ua_file_label_model_id = self.ua_file_label.model_id
         upload_area = ui.Box(
             [ua_background, ua_overlay, self.ua_file_label],
             layout=ui.Layout(margin="32px 0px"),
         )
-        upload_area._dom_classes = ["c-upload-area"]
+        upload_area._dom_classes = [CSS.UA]
 
         # Create a box to show that there's no file uploaded or to show the the uploaded file's name
         # -Create snackbar to tell the user that no file has been uploaded
@@ -275,10 +301,10 @@ class View:
             ' background: var(--light-grey); color: white;"> No file uploaded </div>'
         )
         # -Create snackbar to show the uploaded file's name
-        uploaded_file_name = ui.Label("<filename>")
-        uploaded_file_name.add_class("c-snackbar__text")
+        uploaded_file_name = ui.Label("")
+        uploaded_file_name.add_class(CSS.FILENAME_SNACKBAR__TEXT)
         x_button = ui.Button(icon="times")
-        x_button.add_class("c-icon-button")
+        x_button.add_class(CSS.ICON_BUTTON)
         x_button.on_click(self.ctrl.onclick_remove_file)
         uploaded_file_snackbar = ui.Box(
             [
@@ -286,8 +312,8 @@ class View:
                 x_button,
             ],
         )
-        uploaded_file_snackbar.add_class("c-snackbar")
-        uploaded_file_snackbar.add_class("c-display-mod--none")  # By default this snackbar is hidden
+        uploaded_file_snackbar.add_class(CSS.FILENAME_SNACKBAR)
+        uploaded_file_snackbar.add_class(CSS.DISPLAY_MOD__NONE)  # By default this snackbar is hidden
         # -Create the box
         self.uploaded_file_name_box = ui.Box([no_file_uploaded, uploaded_file_snackbar])
 
@@ -305,9 +331,7 @@ class View:
                 </a>
             """
         )
-        next_button = ui.Button(
-            description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end")
-        )
+        next_button = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_button.on_click(self.ctrl.onclick_next_from_page_1)
         return ui.VBox(  # page
             [
