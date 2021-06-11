@@ -12,7 +12,7 @@ LIGHT_GREY = "#D3D3D3"
 
 
 class Icon:
-    """Namespace for icon constants"""
+    """Namespace for icon html objects"""
 
     WARNING = ui.HTML(
         """
@@ -51,10 +51,10 @@ class Notification:
     """Namespace for notification variants"""
 
     ERROR = "error"
+    INFO = "info"
     SUCCESS = "success"
     WARNING = "warning"
-    INFO = "info"
-    _VARIANTS = [ERROR, SUCCESS, WARNING, INFO]
+    _VARIANTS = [ERROR, INFO, SUCCESS, WARNING]
 
     FILE_UPLOAD_SUCCESS = "File uploaded successfully"
     INVALID_FILE_FORMAT = "File format must be CSV"
@@ -62,21 +62,37 @@ class Notification:
 
 
 class CSS:
-    """Namespace for CSS classes declared in style.html"""
+    """Namespace for CSS classes declared in style.html and used in Python"""
 
     APP = "c-app-container"
-    DISPLAY_MOD__NONE = "c-display-mod--none"
     COLOR_MOD__WHITE = "c-color-mod--white"
     COLOR_MOD__BLACK = "c-color-mod--black"
-    NOTIFICATION = "c-notification"
-    NOTIFICATION__SHOW = "c-notification--show"
-    NOTIFICATION__SUCCESS = "c-notification--success"
-    NOTIFICATION__INFO = "c-notification--info"
-    NOTIFICATION__WARNING = "c-notification--warning"
-    NOTIFICATION__ERROR = "c-notification--error"
+    COLOR_MOD__GREY = "c-color-mod--grey"
+    DISPLAY_MOD__NONE = "c-display-mod--none"
     FILENAME_SNACKBAR = "c-filename-snackbar"
     FILENAME_SNACKBAR__TEXT = "c-filename-snackbar__text"
-    UA_FILE_UPLOADER = "c-upload-area__file-uploader"
+    HEADER_BAR = "c-header-bar"
+    ICON_BUTTON = "c-icon-button"
+    NOTIFICATION = "c-notification"
+    NOTIFICATION__ERROR = "c-notification--error"
+    NOTIFICATION__INFO = "c-notification--info"
+    NOTIFICATION__SHOW = "c-notification--show"
+    NOTIFICATION__SUCCESS = "c-notification--success"
+    NOTIFICATION__WARNING = "c-notification--warning"
+    STEPPER = "c-stepper"
+    STEPPER__NUMBER = "c-stepper__number"
+    STEPPER__NUMBER__ACTIVE = "c-stepper__number--active"
+    STEPPER__NUMBER__CURRENT = "c-stepper__number--current"
+    STEPPER__NUMBER__INACTIVE = "c-stepper__number--inactive"
+    STEPPER__SEPARATOR__ACTIVE = "c-stepper__separator--active"
+    STEPPER__SEPARATOR__INACTIVE = "c-stepper__separator--inactive"
+    STEPPER__TITLE__ACTIVE = "c-stepper__title--active"
+    STEPPER__TITLE__INACTIVE = "c-stepper__title--inactive"
+    UA = "c-upload-area"
+    UA__BACKGROUND = "c-upload-area__background"
+    UA__FILE_UPLOADER = "c-upload-area__file-uploader"
+    UA__OVERLAY = "c-upload-area__overlay"
+    UA__FILE_LABEL = "c-upload-area__file-label"
 
 
 # pyright: reportGeneralTypeIssues=false
@@ -131,26 +147,26 @@ class View:
         # Create notification widget
         notification_text = ui.Label("")
         self.notification = ui.HBox(children=(Icon.SUCCESS, notification_text))
-        self.notification.add_class("c-notification")
+        self.notification.add_class(CSS.NOTIFICATION)
         # Create header bar
         header_bar = ui.HTML(APP_TITLE)
-        header_bar.add_class("c-header-bar")
+        header_bar.add_class(CSS.HEADER_BAR)
         # Create stepper
         stepper_children = []
         for i in range(0, NUM_OF_PAGES):
             page_number = ui.HTML(value=str(i + 1))
-            page_number.add_class("c-stepper__number")  # Available modifiers are current, active, inactive
-            page_number.add_class("c-stepper__number--current" if i == 0 else "c-stepper__number--inactive")
+            page_number.add_class(CSS.STEPPER__NUMBER)
+            page_number.add_class(CSS.STEPPER__NUMBER__CURRENT if i == 0 else CSS.STEPPER__NUMBER__INACTIVE)
 
-            page_title = ui.HTML(PAGE_TITLES[i])  # Available modifiers are active, inactive
-            page_title.add_class("c-stepper__title--active" if i == 0 else "c-stepper__title--inactive")
-            separator = ui.HTML("<hr width=48px/>")  # Available modifiers are active, inactive
-            separator.add_class("c-stepper__separator--inactive")
+            page_title = ui.HTML(PAGE_TITLES[i])
+            page_title.add_class(CSS.STEPPER__TITLE__ACTIVE if i == 0 else CSS.STEPPER__TITLE__INACTIVE)
+            separator = ui.HTML("<hr width=48px/>")
+            separator.add_class(CSS.STEPPER__SEPARATOR__INACTIVE)
 
             is_last_page = i == NUM_OF_PAGES - 1
             stepper_children += [page_number, page_title] if is_last_page else [page_number, page_title, separator]
         self.stepper = ui.HBox(stepper_children)
-        self.stepper.add_class("c-stepper")
+        self.stepper.add_class(CSS.STEPPER)
 
         # Create app pages & page container
         self.file_upload_page = self._build_file_upload_page()
@@ -171,7 +187,7 @@ class View:
                 ),
             ],
         )
-        app.add_class("c-app-container")
+        app.add_class(CSS.APP)
         return app
 
     counter = 0
@@ -257,25 +273,25 @@ class View:
         ua_background = ui.Box(
             [
                 ui.HTML('<img src="upload_file.svg" width="80px" height="800px"/>'),
-                ui.HTML("<div class=c-text-grey>Browse files from your computer</div>"),
+                ui.HTML(f'<div class="{CSS.COLOR_MOD__GREY}"">Browse files from your computer</div>'),
             ]
         )
-        ua_background.add_class("c-upload-area__background")
+        ua_background.add_class(CSS.UA__BACKGROUND)
         ua_overlay = ui.HTML(
-            """
-            <input class="c-upload-area__file-uploader" type="file" title="Click to browse" accept=".csv">
+            f"""
+            <input class="{CSS.UA__FILE_UPLOADER}" type="file" title="Click to browse" accept=".csv">
             """
         )
-        ua_overlay.add_class("c-upload-area__overlay")
+        ua_overlay.add_class(CSS.UA__OVERLAY)
         self.ua_file_label = ui.Label("")
-        self.ua_file_label.add_class("c-upload-area__uploaded-file-name")
+        self.ua_file_label.add_class(CSS.UA__FILE_LABEL)
         self.ua_file_label.observe(self.ctrl.onchange_ua_file_label, "value")
         self.model.update_javascript_app_model("ua_file_label_model_id", self.ua_file_label.model_id)
         upload_area = ui.Box(
             [ua_background, ua_overlay, self.ua_file_label],
             layout=ui.Layout(margin="32px 0px"),
         )
-        upload_area._dom_classes = ["c-upload-area"]
+        upload_area._dom_classes = [CSS.UA]
 
         # Create a box to show that there's no file uploaded or to show the the uploaded file's name
         # -Create snackbar to tell the user that no file has been uploaded
@@ -285,9 +301,9 @@ class View:
         )
         # -Create snackbar to show the uploaded file's name
         uploaded_file_name = ui.Label("")
-        uploaded_file_name.add_class("c-filename-snackbar__text")
+        uploaded_file_name.add_class(CSS.FILENAME_SNACKBAR__TEXT)
         x_button = ui.Button(icon="times")
-        x_button.add_class("c-icon-button")
+        x_button.add_class(CSS.ICON_BUTTON)
         x_button.on_click(self.ctrl.onclick_remove_file)
         uploaded_file_snackbar = ui.Box(
             [
@@ -295,8 +311,8 @@ class View:
                 x_button,
             ],
         )
-        uploaded_file_snackbar.add_class("c-filename-snackbar")
-        uploaded_file_snackbar.add_class("c-display-mod--none")  # By default this snackbar is hidden
+        uploaded_file_snackbar.add_class(CSS.FILENAME_SNACKBAR)
+        uploaded_file_snackbar.add_class(CSS.DISPLAY_MOD__NONE)  # By default this snackbar is hidden
         # -Create the box
         self.uploaded_file_name_box = ui.Box([no_file_uploaded, uploaded_file_snackbar])
 

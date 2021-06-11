@@ -146,7 +146,7 @@
 	}
 
 	/* Cursor modification */	
-	.c-cursor-mod--progress * {				
+	.c-cursor-mod--progress * {
 		cursor: progress !important;
 	}
 	
@@ -161,6 +161,9 @@
 	}
 	.c-color-mod--black{
 		color: black;
+	}
+	.c-color-mode--grey {
+	    color: var(--grey);
 	}
 
 	/* Snackbar to show the name of the uploaded file */
@@ -198,17 +201,6 @@
 	}
 	.c-icon-button:active {
 	    color: var(--blue) !important;
-	}
-
-	/* Text colors */
-	.c-text-light-grey {
-	    color: var(--grey);
-	}
-	.c-text-grey {
-	    color: var(--grey);
-	}
-	.c-text-white{
-	    color: white);
 	}
 
 	/* Header bar */
@@ -295,7 +287,7 @@
 	    color: transparent;
 	    z-index: 10;
 	}
-	.c-upload-area__uploaded-file-name{
+	.c-upload-area__file-label {
 		display: none;
 	}
 	.c-upload-area__file-uploader {

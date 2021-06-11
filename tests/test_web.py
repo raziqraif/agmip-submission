@@ -32,6 +32,7 @@ def invalid_file_ext_spath() -> str:
 
 class TestFileUploadSuite:
     def setup_method(self, method):
+        # Note: With the current CI environment, chrome needs to be in headless mode before pushing to github 
         options = webdriver.ChromeOptions()
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
@@ -78,7 +79,7 @@ class TestFileUploadSuite:
     def _test_valid_upload(self, sample_file_spath: str):
         """Test case: upload"""
         # Upload a file
-        self.driver.find_element_by_class_name(CSS.UA_FILE_UPLOADER).send_keys(sample_file_spath)
+        self.driver.find_element_by_class_name(CSS.UA__FILE_UPLOADER).send_keys(sample_file_spath)
         # Wait until file name snackbar IS visible
         filename_snackbar_locator = (By.CLASS_NAME, CSS.FILENAME_SNACKBAR)
         self.wait.until(expected_conditions.visibility_of_element_located(filename_snackbar_locator))
@@ -110,7 +111,7 @@ class TestFileUploadSuite:
     def test_2(self, invalid_file_ext_spath: str) -> None:
         """Test case: upload file with invalid extension > click next"""
         # Upload file
-        self.driver.find_element_by_class_name(CSS.UA_FILE_UPLOADER).send_keys(invalid_file_ext_spath)
+        self.driver.find_element_by_class_name(CSS.UA__FILE_UPLOADER).send_keys(invalid_file_ext_spath)
         self._test_notification_appear_correctly(Notification.INVALID_FILE_FORMAT)
         next_button: WebElement = self.driver.find_element_by_xpath(
             '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[2]/div/div[2]/button'
