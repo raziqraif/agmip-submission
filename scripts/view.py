@@ -1,4 +1,5 @@
 from __future__ import annotations
+from scripts.model import JSAppModel
 from typing import Union  # Delay the evaluation of undefined types
 from threading import Timer
 
@@ -129,21 +130,20 @@ class View:
     def display(self) -> None:
         """Build and show notebook user interface"""
         app_container = self.build()
+        # Display the appropriate html files and our ipywidgets app
         display(HTML(filename="style.html"))
         display(app_container)
-
-        # Embed app model in Javascript context
-        display(HTML(f"<script> APP_MODEL = {self.model.javascript_app_model()}</script>"))
+        # Embed Javascript app model in Javascript context
+        javascript_model: JSAppModel = self.model.javascript_model
+        display(HTML(f"<script> APP_MODEL = {javascript_model.serialize()}</script>"))
         display(HTML(filename="script.html"))
 
     def build(self) -> ui.Box:
         """Build the application"""
-
         # Constants
         APP_TITLE = "AgMIP Model Submission Pipeline"
         PAGE_TITLES = ["File Upload", "Data Specification", "Integrity Checking", "Plausibility Checking"]
         NUM_OF_PAGES = 4
-
         # Create notification widget
         notification_text = ui.Label("")
         self.notification = ui.HBox(children=(Icon.SUCCESS, notification_text))
@@ -167,7 +167,6 @@ class View:
             stepper_children += [page_number, page_title] if is_last_page else [page_number, page_title, separator]
         self.stepper = ui.HBox(stepper_children)
         self.stepper.add_class(CSS.STEPPER)
-
         # Create app pages & page container
         self.file_upload_page = self._build_file_upload_page()
         self.data_specification_page = self._build_data_specification_page()
@@ -200,8 +199,8 @@ class View:
         self.notification_timer.cancel()
 
         # Reset the notification's DOM classes
-        # This is important because we implement a clickaway listener in JS which will remove a DOM class from the
-        # notification view without informing the notification model. Doing this will reset the DOM classes that the
+        # This is important because we implement a clickaway listener in JS which removes a DOM class from the
+        # notification view without notifying the notification model. Doing this will reset the DOM classes that the
         # notification models in both server-side & client-side are maintaining
         self.notification._dom_classes = (CSS.NOTIFICATION,)
 
@@ -286,7 +285,9 @@ class View:
         self.ua_file_label = ui.Label("")
         self.ua_file_label.add_class(CSS.UA__FILE_LABEL)
         self.ua_file_label.observe(self.ctrl.onchange_ua_file_label, "value")
-        self.model.update_javascript_app_model("ua_file_label_model_id", self.ua_file_label.model_id)
+        # Store the model id of file label in the js model (so that the label can be manipulated within js context)
+        javascript_model: JSAppModel = self.model.javascript_model
+        javascript_model.ua_file_label_model_id = self.ua_file_label.model_id
         upload_area = ui.Box(
             [ua_background, ua_overlay, self.ua_file_label],
             layout=ui.Layout(margin="32px 0px"),
