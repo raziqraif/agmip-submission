@@ -32,7 +32,7 @@ def invalid_file_ext_spath() -> str:
 
 class TestFileUploadSuite:
     def setup_method(self, method):
-        options = webdriver.ChromeOptions() 
+        options = webdriver.ChromeOptions()
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--headless")
@@ -50,7 +50,7 @@ class TestFileUploadSuite:
         # Clear output and run all cells
         self.driver.find_element_by_id("kernellink").click()
         self.driver.find_element_by_link_text("Restart & Run All").click()
-        self.driver.find_element_by_xpath("/html/body/div[8]/div/div/div[3]/button[2]").click()
+        self.driver.find_element_by_class_name("btn-danger").click()
 
     def _test_notification_appear_correctly(self, content: str):
         """Test case: <no action>"""
