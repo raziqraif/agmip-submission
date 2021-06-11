@@ -1,9 +1,9 @@
 name: Main tests
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
-  build-linux:
+  build:
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 5
@@ -18,17 +18,23 @@ jobs:
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         echo $CONDA/bin >> $GITHUB_PATH
+    - name: Set up cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ hashFiles('environment.yml') }}
     - name: Install dependencies
       run: |
         conda env update --file environment.yml --name base
-    - name: Prepare selenium
+    - name: Prepare selenium 
       uses: nanasess/setup-chromedriver@master
-    - run: |
+    - name: Run headless chrome driver for selenium
+      run: |
         chromedriver --url-base=/wd/hub &
     - name: Run Jupyter notebook server
       run: |
         jupyter notebook &
-        sleep 5 
+        sleep 3 
     - name: Test with pytest
       run: |
         pytest
