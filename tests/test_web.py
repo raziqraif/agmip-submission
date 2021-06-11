@@ -3,6 +3,8 @@ import sys
 
 import pytest
 from selenium import webdriver
+import selenium
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions
@@ -51,7 +53,12 @@ class TestFileUploadSuite:
         # Clear output and run all cells
         self.driver.find_element_by_id("kernellink").click()
         self.driver.find_element_by_link_text("Restart & Run All").click()
-        self.driver.find_element_by_class_name("btn-danger").click()
+        try:
+            confirmation_button_locator = (By.CLASS_NAME, "btn-danger") 
+            self.wait.until(expected_conditions.visibility_of_element_located(confirmation_button_locator))
+            self.driver.find_element(*confirmation_button_locator).click()
+        except NoSuchElementException:
+            print("Problem locating confirmation button for kernel restart")
 
     def _test_notification_appear_correctly(self, content: str):
         """Test case: <no action>"""
