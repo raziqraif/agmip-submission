@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import sys
 
@@ -58,7 +59,8 @@ class TestFileUploadSuite:
             self.wait.until(expected_conditions.visibility_of_element_located(confirmation_button_locator))
             self.driver.find_element(*confirmation_button_locator).click()
         except (NoSuchElementException, TimeoutException) as e:
-            print("Problem locating confirmation button for kernel restart")
+            logger = logging.getLogger()
+            logger.error(str(e), exc_info=True)
 
     def _test_notification_appear_correctly(self, content: str):
         """Test case: <no action>"""

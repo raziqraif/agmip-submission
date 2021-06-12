@@ -55,15 +55,6 @@ class Model:
         self.view = view
         self.controller = controller
 
-    def update_javascript_app_model(self, attr_name: str, attr_value: str) -> None:
-        """Update an attribute of the app model in Javascript"""
-        assert attr_name in vars(self.javascript_model).keys()
-        setattr(self.javascript_model, attr_name, attr_value)
-
-    def javascript_model(self) -> str:
-        """Get the string representation of the app model in Javascript"""
-        return str(vars(self.javascript_model))
-
     def remove_file(self, file_name: str) -> None:
         """Remove uploaded file from the upload directory"""
         assert len(file_name) > 0

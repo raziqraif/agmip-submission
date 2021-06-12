@@ -16,32 +16,35 @@ jobs:
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         echo $CONDA/bin >> $GITHUB_PATH
-        conda info
-        conda env list
     - name: Set up cache
       uses: actions/cache@v2
-      id: conda
+      id: cache-step 
       env:
         CACHE_NUMBER: 2
       with:
         path: |
-          # ${{ env.pythonLocation }}
-          # ~/.cache/pip
           /usr/share/miniconda/envs/agmip
         key: ${{ runner.os }}-${{ hashFiles('environment.yml') }}-v${{ env.CACHE_NUMBER }}
-    - name: Create or update conda environment when there's a cache miss
-      if: steps.conda.outputs.cache-hit != 'true'
+    - name: Create conda environment when there's a cache miss
+      if: steps.cache-step.outputs.cache-hit != 'true'
       run: |
-        conda env create -f environment.yml -n agmip  || conda env update -f environment.yml -n agmip
+        conda env create -f environment.yml -n agmip
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        conda run -n agmip flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        conda run -n agmip flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
     - name: Prepare selenium 
       uses: nanasess/setup-chromedriver@v1.0.5
     - name: Run headless chrome driver for selenium
       run: |
         chromedriver --url-base=/wd/hub &
-    - name: Run Jupyter notebook server
+    - name: Run notebook server
       run: |
         conda run -n agmip jupyter notebook &
-    - name: Test with pytest
+    - name: Test
       run: |
         conda run -n agmip pytest tests/test_nbserver.py
+        conda run -n agmip pytest tests/test_web.py
 
