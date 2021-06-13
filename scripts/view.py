@@ -1,6 +1,6 @@
 from __future__ import annotations
 from scripts.model import JSAppModel
-from typing import Union  # Delay the evaluation of undefined types
+from typing import Optional, Union  # Delay the evaluation of undefined types
 from threading import Timer
 
 import ipywidgets as ui
@@ -108,11 +108,10 @@ class View:
         self.ctrl: Controller
 
         # Main app's helper widgets
-        self.page_container: ui.Box
-        self.stepper: ui.Box
-        self.notification: ui.Box
+        self.page_container: ui.Box = None
+        self.page_stepper: ui.Box = None
+        self.notification: ui.Box = None
         self.notification_timer: Timer = Timer(0.0, None)
-
         # Widgets in file upload page that needs to be manipulated
         self.ua_file_label: ui.Label  # ua here stands for "upload area"
         self.uploaded_file_name_box: ui.Box
@@ -160,8 +159,8 @@ class View:
 
             is_last_page = i == NUM_OF_PAGES - 1
             stepper_children += [page_number, page_title] if is_last_page else [page_number, page_title, separator]
-        self.stepper = ui.HBox(stepper_children)
-        self.stepper.add_class(CSS.STEPPER)
+        self.page_stepper = ui.HBox(stepper_children)
+        self.page_stepper.add_class(CSS.STEPPER)
         # Create app pages & page container
         self.page_container = ui.Box(
             [
@@ -181,7 +180,7 @@ class View:
                 self.notification,
                 header_bar,  # -header bar
                 ui.VBox(  # -body container
-                    children=[self.stepper, self.page_container],  # --stepper, page container
+                    children=[self.page_stepper, self.page_container],  # --page stepper, page container
                     layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
                 ),
             ],
@@ -233,6 +232,10 @@ class View:
         self.notification_timer = Timer(3.0, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self.notification_timer.start()
 
+    def update_page_stepper(self, current_page: int, last_active_page: Optional[int] = None) -> None:
+        """Update the state of page_stepper"""
+        pass
+
     def switch_page(self, page_number: int) -> None:
         """Show the next page"""
         assert page_number > 0 and page_number <= len(self.page_container.children)
@@ -240,7 +243,7 @@ class View:
         for page in self.page_container.children:
             assert isinstance(page, ui.Box)
             page.add_class(CSS.DISPLAY_MOD__NONE)
-        # Show the requested page 
+        # Show the requested page
         page_number = page_number - 1
         page: ui.Box = self.page_container.children[page_number]
         page.remove_class(CSS.DISPLAY_MOD__NONE)
