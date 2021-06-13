@@ -39,6 +39,7 @@ class TestFileUploadSuite:
         options = webdriver.ChromeOptions()
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--window-size=1440, 900")
         options.add_argument("--headless")
         self.driver = webdriver.Chrome(options=options)
         self.wait = WebDriverWait(self.driver, 10)  # Set explicit wait time to 10 seconds
@@ -130,3 +131,13 @@ class TestFileUploadSuite:
         # Verify that we're still on the file upload page
         download_button: WebElement = self.driver.find_element_by_link_text("Download")
         assert download_button.is_displayed()
+
+    def test_3(self, sample_file_spath: str) -> None:
+        """Test case: upload > next"""
+        self._test_valid_upload(sample_file_spath)
+        next_button: WebElement = self.driver.find_element_by_xpath(
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[2]/div/div[2]/button'
+        )
+        next_button.click()
+        # Check if we switched page
+        self.wait.until(expected_conditions.invisibility_of_element((By.CLASS_NAME, CSS.UA__BACKGROUND)))

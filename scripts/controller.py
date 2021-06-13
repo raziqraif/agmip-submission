@@ -56,3 +56,5 @@ class Controller:
         """'Next' button on the file upload page was clicked"""
         if len(self._uploaded_filename) == 0:
             self.view.show_notification(Notification.INFO, Notification.PLEASE_UPLOAD)
+            return
+        self.view.switch_page(2)

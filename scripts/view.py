@@ -107,13 +107,8 @@ class View:
         self.model: Model
         self.ctrl: Controller
 
-        # Page container & other app pages
+        # Main app's helper widgets
         self.page_container: ui.Box
-        self.file_upload_page: ui.Box
-        self.data_specification_page: ui.Box
-        self.integrity_checking_page: ui.Box
-        self.plausibility_checking_page: ui.Box
-
         self.stepper: ui.Box
         self.notification: ui.Box
         self.notification_timer: Timer = Timer(0.0, None)
@@ -168,13 +163,18 @@ class View:
         self.stepper = ui.HBox(stepper_children)
         self.stepper.add_class(CSS.STEPPER)
         # Create app pages & page container
-        self.file_upload_page = self._build_file_upload_page()
-        self.data_specification_page = self._build_data_specification_page()
-        self.integrity_checkgin_page = self._build_integrity_checking_page()
-        self.integrity_checkgin_page = self._build_plausibility_checking_page()
         self.page_container = ui.Box(
-            [self.file_upload_page], layout=ui.Layout(flex="1", width="100%")  # page container stores the current page
+            [
+                self._build_file_upload_page(),
+                self._build_data_specification_page(),
+                self._build_integrity_checking_page(),
+                self._build_plausibility_checking_page(),
+            ],
+            layout=ui.Layout(flex="1", width="100%"),  # page container stores the current page
         )
+        # Hide all pages, except for the first one
+        for page in self.page_container.children[1:]:
+            page.add_class(CSS.DISPLAY_MOD__NONE)
 
         app = ui.VBox(  # app container
             [
@@ -232,6 +232,18 @@ class View:
         # Create a timer to hide notification after X seconds
         self.notification_timer = Timer(3.0, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self.notification_timer.start()
+
+    def switch_page(self, page_number: int) -> None:
+        """Show the next page"""
+        assert page_number > 0 and page_number <= len(self.page_container.children)
+        # Hide all pages
+        for page in self.page_container.children:
+            assert isinstance(page, ui.Box)
+            page.add_class(CSS.DISPLAY_MOD__NONE)
+        # Show the requested page 
+        page_number = page_number - 1
+        page: ui.Box = self.page_container.children[page_number]
+        page.remove_class(CSS.DISPLAY_MOD__NONE)
 
     def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
         """
