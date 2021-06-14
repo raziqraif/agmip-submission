@@ -5,7 +5,7 @@
         --blue: #60A5FA;
         --light-blue: #93C5FD;
         --grey: #757575;
-	--green: #59ca7f;
+        --green: #34D399;
         --light-grey: #D3D3D3;
         --alert-blue: #007bff;
         --alert-red: #DC3545;
@@ -32,11 +32,17 @@
         Note: Make sure this section appear first before the section that contains classes for custom CSS components.
         Else, the styling defined in this section might override the styling defined in the custom section
     ***/
+    
+    /*Change color*/
+    :root {
+        --jp-error-color1: #F87171;
+    }
 
     /* Change button style */
     .jupyter-button {
         line-height: 36px;
         height: 36px;
+        width: 132px;
         border-radius: 4px;
         background: var(--blue);
         color: white;
@@ -178,7 +184,7 @@
         align-items: center;
         flex-flow: row nowrap;
         border-radius: 4px;
-        background: var(--light-blue);
+        background: var(--blue);
         color: white;
     }
     .c-filename-snackbar__text {

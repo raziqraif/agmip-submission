@@ -252,10 +252,10 @@ class View:
             assert isinstance(child_element, ui.DOMWidget)
             if CSS.STEPPER__NUMBER__CURRENT in child_element._dom_classes:
                 child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__ACTIVE)
-        # Update the stepper elements belonging to the current page 
+        # Update the stepper elements belonging to the current page
         # Format of page stepper's children = [number el, title el, separator el, ..., number el, title el]
-        number_element = self.page_stepper.children[page_number* 3 + 0]
-        title_element = self.page_stepper.children[page_number* 3 + 1]
+        number_element = self.page_stepper.children[page_number * 3 + 0]
+        title_element = self.page_stepper.children[page_number * 3 + 1]
         assert isinstance(number_element, ui.DOMWidget)
         assert isinstance(title_element, ui.DOMWidget)
         number_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__CURRENT)
@@ -356,7 +356,7 @@ class View:
                 <a
                     href="SampleData.csv" 
                     download="SampleData.csv"
-                    class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-info" 
+                    class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-danger" 
                     title=""
                 >
                     Download
