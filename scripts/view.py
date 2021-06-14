@@ -1,4 +1,8 @@
 from __future__ import annotations
+
+import math
+from ipywidgets.widgets.domwidget import DOMWidget
+from numpy import number
 from scripts.model import JSAppModel
 from typing import Optional, Union  # Delay the evaluation of undefined types
 from threading import Timer
@@ -232,10 +236,6 @@ class View:
         self.notification_timer = Timer(3.0, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self.notification_timer.start()
 
-    def update_page_stepper(self, current_page: int, last_active_page: Optional[int] = None) -> None:
-        """Update the state of page_stepper"""
-        pass
-
     def switch_page(self, page_number: int) -> None:
         """Show the next page"""
         assert page_number > 0 and page_number <= len(self.page_container.children)
@@ -247,6 +247,24 @@ class View:
         page_number = page_number - 1
         page: ui.Box = self.page_container.children[page_number]
         page.remove_class(CSS.DISPLAY_MOD__NONE)
+        # Change the number element with the "current" modifier to be "active"
+        for child_element in self.page_stepper.children:
+            assert isinstance(child_element, ui.DOMWidget)
+            if CSS.STEPPER__NUMBER__CURRENT in child_element._dom_classes:
+                child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__ACTIVE)
+        # Update the stepper elements belonging to the current page 
+        # Format of page stepper's children = [number el, title el, separator el, ..., number el, title el]
+        number_element = self.page_stepper.children[page_number* 3 + 0]
+        title_element = self.page_stepper.children[page_number* 3 + 1]
+        assert isinstance(number_element, ui.DOMWidget)
+        assert isinstance(title_element, ui.DOMWidget)
+        number_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__CURRENT)
+        title_element._dom_classes = (CSS.STEPPER__TITLE__ACTIVE,)
+        # If the current page "just" become active, then its left separator would still be inactive, so activate it
+        if page_number > 0:
+            separator_element = self.page_stepper.children[page_number * 3 - 1]
+            assert isinstance(separator_element, DOMWidget)
+            separator_element._dom_classes = (CSS.STEPPER__SEPARATOR__ACTIVE,)
 
     def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
         """

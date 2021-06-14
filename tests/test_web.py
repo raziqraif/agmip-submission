@@ -158,9 +158,19 @@ class TestFileUploadSuite:
         next_button.click()
         # Check if we switched page
         self.wait.until(expected_conditions.invisibility_of_element((By.CLASS_NAME, CSS.UA__BACKGROUND)))
-        # Check if stepper element changes color
-        page_2_stepper_locator = (
+        # Check if stepper element changes color appropriately
+        page_1_number_locator = (
+            By.XPATH,
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[1]',
+        )
+        page_2_number_locator = (
             By.XPATH,
             '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[4]',
         )
-        self.wait.until(presence_of_class_name(page_2_stepper_locator, CSS.STEPPER__NUMBER__CURRENT))
+        page_2_title_locator = (
+            By.XPATH,
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[5]',
+        )
+        self.wait.until(presence_of_class_name(page_1_number_locator, CSS.STEPPER__NUMBER__ACTIVE))
+        self.wait.until(presence_of_class_name(page_2_number_locator, CSS.STEPPER__NUMBER__CURRENT))
+        self.wait.until(presence_of_class_name(page_2_title_locator, CSS.STEPPER__TITLE__ACTIVE))
