@@ -27,6 +27,10 @@
                                   the parent instead. */
     }
 
+    textarea{
+        resize: none;
+    }
+
     /*** Extend CSS classes used by native ipywidgets components
 
         Note: Make sure this section appear first before the section that contains classes for custom CSS components.
@@ -360,6 +364,38 @@
     @keyframes fadeout {
     from {top: 84px; opacity: 1;}
     to {top: 84px; opacity: 0;}
+    }
+
+    /* Column assignment table */
+    .c-column-assignment-table {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);  /* 100% / 8 */
+        background: var(--jp-border-color1);
+        border: 1px solid var(--jp-border-color1);
+        margin: 8px 0px 16px 0px;
+        justify-items: center;
+        grid-gap: 1px 1px;
+    }
+    .c-column-assignment-table > * {
+        width: 100%;
+        background: white;
+        justify-content: center;
+    }
+    .c-column-assignment-table select {
+        border: none;
+    }
+
+    /* Preview table */
+    .c-preview-table {
+        background: var(--jp-border-color1);
+        border: 1px solid var(--jp-border-color1);
+        margin: 8px 0px 16px 0px;
+        justify-items: center;
+        grid-gap: 1px 0px;
+    }
+    .c-preview-table > * {
+        width: 100%;
+        background: white;
     }
 
 </style>

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from ipywidgets.widgets.domwidget import DOMWidget
+from ipywidgets.widgets.widget_layout import Layout
 from numpy import number
 from scripts.model import JSAppModel
 from typing import Optional, Union  # Delay the evaluation of undefined types
@@ -73,6 +74,7 @@ class CSS:
     COLOR_MOD__WHITE = "c-color-mod--white"
     COLOR_MOD__BLACK = "c-color-mod--black"
     COLOR_MOD__GREY = "c-color-mod--grey"
+    COLUMN_ASSIGNMENT_TABLE = "c-column-assignment-table"
     DISPLAY_MOD__NONE = "c-display-mod--none"
     FILENAME_SNACKBAR = "c-filename-snackbar"
     FILENAME_SNACKBAR__TEXT = "c-filename-snackbar__text"
@@ -84,6 +86,7 @@ class CSS:
     NOTIFICATION__SHOW = "c-notification--show"
     NOTIFICATION__SUCCESS = "c-notification--success"
     NOTIFICATION__WARNING = "c-notification--warning"
+    PREVIEW_TABLE = "c-preview-table"
     STEPPER = "c-stepper"
     STEPPER__NUMBER = "c-stepper__number"
     STEPPER__NUMBER__ACTIVE = "c-stepper__number--active"
@@ -98,6 +101,16 @@ class CSS:
     UA__FILE_UPLOADER = "c-upload-area__file-uploader"
     UA__OVERLAY = "c-upload-area__overlay"
     UA__FILE_LABEL = "c-upload-area__file-label"
+
+    @classmethod
+    def assign_class(cls, widget: DOMWidget, class_name: str) -> DOMWidget:
+        # Get attribute names by filtering out method names from __dict__.keys()
+        attribute_names = [name for name in cls.__dict__.keys() if name[:1] != "__"]
+        defined_css_classes = [getattr(cls, name) for name in attribute_names]
+        assert class_name in defined_css_classes
+        assert isinstance(widget, DOMWidget)
+        widget.add_class(class_name)
+        return widget
 
 
 # pyright: reportGeneralTypeIssues=false
@@ -368,29 +381,132 @@ class View:
         next_button.on_click(self.ctrl.onclick_next_from_page_1)
         return ui.VBox(  # page
             [
-                ui.VBox(  # -container to fill up the space above navigation button area
+                ui.VBox(  # -container to fill up the space above navigation buttons
                     [
-                        ui.VBox(  # --instruction container
+                        ui.VBox(  # --instructions container 
                             layout=ui.Layout(width="500px"), children=[ui.HTML(INSTRUCTION), ui.HTML(SUB_INSTRUCTION)]
                         ),
                         upload_area,  # --upload area
-                        ui.HBox(  # --uploaded file container
+                        ui.HBox(  # --uploaded file container 
                             [ui.HTML(UPLOADED_FILE), self.uploaded_file_name_box],
                             layout=ui.Layout(width="500px", margin="0px 0px 4px 0px"),
                         ),
-                        ui.HBox(  # --sample file container
+                        ui.HBox(  # --sample file container 
                             [ui.HTML(SAMPLE_FILE), download_button], layout=ui.Layout(width="500px")
                         ),
                     ],
                     layout=ui.Layout(flex="1", justify_content="center"),
                 ),
-                ui.VBox([next_button], layout=ui.Layout(align_self="flex-end")),  # -container for navgation button
+                ui.HBox([next_button], layout=ui.Layout(align_self="flex-end")),  # -navigation button box
             ],
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
         )
 
     def _build_data_specification_page(self) -> ui.Box:
-        return ui.Box()
+
+        # Create all control widgets in this page
+        control_layout = ui.Layout(flex="1 1", max_width="100%", display="flex")
+        model_name_dropdown = ui.Dropdown(layout=control_layout)
+        header_included_select = ui.Checkbox(indent=False, value=False, description="", layout=control_layout)
+        skip_lines_text = ui.Text(layout=control_layout)
+        delimeter_text = ui.Text(layout=control_layout)
+        ignore_scenarios_text = ui.Textarea(
+            placeholder="Enter comma-separated scenario values", layout=ui.Layout(flex="1", height="66px")
+        )
+        model_name_label = ui.Label("<model name>")
+        scenario_column_dropdown = ui.Dropdown(layout=control_layout)
+        region_column_dropdown = ui.Dropdown(layout=control_layout)
+        variable_column_dropdown = ui.Dropdown(layout=control_layout)
+        item_column_dropdown = ui.Dropdown(layout=control_layout)
+        unit_column_dropdown = ui.Dropdown(layout=control_layout)
+        year_column_dropdown = ui.Dropdown(layout=control_layout)
+        value_column_dropdown = ui.Dropdown(layout=control_layout)
+        next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
+        previous = ui.Button(
+            description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
+        )
+        # Create specifications grid layout
+        label_layout = ui.Layout(width="205px")
+        specifications_area = ui.VBox(  # Specification box
+            (
+                ui.GridBox(  # -Grid box for all specifications except for "Scenarios to ignore"
+                    (
+                        ui.HBox((ui.Label("Model name *", layout=label_layout), model_name_dropdown)),
+                        ui.HBox((ui.Label("Number of initial lines to skip *", layout=label_layout), skip_lines_text)),
+                        ui.HBox((ui.Label("Header is included *", layout=label_layout), header_included_select)),
+                        ui.HBox((ui.Label("Delimeter *", layout=label_layout), delimeter_text)),
+                    ),
+                    layout=ui.Layout(width="100%", grid_template_columns="auto auto", grid_gap="4px 56px"),
+                ),
+                ui.HBox(  # -Scenarios to ignore box
+                    (ui.Label("Scenarios to ignore", layout=label_layout), ignore_scenarios_text),
+                    layout=ui.Layout(margin="4px 0px 0px 0px"),
+                ),
+            ),
+            layout=ui.Layout(padding="8px 0px 16px 0px"),
+        )
+
+        page = ui.VBox(  # Page
+            (
+                ui.VBox(  # -Box to fill up the space above navigation buttons
+                    (
+                        ui.VBox(  # --Box for the page's main components
+                            (
+                                ui.HTML("<b>Specifications</b>"),  # ---Title
+                                specifications_area,  # ---Specifications area
+                                ui.HTML("<b>Assign columns from the uploaded data to the output data</b>"),  # ---Title
+                                CSS.assign_class(
+                                    ui.GridBox(  # --Column assignment table
+                                        (
+                                            ui.Box((ui.Label("Model"),)),
+                                            ui.Box((ui.Label("Scenario"),)),
+                                            ui.Box((ui.Label("Region"),)),
+                                            ui.Box((ui.Label("Variable"),)),
+                                            ui.Box((ui.Label("Item"),)),
+                                            ui.Box((ui.Label("Unit"),)),
+                                            ui.Box((ui.Label("Year"),)),
+                                            ui.Box((ui.Label("Value"),)),
+                                            ui.Box((model_name_label,)),
+                                            scenario_column_dropdown,
+                                            region_column_dropdown,
+                                            variable_column_dropdown,
+                                            item_column_dropdown,
+                                            unit_column_dropdown,
+                                            year_column_dropdown,
+                                            value_column_dropdown,
+                                        )
+                                    ),
+                                    CSS.COLUMN_ASSIGNMENT_TABLE,
+                                ),
+                                ui.HTML("<b>Preview of uploaded data</b>"),
+                                CSS.assign_class(
+                                    ui.GridBox(  # --Column assignment table
+                                        list( ui.Label("") for i in range(32)),
+                                        layout=ui.Layout(grid_template_columns="repeat(8, 1fr)")
+                                    ),
+                                    CSS.PREVIEW_TABLE,
+                                ),
+                                ui.HTML("<b>Preview of output data</b>"),
+                                CSS.assign_class(
+                                    ui.GridBox(  # --Column assignment table
+                                        list( ui.Label("") for i in range(32)),
+                                        layout=ui.Layout(grid_template_columns="repeat(8, 1fr")
+                                    ),
+                                    CSS.PREVIEW_TABLE,
+                                ),
+                            ),
+                            layout=ui.Layout(width="900px"),
+                        ),
+                    ),
+                    layout=ui.Layout(flex="1", width="100%", justify_content="center", align_items="center"),
+                ),
+                ui.HBox(  # -Navigation buttons box
+                    [previous, next_], layout=ui.Layout(justify_content="flex-end", width="100%")
+                ),
+            ),
+            layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
+        )
+        return page
 
     def _build_integrity_checking_page(self) -> ui.Box:
         return ui.Box()
