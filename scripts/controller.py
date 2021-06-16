@@ -58,3 +58,18 @@ class Controller:
             self.view.show_notification(Notification.INFO, Notification.PLEASE_UPLOAD)
             return
         self.view.switch_page(2)
+        """
+        if self.model_finished_steps == 1:
+            
+        self.model.load_file()  # need to do try catch
+        self.model.guessed_model_name
+        self.model.guessed_delimeter
+        self.model.guessed_header_inclusion
+        self.model.guessed_number_of_lines_to_skip
+        self.model.guessed_model_name
+        self.model.guessed_sector_column
+        self.model.guessed_sector_column
+        self.model.columns 
+        self.model.input_data_preview_table
+        self.model.output_data_preview_table
+        """

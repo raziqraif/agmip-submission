@@ -279,6 +279,21 @@ class View:
             assert isinstance(separator_element, DOMWidget)
             separator_element._dom_classes = (CSS.STEPPER__SEPARATOR__ACTIVE,)
 
+    def update_switch_page(self):
+        pass
+        """
+        self.model.guessed_model_name
+        self.model.guessed_delimeter
+        self.model.guessed_header_inclusion
+        self.model.guessed_number_of_lines_to_skip
+        self.model.guessed_model_name
+        self.model.guessed_sector_column
+        self.model.guessed_sector_column
+        self.model.columns 
+        self.model.input_data_preview_table
+        self.model.output_data_preview_table
+        """
+
     def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
         """
         File upload page has two states:
@@ -383,15 +398,15 @@ class View:
             [
                 ui.VBox(  # -container to fill up the space above navigation buttons
                     [
-                        ui.VBox(  # --instructions container 
+                        ui.VBox(  # --instructions container
                             layout=ui.Layout(width="500px"), children=[ui.HTML(INSTRUCTION), ui.HTML(SUB_INSTRUCTION)]
                         ),
                         upload_area,  # --upload area
-                        ui.HBox(  # --uploaded file container 
+                        ui.HBox(  # --uploaded file container
                             [ui.HTML(UPLOADED_FILE), self.uploaded_file_name_box],
                             layout=ui.Layout(width="500px", margin="0px 0px 4px 0px"),
                         ),
-                        ui.HBox(  # --sample file container 
+                        ui.HBox(  # --sample file container
                             [ui.HTML(SAMPLE_FILE), download_button], layout=ui.Layout(width="500px")
                         ),
                     ],
@@ -481,16 +496,16 @@ class View:
                                 ui.HTML("<b>Preview of uploaded data</b>"),
                                 CSS.assign_class(
                                     ui.GridBox(  # --Column assignment table
-                                        list( ui.Label("") for i in range(32)),
-                                        layout=ui.Layout(grid_template_columns="repeat(8, 1fr)")
+                                        list(ui.Label("") for i in range(32)),
+                                        layout=ui.Layout(grid_template_columns="repeat(8, 1fr)"),
                                     ),
                                     CSS.PREVIEW_TABLE,
                                 ),
                                 ui.HTML("<b>Preview of output data</b>"),
                                 CSS.assign_class(
                                     ui.GridBox(  # --Column assignment table
-                                        list( ui.Label("") for i in range(32)),
-                                        layout=ui.Layout(grid_template_columns="repeat(8, 1fr")
+                                        list(ui.Label("") for i in range(32)),
+                                        layout=ui.Layout(grid_template_columns="repeat(8, 1fr"),
                                     ),
                                     CSS.PREVIEW_TABLE,
                                 ),
