@@ -15,9 +15,6 @@ class Controller:
         self.model: Model
         self.view: View
 
-        self._uploaded_filename: str = ""  # Tracks uploaded file name
-        # Needs to be updated when the file was removed too
-
     def intro(self, model: Model, view: View) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
         self.model = model
@@ -34,27 +31,25 @@ class Controller:
         if len(file_name) == 0:  # This change was triggered by View's internal operation, so no View update is needed
             return
 
-        self._uploaded_filename = file_name
+        self.model.uploaded_filename = file_name
         if file_name.endswith(CSV):
             self.view.show_notification(Notification.SUCCESS, Notification.FILE_UPLOAD_SUCCESS)
             self.view.update_file_upload_page(file_name)
         else:
             self.view.show_notification(Notification.ERROR, Notification.INVALID_FILE_FORMAT)
             self.model.remove_file(file_name)
-            self._uploaded_filename = ""
+            self.model.uploaded_filename = ""
 
     def onclick_remove_file(self, widget: ui.Button) -> None:
         """'x' button in the file upload snackbar was clicked"""
-        # The order of the following code matters. Because self.view.update_file_upload_page(None) will trigger
-        # onchange_ua_file, which will modify the value of self._uploaded_filename
-        assert len(self._uploaded_filename) > 0
-        self.model.remove_file(self._uploaded_filename)
-        self._uploaded_filename = ""
+        assert len(self.model.uploaded_filename) > 0
+        self.model.remove_file(self.model.uploaded_filename)
+        self.model.uploaded_filename = ""
         self.view.update_file_upload_page(None)
 
     def onclick_next_from_page_1(self, widget: ui.Button) -> None:
         """'Next' button on the file upload page was clicked"""
-        if len(self._uploaded_filename) == 0:
+        if len(self.model.uploaded_filename) == 0:
             self.view.show_notification(Notification.INFO, Notification.PLEASE_UPLOAD)
             return
         self.view.switch_page(2)

@@ -47,6 +47,8 @@ class Model:
         self.controller: Controller
 
         self.javascript_model = JSAppModel()
+        self.uploaded_filename: str = ""  # Tracks uploaded file name
+        # Needs to be updated when the file was removed too
 
         self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
