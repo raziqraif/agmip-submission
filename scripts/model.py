@@ -78,8 +78,8 @@ class Model:
         return True
 
     @property
-    def lines_to_skip(self) -> int:
-        return 0
+    def lines_to_skip(self) -> str:
+        return "0"
 
     @property
     def scenarios_to_ignore(self) -> str:

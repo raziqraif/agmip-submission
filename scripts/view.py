@@ -64,7 +64,7 @@ class Notification:
     FILE_UPLOAD_SUCCESS = "File uploaded successfully"
     INVALID_FILE_FORMAT = "File format must be CSV"
     PLEASE_UPLOAD = "Please upload a CSV file first"
-
+    FIELDS_WERE_PREPOPULATED = "Some fields have been prepopulated for you"
 
 class Delimiter:
     """Namespace for supported CSV delimiters and relevant utilities"""
@@ -322,35 +322,46 @@ class View:
         self.notification_timer = Timer(4.0, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self.notification_timer.start()
 
-    def switch_page(self, page_number: int) -> None:
-        """Show the next page"""
-        assert page_number > 0 and page_number <= len(self.page_container.children)
+    def switch_page(self, requested_page_number: int, is_last_active_page: bool = False) -> None:
+        """Show the requested page and update the page stepper accordingly"""
+        assert requested_page_number > 0 and requested_page_number <= len(self.page_container.children)
         # Hide all pages
         for page in self.page_container.children:
             assert isinstance(page, ui.Box)
             page.add_class(CSS.DISPLAY_MOD__NONE)
         # Show the requested page
-        page_number = page_number - 1
-        page: ui.Box = self.page_container.children[page_number]
+        requested_page_number = requested_page_number - 1
+        page: ui.Box = self.page_container.children[requested_page_number]
         page.remove_class(CSS.DISPLAY_MOD__NONE)
-        # Change the number element with the "current" modifier to be "active"
+        # Change stepper element with the "current" modifier to be "active"
         for child_element in self.page_stepper.children:
             assert isinstance(child_element, ui.DOMWidget)
             if CSS.STEPPER__NUMBER__CURRENT in child_element._dom_classes:
                 child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__ACTIVE)
         # Update the stepper elements belonging to the current page
-        # Format of page stepper's children = [number el, title el, separator el, ..., number el, title el]
-        number_element = self.page_stepper.children[page_number * 3 + 0]
-        title_element = self.page_stepper.children[page_number * 3 + 1]
+        # Format of the page stepper's children = [number el, title el, separator el, ..., number el, title el]
+        number_element = self.page_stepper.children[requested_page_number * 3 + 0]
+        title_element = self.page_stepper.children[requested_page_number * 3 + 1]
         assert isinstance(number_element, ui.DOMWidget)
         assert isinstance(title_element, ui.DOMWidget)
         number_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__CURRENT)
         title_element._dom_classes = (CSS.STEPPER__TITLE__ACTIVE,)
         # If the current page "just" become active, then its left separator would still be inactive, so activate it
-        if page_number > 0:
-            separator_element = self.page_stepper.children[page_number * 3 - 1]
+        if requested_page_number > 0:
+            separator_element = self.page_stepper.children[requested_page_number * 3 - 1]
             assert isinstance(separator_element, DOMWidget)
             separator_element._dom_classes = (CSS.STEPPER__SEPARATOR__ACTIVE,)
+        # If this the last active page, make sure the stepper elements belonging to the upcoming pages are inactive
+        if is_last_active_page:
+            for child_element in self.page_stepper.children[requested_page_number * 3 + 2:]:
+                assert isinstance(child_element, ui.DOMWidget)
+                if CSS.STEPPER__NUMBER__ACTIVE in child_element._dom_classes:
+                    child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__INACTIVE)
+                elif CSS.STEPPER__TITLE__ACTIVE in child_element._dom_classes:
+                    child_element._dom_classes = (CSS.STEPPER__TITLE__INACTIVE,)
+                elif CSS.STEPPER__SEPARATOR__ACTIVE in child_element._dom_classes:
+                    child_element._dom_classes = (CSS.STEPPER__SEPARATOR__INACTIVE,)
+
 
     def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
         """
@@ -385,7 +396,7 @@ class View:
         self.delimiter_dropdown.options = ("", *Delimiter.get_views())
         self.delimiter_dropdown.value = Delimiter.get_view(self.model.delimiter)
         self.header_is_included_checkbox.value = self.model.header_is_included
-        self.lines_to_skip_text.value = str(self.model.lines_to_skip)
+        self.lines_to_skip_text.value = self.model.lines_to_skip
         self.scenarios_to_ignore_text.value = self.model.scenarios_to_ignore
         # Column assignment controls
         self.model_name_label.value = self.model.model_name
@@ -554,9 +565,11 @@ class View:
 
         # -page navigation widgets
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
+        next_.on_click(self.ctrl.onclick_next_from_page_2)
         previous = ui.Button(
             description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
         )
+        previous.on_click(self.ctrl.onclick_previous_from_page_2)
         # Create specifications container
         # The process is abstracted away from the page build below to avoid too many indentations
         label_layout = ui.Layout(width="205px")
