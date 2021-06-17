@@ -41,6 +41,27 @@ class JSAppModel:
         return str(vars(self))
 
 
+class DataSpecificationInput:
+    def __init__(self):
+        """
+        Note that for all attributes: 
+        None -> Empty input and was never modified by the user
+        "" -> Empty input but was previously modified by the user
+        """
+        self.model_name: Optional[str] = None
+        self.delimiter: Optional[str] = None
+        self.header_is_included: Optional[bool] = None
+        self.lines_to_skip: Optional[str] = None
+        self.scenarios_to_ignore: Optional[str] = None
+        self.scenario_column: Optional[str] = None
+        self.region_column: Optional[str] = None
+        self.variable_column: Optional[str] = None
+        self.item_column: Optional[str] = None
+        self.unit_column: Optional[str] = None
+        self.year_column: Optional[str] = None
+        self.value_column: Optional[str] = None
+
+
 class Model:
     UPLOAD_DIR: Path = Path(__name__).parent.parent / Path("uploads")  # <PROJECT_DIR>/uploads
 
@@ -57,6 +78,9 @@ class Model:
         self.uploaded_filename: str = ""  # Tracks uploaded file name
         # Needs to be updated when the file was removed too
 
+        # Data specification-related attributes
+        self.entered_data_specification: DataSpecificationInput = DataSpecificationInput()
+        self.guessed_data_specification: DataSpecificationInput = DataSpecificationInput()
         self.dataframe = None
 
         self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -141,12 +165,16 @@ class Model:
         assert file_path.is_file()
         try:
             with open(str(file_path)) as csvfile:
-                dialect = csv.Sniffer().sniff(csvfile.read(100000))  # sniff the csv format from up to ~100kB of data
+                format_sniffer = csv.Sniffer()
+                sample_data = csvfile.read(100000)  # Create a sample data of up to ~100kB
                 csvfile.seek(0)  # Reset the file pointer
-                reader = csv.reader(csvfile, dialect)
+                csv_dialect = format_sniffer.sniff(sample_data)  
+                self.guessed_data_specification.header_is_included = format_sniffer.has_header(sample_data)
+
+                reader = csv.reader(csvfile, csv_dialect)
                 rows = [row for row in reader]
-                row_lengths = np.array([len(row) for row in rows])
-                most_frequent_row_length = np.bincount(row_lengths).argmax()
+                number_of_columns_list = np.array([len(row) for row in rows])
+                most_frequent_number_of_columns = np.bincount(number_of_columns_list).argmax()
                 # Prepare data
         except csv.Error:
             return "Could not determine delimiter when parsing file"
