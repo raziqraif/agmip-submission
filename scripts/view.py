@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import math
-from ipywidgets.widgets.domwidget import DOMWidget
-from ipywidgets.widgets.widget_layout import Layout
-from numpy import number
-from scripts.model import JSAppModel
+import numpy as np
 from typing import Optional, Union  # Delay the evaluation of undefined types
 from threading import Timer
 
 import ipywidgets as ui
+from ipywidgets.widgets.domwidget import DOMWidget
 from IPython.core.display import display
 from IPython.core.display import HTML
 
+from scripts.model import JSAppModel
 
 DARK_BLUE = "#1E3A8A"
 LIGHT_GREY = "#D3D3D3"
@@ -67,14 +66,64 @@ class Notification:
     PLEASE_UPLOAD = "Please upload a CSV file first"
 
 
+class Delimiter:
+    """Namespace for supported CSV delimiters and relevant utilities"""
+
+    COMMA = ","
+    COMMA_VIEW = "Comma  < , >"
+    SPACE = " "
+    SPACE_VIEW = "Space  <   >"
+    SEMICOLON = ";"
+    SEMICOLON_VIEW = "Semicolon  < ; >"
+    TAB = "\t"
+    TAB_VIEW = "Tab  <      >"
+    PIPE = "|"
+    PIPE_VIEW = "Pipe  < | >"
+
+    @classmethod
+    def get_view(cls, delimiter: str) -> str:
+        if delimiter == "":  # Edge case
+            return ""
+        # Get attribute (delimiter) names by filtering out method names from __dict__.keys()
+        delimiter_names = [name for name in cls.__dict__.keys() if name[:1] != "__"]
+        delimiters = [getattr(cls, name) for name in delimiter_names]
+        assert delimiter in delimiters
+        for i in range(len(delimiters)):
+            if delimiter == delimiters[i]:
+                delimiter_name = delimiter_names[i]
+                return getattr(cls, delimiter_name + "_VIEW")
+
+    @classmethod
+    def get_model(cls, delimiter_view: str) -> str:
+        if delimiter_view == "":  # Edge case
+            return ""
+        # Get attribute (delimiter) names by filtering out method names from __dict__.keys()
+        delimiter_names = [name for name in cls.__dict__.keys() if name[:1] != "__"]
+        delimiters = [getattr(cls, name) for name in delimiter_names]
+        assert delimiter_view in delimiters
+        for i in range(len(delimiters)):
+            if delimiter_view == delimiters[i]:
+                delimiter_name = delimiter_names[i]
+                assert "_VIEW" in delimiter_name
+                return getattr(cls, delimiter_name[-len("_VIEW")])
+
+    @classmethod
+    def get_views(cls) -> list[str]:
+        # Get attribute (delimiter) names by filtering out method names from __dict__.keys()
+        delimiter_names = [name for name in cls.__dict__.keys() if name[:1] != "__"]
+        delimiter_view_names = [name for name in delimiter_names if "_VIEW" in name]
+        return [getattr(cls, name) for name in delimiter_view_names]
+
+
 class CSS:
-    """Namespace for CSS classes declared in style.html and used in Python"""
+    """Namespace for CSS classes declared in style.html and used inside Python"""
 
     APP = "c-app-container"
     COLOR_MOD__WHITE = "c-color-mod--white"
     COLOR_MOD__BLACK = "c-color-mod--black"
     COLOR_MOD__GREY = "c-color-mod--grey"
     COLUMN_ASSIGNMENT_TABLE = "c-column-assignment-table"
+    CURSOR_MOD__PROGRESS = "c-cursor-mod--progress"
     DISPLAY_MOD__NONE = "c-display-mod--none"
     FILENAME_SNACKBAR = "c-filename-snackbar"
     FILENAME_SNACKBAR__TEXT = "c-filename-snackbar__text"
@@ -113,8 +162,9 @@ class CSS:
         return widget
 
 
-# pyright: reportGeneralTypeIssues=false
 class View:
+    # The following comment is to silence complaints about assigning None to a non-optional type in constructor
+    # pyright: reportGeneralTypeIssues=false
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
         from .controller import Controller
@@ -124,14 +174,31 @@ class View:
         self.model: Model
         self.ctrl: Controller
 
-        # Main app's helper widgets
+        # Main app's widgets that need to be manipulated
+        self.app_container: ui.Box = None
         self.page_container: ui.Box = None
         self.page_stepper: ui.Box = None
         self.notification: ui.Box = None
         self.notification_timer: Timer = Timer(0.0, None)
-        # Widgets in file upload page that needs to be manipulated
+        # Widgets in the file upload page that need to be manipulated
         self.ua_file_label: ui.Label  # ua here stands for "upload area"
         self.uploaded_file_name_box: ui.Box
+        # Widgets in the data specification page that need to be manipulated
+        self.model_name_dropdown: ui.Dropdown = None
+        self.delimiter_dropdown: ui.Dropdown = None
+        self.header_is_included_checkbox: ui.Checkbox = None
+        self.lines_to_skip_text: ui.Text = None
+        self.scenarios_to_ignore_text: ui.Textarea = None
+        self.model_name_label: ui.Label = None
+        self.scenario_column_dropdown: ui.Dropdown = None
+        self.region_column_dropdown: ui.Dropdown = None
+        self.variable_column_dropdown: ui.Dropdown = None
+        self.item_column_dropdown: ui.Dropdown = None
+        self.unit_column_dropdown: ui.Dropdown = None
+        self.year_column_dropdown: ui.Dropdown = None
+        self.value_column_dropdown: ui.Dropdown = None
+        self.uploaded_data_preview_table: ui.GridBox = None
+        self.output_data_preview_table: ui.GridBox = None
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -140,10 +207,10 @@ class View:
 
     def display(self) -> None:
         """Build and show notebook user interface"""
-        app_container = self.build()
+        self.app_container = self.build()
         # Display the appropriate html files and our ipywidgets app
         display(HTML(filename="style.html"))
-        display(app_container)
+        display(self.app_container)
         # Embed Javascript app model in Javascript context
         javascript_model: JSAppModel = self.model.javascript_model
         display(HTML(f"<script> APP_MODEL = {javascript_model.serialize()}</script>"))
@@ -205,7 +272,13 @@ class View:
         app.add_class(CSS.APP)
         return app
 
-    counter = 0
+    def set_progress_cursor_style(self) -> None:
+        """Change cursor style to 'progress'"""
+        self.app_container.add_class(CSS.CURSOR_MOD__PROGRESS)
+
+    def reset_cursor_style(self) -> None:
+        """Change cursor style to 'progress'"""
+        self.app_container.remove_class(CSS.CURSOR_MOD__PROGRESS)
 
     def show_notification(self, variant: str, content: str) -> None:
         """Display a notification to the user"""
@@ -216,8 +289,8 @@ class View:
 
         # Reset the notification's DOM classes
         # This is important because we implement a clickaway listener in JS which removes a DOM class from the
-        # notification view without notifying the notification model. Doing this will reset the DOM classes that the
-        # notification models in both server-side & client-side are maintaining
+        # notification view without notifying the notification model. Doing this will reset the DOM classes that both
+        # the notification models in server-side & client-side are maintaining
         self.notification._dom_classes = (CSS.NOTIFICATION,)
 
         # Update notification content
@@ -246,7 +319,7 @@ class View:
             assert len("Variant does not exists") == 0
 
         # Create a timer to hide notification after X seconds
-        self.notification_timer = Timer(3.0, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
+        self.notification_timer = Timer(4.0, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self.notification_timer.start()
 
     def switch_page(self, page_number: int) -> None:
@@ -279,21 +352,6 @@ class View:
             assert isinstance(separator_element, DOMWidget)
             separator_element._dom_classes = (CSS.STEPPER__SEPARATOR__ACTIVE,)
 
-    def update_switch_page(self):
-        pass
-        """
-        self.model.guessed_model_name
-        self.model.guessed_delimeter
-        self.model.guessed_header_inclusion
-        self.model.guessed_number_of_lines_to_skip
-        self.model.guessed_model_name
-        self.model.guessed_sector_column
-        self.model.guessed_sector_column
-        self.model.columns 
-        self.model.input_data_preview_table
-        self.model.output_data_preview_table
-        """
-
     def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
         """
         File upload page has two states:
@@ -318,6 +376,46 @@ class View:
 
         # Reset the hidden filename value
         self.ua_file_label.value = ""
+
+    def update_data_specification_page(self):
+        """Update the state of data specification page"""
+        # Format specification controls
+        self.model_name_dropdown.options = ("", *self.model.model_names)
+        self.model_name_dropdown.value = self.model.model_name
+        self.delimiter_dropdown.options = ("", *Delimiter.get_views())
+        self.delimiter_dropdown.value = Delimiter.get_view(self.model.delimiter)
+        self.header_is_included_checkbox.value = self.model.header_is_included
+        self.lines_to_skip_text.value = str(self.model.lines_to_skip)
+        self.scenarios_to_ignore_text.value = self.model.scenarios_to_ignore
+        # Column assignment controls
+        self.model_name_label.value = self.model.model_name
+        self.scenario_column_dropdown.options = self.model.column_options
+        self.scenario_column_dropdown.value = self.model.scenario_column
+        self.region_column_dropdown.options = self.model.column_options
+        self.region_column_dropdown.value = self.model.region_column
+        self.variable_column_dropdown.options = self.model.column_options
+        self.variable_column_dropdown.value = self.model.variable_column
+        self.item_column_dropdown.options = self.model.column_options
+        self.item_column_dropdown.value = self.model.item_column
+        self.unit_column_dropdown.options = self.model.column_options
+        self.unit_column_dropdown.value = self.model.unit_column
+        self.year_column_dropdown.options = self.model.column_options
+        self.year_column_dropdown.value = self.model.year_column
+        self.value_column_dropdown.options = self.model.column_options
+        self.value_column_dropdown.value = self.model.value_column
+        # Preview tables
+        table_content = self.model.uploaded_data_preview_content
+        number_of_columns = table_content.shape[1]
+        table_content = table_content.flatten()
+        table_content = [ui.Label(str(content)) for content in table_content]
+        table_content = [ui.Box((label,)) for label in table_content]
+        self.uploaded_data_preview_table.children = table_content
+        self.uploaded_data_preview_table.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
+        table_content = self.model.output_data_preview_content
+        table_content = table_content.flatten()
+        table_content = [ui.Label(str(content)) for content in table_content]
+        table_content = [ui.Box((label,)) for label in table_content]
+        self.output_data_preview_table.children = table_content
 
     def _build_file_upload_page(self) -> ui.Box:
         """Build the file upload page"""
@@ -418,43 +516,70 @@ class View:
         )
 
     def _build_data_specification_page(self) -> ui.Box:
-
         # Create all control widgets in this page
+        # -specification widgets
         control_layout = ui.Layout(flex="1 1", max_width="100%", display="flex")
-        model_name_dropdown = ui.Dropdown(layout=control_layout)
-        header_included_select = ui.Checkbox(indent=False, value=False, description="", layout=control_layout)
-        skip_lines_text = ui.Text(layout=control_layout)
-        delimeter_text = ui.Text(layout=control_layout)
-        ignore_scenarios_text = ui.Textarea(
-            placeholder="Enter comma-separated scenario values", layout=ui.Layout(flex="1", height="66px")
+        self.model_name_dropdown = ui.Dropdown(layout=control_layout)
+        self.header_is_included_checkbox = ui.Checkbox(indent=False, value=False, description="", layout=control_layout)
+        self.lines_to_skip_text = ui.Text(layout=control_layout)
+        self.delimiter_dropdown = ui.Dropdown(layout=control_layout)
+        self.scenarios_to_ignore_text = ui.Textarea(
+            placeholder="(Optional) Enter comma-separated scenario values", layout=ui.Layout(flex="1", height="66px")
         )
-        model_name_label = ui.Label("<model name>")
-        scenario_column_dropdown = ui.Dropdown(layout=control_layout)
-        region_column_dropdown = ui.Dropdown(layout=control_layout)
-        variable_column_dropdown = ui.Dropdown(layout=control_layout)
-        item_column_dropdown = ui.Dropdown(layout=control_layout)
-        unit_column_dropdown = ui.Dropdown(layout=control_layout)
-        year_column_dropdown = ui.Dropdown(layout=control_layout)
-        value_column_dropdown = ui.Dropdown(layout=control_layout)
+        # -column assignment widgets
+        self.model_name_label = ui.Label("<model name>")
+        self.scenario_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.region_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.variable_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.item_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.unit_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.year_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.value_column_dropdown = ui.Dropdown(layout=control_layout)
+        # -preview table widgets
+        self.uploaded_data_preview_table = CSS.assign_class(
+            ui.GridBox(
+                tuple(ui.Label("") for i in range(32)),
+                layout=ui.Layout(grid_template_columns="repeat(8, 1fr)"),
+            ),
+            CSS.PREVIEW_TABLE,
+        )
+
+        self.output_data_preview_table = CSS.assign_class(
+            ui.GridBox(
+                tuple(ui.Label("") for i in range(32)),
+                layout=ui.Layout(grid_template_columns="repeat(8, 1fr"),
+            ),
+            CSS.PREVIEW_TABLE,
+        )
+
+        # -page navigation widgets
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         previous = ui.Button(
             description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
         )
-        # Create specifications grid layout
+        # Create specifications container
+        # The process is abstracted away from the page build below to avoid too many indentations
         label_layout = ui.Layout(width="205px")
         specifications_area = ui.VBox(  # Specification box
             (
                 ui.GridBox(  # -Grid box for all specifications except for "Scenarios to ignore"
                     (
-                        ui.HBox((ui.Label("Model name *", layout=label_layout), model_name_dropdown)),
-                        ui.HBox((ui.Label("Number of initial lines to skip *", layout=label_layout), skip_lines_text)),
-                        ui.HBox((ui.Label("Header is included *", layout=label_layout), header_included_select)),
-                        ui.HBox((ui.Label("Delimeter *", layout=label_layout), delimeter_text)),
+                        ui.HBox((ui.Label("Model name *", layout=label_layout), self.model_name_dropdown)),
+                        ui.HBox((ui.Label("Delimiter *", layout=label_layout), self.delimiter_dropdown)),
+                        ui.HBox(
+                            (ui.Label("Header is included *", layout=label_layout), self.header_is_included_checkbox)
+                        ),
+                        ui.HBox(
+                            (
+                                ui.Label("Number of initial lines to skip *", layout=label_layout),
+                                self.lines_to_skip_text,
+                            )
+                        ),
                     ),
                     layout=ui.Layout(width="100%", grid_template_columns="auto auto", grid_gap="4px 56px"),
                 ),
                 ui.HBox(  # -Scenarios to ignore box
-                    (ui.Label("Scenarios to ignore", layout=label_layout), ignore_scenarios_text),
+                    (ui.Label("Scenarios to ignore", layout=label_layout), self.scenarios_to_ignore_text),
                     layout=ui.Layout(margin="4px 0px 0px 0px"),
                 ),
             ),
@@ -467,7 +592,7 @@ class View:
                     (
                         ui.VBox(  # --Box for the page's main components
                             (
-                                ui.HTML("<b>Specifications</b>"),  # ---Title
+                                ui.HTML("<b>Specify the format of the uploaded data</b>"),  # ---Title
                                 specifications_area,  # ---Specifications area
                                 ui.HTML("<b>Assign columns from the uploaded data to the output data</b>"),  # ---Title
                                 CSS.assign_class(
@@ -481,34 +606,22 @@ class View:
                                             ui.Box((ui.Label("Unit"),)),
                                             ui.Box((ui.Label("Year"),)),
                                             ui.Box((ui.Label("Value"),)),
-                                            ui.Box((model_name_label,)),
-                                            scenario_column_dropdown,
-                                            region_column_dropdown,
-                                            variable_column_dropdown,
-                                            item_column_dropdown,
-                                            unit_column_dropdown,
-                                            year_column_dropdown,
-                                            value_column_dropdown,
+                                            ui.Box((self.model_name_label,)),
+                                            self.scenario_column_dropdown,
+                                            self.region_column_dropdown,
+                                            self.variable_column_dropdown,
+                                            self.item_column_dropdown,
+                                            self.unit_column_dropdown,
+                                            self.year_column_dropdown,
+                                            self.value_column_dropdown,
                                         )
                                     ),
                                     CSS.COLUMN_ASSIGNMENT_TABLE,
                                 ),
-                                ui.HTML("<b>Preview of uploaded data</b>"),
-                                CSS.assign_class(
-                                    ui.GridBox(  # --Column assignment table
-                                        list(ui.Label("") for i in range(32)),
-                                        layout=ui.Layout(grid_template_columns="repeat(8, 1fr)"),
-                                    ),
-                                    CSS.PREVIEW_TABLE,
-                                ),
-                                ui.HTML("<b>Preview of output data</b>"),
-                                CSS.assign_class(
-                                    ui.GridBox(  # --Column assignment table
-                                        list(ui.Label("") for i in range(32)),
-                                        layout=ui.Layout(grid_template_columns="repeat(8, 1fr"),
-                                    ),
-                                    CSS.PREVIEW_TABLE,
-                                ),
+                                ui.HTML("<b>Preview of the uploaded data</b>"),
+                                self.uploaded_data_preview_table,  # --preview table
+                                ui.HTML("<b>Preview of the output data</b>"),
+                                self.output_data_preview_table,  # --preview table
                             ),
                             layout=ui.Layout(width="900px"),
                         ),

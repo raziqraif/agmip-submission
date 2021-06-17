@@ -332,9 +332,9 @@
     .c-notification--show {
         visibility: visible; /* Show the notification */
         /* Add animation: Take 0.5 seconds to fade in and out the notification. */
-        /* However, delay the fade out process for 2.5 seconds  */
-        -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s; 
-        animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        /* However, delay the fade out process for X seconds  */
+        -webkit-animation: fadein 0.5s, fadeout 0.5s 3.5s; 
+        animation: fadein 0.5s, fadeout 0.5s 3.5s;
     }
     .c-notification--success {
         background: var(--alert-green)
@@ -373,7 +373,6 @@
         background: var(--jp-border-color1);
         border: 1px solid var(--jp-border-color1);
         margin: 8px 0px 16px 0px;
-        justify-items: center;
         grid-gap: 1px 1px;
     }
     .c-column-assignment-table > * {
@@ -390,12 +389,12 @@
         background: var(--jp-border-color1);
         border: 1px solid var(--jp-border-color1);
         margin: 8px 0px 16px 0px;
-        justify-items: center;
         grid-gap: 1px 0px;
     }
     .c-preview-table > * {
         width: 100%;
         background: white;
+        justify-content: center;
     }
 
 </style>

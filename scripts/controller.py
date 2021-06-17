@@ -52,19 +52,14 @@ class Controller:
         if len(self.model.uploaded_filename) == 0:
             self.view.show_notification(Notification.INFO, Notification.PLEASE_UPLOAD)
             return
+        self.view.set_progress_cursor_style()
+        if self.model.finished_steps == 0:
+            self.model.finished_steps += 1
+            error_message = self.model.load_file(self.model.uploaded_filename)
+            self.view.update_data_specification_page()
+            if error_message is not None:
+                self.view.show_notification(Notification.ERROR, error_message)
+            else:
+                self.view.show_notification(Notification.INFO, "Some fields have been prepopulated for you")
+        self.view.reset_cursor_style()
         self.view.switch_page(2)
-        """
-        if self.model_finished_steps == 1:
-            
-        self.model.load_file()  # need to do try catch
-        self.model.guessed_model_name
-        self.model.guessed_delimeter
-        self.model.guessed_header_inclusion
-        self.model.guessed_number_of_lines_to_skip
-        self.model.guessed_model_name
-        self.model.guessed_sector_column
-        self.model.guessed_sector_column
-        self.model.columns 
-        self.model.input_data_preview_table
-        self.model.output_data_preview_table
-        """
