@@ -30,7 +30,7 @@
     textarea{
         resize: none;
     }
-
+    
     /*** Extend CSS classes used by native ipywidgets components
 
         Note: Make sure this section appear first before the section that contains classes for custom CSS components.
@@ -385,6 +385,7 @@
     }
     .c-column-assignment-table select {
         border: none;
+        width: inherit;
     }
 
     /* Preview table */
@@ -397,6 +398,7 @@
     .c-preview-table > * {
         width: 100%;
         background: white;
-        justify-content: center;
+        justify-content: flex-start;
+        padding: 0px 16px;
     }
 </style>

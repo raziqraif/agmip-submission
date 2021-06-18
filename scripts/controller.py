@@ -180,7 +180,7 @@ class Controller:
         # If the onchange event is triggered programmatically by page update, and not by dropdown selection
         if guessed_value == new_value:
             return
-        self.model.data_specification.delimiter = new_value
+        self.model.delimiter = new_value
         self.view.update_data_specification_page()
 
     def onchange_scenarios_to_ignore_text(self, change: dict) -> None:

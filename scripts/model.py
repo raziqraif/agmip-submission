@@ -89,7 +89,6 @@ class Model:
 
         # Data specification-related attributes
         self.data_specification: DataSpecificationInput = DataSpecificationInput()
-        self.data_specification: DataSpecificationInput = DataSpecificationInput()
         self.raw_csv_rows: Optional[
             list[str]
         ] = None  # raw here means that each row was not separated by the csv delimiter yet
@@ -120,7 +119,15 @@ class Model:
 
     @delimiter.setter
     def delimiter(self, value: str) -> None:
-        assert value in Delimiter.get_models()
+        assert value in Delimiter.get_models() or value == ""
+        self.data_specification.delimiter = value
+        self.data_specification.scenario_column_number = 0
+        self.data_specification.region_column_number = 0
+        self.data_specification.variable_column_number = 0
+        self.data_specification.item_column_number = 0
+        self.data_specification.unit_column_number = 0
+        self.data_specification.year_column_number = 0
+        self.data_specification.value_column_number = 0
         self.rebuild_csv_rows()
 
     @property
@@ -228,7 +235,7 @@ class Model:
             preview_table = [header] + preview_table[:2]
         else:
             preview_table[0] = [
-                chr(colnum + 97) + ")   " + preview_table[0][colnum] for colnum in range(len(preview_table[0]))
+                chr(colnum + 97) + ")  " + preview_table[0][colnum] for colnum in range(len(preview_table[0]))
             ]
         return np.array(preview_table)
 
@@ -285,6 +292,7 @@ class Model:
         Load CSV file from the upload directory
         Returns None or an error message if an error is encountered
         """
+        self.data_specification = DataSpecificationInput()
         assert len(file_name) > 0
         file_path = self.UPLOAD_DIR / Path(file_name)
         assert file_path.is_file()
