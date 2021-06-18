@@ -66,6 +66,7 @@ class Notification:
     PLEASE_UPLOAD = "Please upload a CSV file first"
     FIELDS_WERE_PREPOPULATED = "Some fields have been prepopulated for you"
 
+
 class Delimiter:
     """Namespace for supported CSV delimiters and relevant utilities"""
 
@@ -199,6 +200,7 @@ class View:
         self.value_column_dropdown: ui.Dropdown = None
         self.uploaded_data_preview_table: ui.GridBox = None
         self.output_data_preview_table: ui.GridBox = None
+        self._uploaded_data_preview_table_children_cache: Optional[list] = None
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -353,7 +355,7 @@ class View:
             separator_element._dom_classes = (CSS.STEPPER__SEPARATOR__ACTIVE,)
         # If this the last active page, make sure the stepper elements belonging to the upcoming pages are inactive
         if is_last_active_page:
-            for child_element in self.page_stepper.children[requested_page_number * 3 + 2:]:
+            for child_element in self.page_stepper.children[requested_page_number * 3 + 2 :]:
                 assert isinstance(child_element, ui.DOMWidget)
                 if CSS.STEPPER__NUMBER__ACTIVE in child_element._dom_classes:
                     child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__INACTIVE)
@@ -361,7 +363,6 @@ class View:
                     child_element._dom_classes = (CSS.STEPPER__TITLE__INACTIVE,)
                 elif CSS.STEPPER__SEPARATOR__ACTIVE in child_element._dom_classes:
                     child_element._dom_classes = (CSS.STEPPER__SEPARATOR__INACTIVE,)
-
 
     def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
         """
@@ -399,7 +400,7 @@ class View:
         self.lines_to_skip_text.value = self.model.lines_to_skip
         self.scenarios_to_ignore_text.value = self.model.scenarios_to_ignore
         # Column assignment controls
-        self.model_name_label.value = self.model.model_name
+        self.model_name_label.value = self.model.model_name if len(self.model.model_name) > 0 else "<Model Name>"
         self.scenario_column_dropdown.options = self.model.column_options
         self.scenario_column_dropdown.value = self.model.scenario_column
         self.region_column_dropdown.options = self.model.column_options
@@ -418,15 +419,26 @@ class View:
         table_content = self.model.uploaded_data_preview_content
         number_of_columns = table_content.shape[1]
         table_content = table_content.flatten()
-        table_content = [ui.Label(str(content)) for content in table_content]
-        table_content = [ui.Box((label,)) for label in table_content]
-        self.uploaded_data_preview_table.children = table_content
+        content_index = 0
+        for content in table_content:
+            content_box = self._uploaded_data_preview_table_children_cache[content_index]
+            assert isinstance(content_box, ui.Box)
+            content_label = content_box.children[0]
+            assert isinstance(content_label, ui.Label)
+            content_label.value = content
+            content_index += 1
+        self.uploaded_data_preview_table.children = self._uploaded_data_preview_table_children_cache[:table_content.size]
         self.uploaded_data_preview_table.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
+
         table_content = self.model.output_data_preview_content
         table_content = table_content.flatten()
-        table_content = [ui.Label(str(content)) for content in table_content]
-        table_content = [ui.Box((label,)) for label in table_content]
-        self.output_data_preview_table.children = table_content
+        content_index = 0
+        for content_box in self.output_data_preview_table.children:
+            assert isinstance(content_box, ui.Box)
+            content_label = content_box.children[0]
+            assert isinstance(content_label, ui.Label)
+            content_label.value = table_content[content_index]
+            content_index += 1
 
     def _build_file_upload_page(self) -> ui.Box:
         """Build the file upload page"""
@@ -531,33 +543,48 @@ class View:
         # -specification widgets
         control_layout = ui.Layout(flex="1 1", max_width="100%", display="flex")
         self.model_name_dropdown = ui.Dropdown(layout=control_layout)
+        self.model_name_dropdown.observe(self.ctrl.onchange_model_name_dropdown, "value")
         self.header_is_included_checkbox = ui.Checkbox(indent=False, value=False, description="", layout=control_layout)
-        self.lines_to_skip_text = ui.Text(layout=control_layout)
+        self.header_is_included_checkbox.observe(self.ctrl.onchange_header_is_included_checkbox, "value")
+        self.lines_to_skip_text = ui.Text(layout=control_layout, continuous_update=False)
+        self.lines_to_skip_text.observe(self.ctrl.onchange_lines_to_skip_text, "value")
         self.delimiter_dropdown = ui.Dropdown(layout=control_layout)
+        self.delimiter_dropdown.observe(self.ctrl.onchange_delimiter_dropdown, "value")
         self.scenarios_to_ignore_text = ui.Textarea(
-            placeholder="(Optional) Enter comma-separated scenario values", layout=ui.Layout(flex="1", height="66px")
+            placeholder="(Optional) Enter comma-separated scenario values",
+            layout=ui.Layout(flex="1", height="66px"),
+            continuous_update=False,
         )
+        self.scenarios_to_ignore_text.observe(self.ctrl.onchange_scenarios_to_ignore_text, "value")
         # -column assignment widgets
-        self.model_name_label = ui.Label("<model name>")
+        self.model_name_label = ui.Label("")
         self.scenario_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.scenario_column_dropdown.observe(self.ctrl.onchange_scenario_column_dropdown, "value")
         self.region_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.region_column_dropdown.observe(self.ctrl.onchange_region_column_dropdown, "value")
         self.variable_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.variable_column_dropdown.observe(self.ctrl.onchange_variable_column_dropdown, "value")
         self.item_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.item_column_dropdown.observe(self.ctrl.onchange_item_column_dropdown, "value")
         self.unit_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.unit_column_dropdown.observe(self.ctrl.onchange_unit_column_dropdown, "value")
         self.year_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.year_column_dropdown.observe(self.ctrl.onchange_year_column_dropdown, "value")
         self.value_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.value_column_dropdown.observe(self.ctrl.onchange_value_column_dropdown, "value")
         # -preview table widgets
+        self._uploaded_data_preview_table_children_cache = [ui.Box([ui.Label("")]) for i in range(100)]  # 100 is random
         self.uploaded_data_preview_table = CSS.assign_class(
             ui.GridBox(
-                tuple(ui.Label("") for i in range(32)),
+                self._uploaded_data_preview_table_children_cache[:24],  # 24 because we assume the table dimension to be
+                # 3 x 8 (the row number will stay the same, but the column number may vary)
                 layout=ui.Layout(grid_template_columns="repeat(8, 1fr)"),
             ),
             CSS.PREVIEW_TABLE,
         )
-
         self.output_data_preview_table = CSS.assign_class(
             ui.GridBox(
-                tuple(ui.Label("") for i in range(32)),
+                [ui.Box([ui.Label("")]) for i in range(24)],  # 24 because of the 3 x 8 table dimension (invariant)
                 layout=ui.Layout(grid_template_columns="repeat(8, 1fr"),
             ),
             CSS.PREVIEW_TABLE,
