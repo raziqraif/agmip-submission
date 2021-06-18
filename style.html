@@ -161,6 +161,9 @@
     .c-cursor-mod--progress * {
         cursor: progress !important;
     }
+    .c-cursor-mod--wait * {
+        cursor: wait !important;
+    }
     
     /* Display modification */
     .c-display-mod--none {
@@ -331,10 +334,10 @@
     }
     .c-notification--show {
         visibility: visible; /* Show the notification */
-        /* Add animation: Take 0.5 seconds to fade in and out the notification. */
-        /* However, delay the fade out process for X seconds  */
-        -webkit-animation: fadein 0.5s, fadeout 0.5s 3.5s; 
-        animation: fadein 0.5s, fadeout 0.5s 3.5s;
+        /* Add animation: Take X seconds to fade in and out the notification. */
+        /* However, delay the fade out process for Y seconds  */
+        -webkit-animation: fadein 0.25s, fadeout 0.25s 3.5s; 
+        animation: fadein 0.25s, fadeout 0.25s 3.5s;
     }
     .c-notification--success {
         background: var(--alert-green)
@@ -396,5 +399,4 @@
         background: white;
         justify-content: center;
     }
-
 </style>

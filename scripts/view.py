@@ -10,7 +10,6 @@ from ipywidgets.widgets.domwidget import DOMWidget
 from IPython.core.display import display
 from IPython.core.display import HTML
 
-from scripts.model import JSAppModel
 
 DARK_BLUE = "#1E3A8A"
 LIGHT_GREY = "#D3D3D3"
@@ -68,52 +67,58 @@ class Notification:
 
 
 class Delimiter:
-    """Namespace for supported CSV delimiters and relevant utilities"""
+    """
+    Namespace for supported CSV delimiters and relevant utilities
+    """
 
-    COMMA = ","
+    _model_postfix = "_MODEL"
+    _view_postfix = "_VIEW"
+    COMMA_MODEL = ","
     COMMA_VIEW = "Comma  < , >"
-    SPACE = " "
+    SPACE_MODEL = " "
     SPACE_VIEW = "Space  <   >"
-    SEMICOLON = ";"
+    SEMICOLON_MODEL = ";"
     SEMICOLON_VIEW = "Semicolon  < ; >"
-    TAB = "\t"
+    TAB_MODEL = "\t"
     TAB_VIEW = "Tab  <      >"
-    PIPE = "|"
+    PIPE_MODEL = "|"
     PIPE_VIEW = "Pipe  < | >"
 
     @classmethod
-    def get_view(cls, delimiter: str) -> str:
-        if delimiter == "":  # Edge case
+    def get_view(cls, delimiter_model: str) -> str:
+        if delimiter_model == "":  # Edge case
             return ""
-        # Get attribute (delimiter) names by filtering out method names from __dict__.keys()
-        delimiter_names = [name for name in cls.__dict__.keys() if name[:1] != "__"]
-        delimiters = [getattr(cls, name) for name in delimiter_names]
-        assert delimiter in delimiters
-        for i in range(len(delimiters)):
-            if delimiter == delimiters[i]:
-                delimiter_name = delimiter_names[i]
-                return getattr(cls, delimiter_name + "_VIEW")
+        delimiter_model_names = [name for name in cls.__dict__.keys() if cls._model_postfix in name]
+        delimiter_models = [getattr(cls, name) for name in delimiter_model_names]
+        assert delimiter_model in delimiter_models
+        for i in range(len(delimiter_models)):
+            if delimiter_model == delimiter_models[i]:
+                delimiter_model_name = delimiter_model_names[i]
+                delimiter_view_name = delimiter_model_name.replace(cls._model_postfix, cls._view_postfix)
+                return getattr(cls, delimiter_view_name)
 
     @classmethod
     def get_model(cls, delimiter_view: str) -> str:
         if delimiter_view == "":  # Edge case
             return ""
-        # Get attribute (delimiter) names by filtering out method names from __dict__.keys()
-        delimiter_names = [name for name in cls.__dict__.keys() if name[:1] != "__"]
-        delimiters = [getattr(cls, name) for name in delimiter_names]
-        assert delimiter_view in delimiters
-        for i in range(len(delimiters)):
-            if delimiter_view == delimiters[i]:
-                delimiter_name = delimiter_names[i]
-                assert "_VIEW" in delimiter_name
-                return getattr(cls, delimiter_name[-len("_VIEW")])
+        delimiter_view_names = [name for name in cls.__dict__.keys() if cls._view_postfix in name]
+        delimiter_views = [getattr(cls, name) for name in delimiter_view_names]
+        assert delimiter_view in delimiter_views
+        for i in range(len(delimiter_views)):
+            if delimiter_view == delimiter_views[i]:
+                delimiter_view_name = delimiter_view_names[i]
+                delimiter_model_name = delimiter_view_name.replace(cls._view_postfix, cls._model_postfix)
+                return getattr(cls, delimiter_model_name)
 
     @classmethod
     def get_views(cls) -> list[str]:
-        # Get attribute (delimiter) names by filtering out method names from __dict__.keys()
-        delimiter_names = [name for name in cls.__dict__.keys() if name[:1] != "__"]
-        delimiter_view_names = [name for name in delimiter_names if "_VIEW" in name]
+        delimiter_view_names = [name for name in cls.__dict__.keys() if cls._view_postfix in name]
         return [getattr(cls, name) for name in delimiter_view_names]
+
+    @classmethod
+    def get_models(cls) -> list[str]:
+        delimiter_model_names = [name for name in cls.__dict__.keys() if cls._model_postfix in name]
+        return [getattr(cls, name) for name in delimiter_model_names]
 
 
 class CSS:
@@ -125,6 +130,7 @@ class CSS:
     COLOR_MOD__GREY = "c-color-mod--grey"
     COLUMN_ASSIGNMENT_TABLE = "c-column-assignment-table"
     CURSOR_MOD__PROGRESS = "c-cursor-mod--progress"
+    CURSOR_MOD__WAIT = "c-cursor-mod--wait"
     DISPLAY_MOD__NONE = "c-display-mod--none"
     FILENAME_SNACKBAR = "c-filename-snackbar"
     FILENAME_SNACKBAR__TEXT = "c-filename-snackbar__text"
@@ -163,7 +169,17 @@ class CSS:
         return widget
 
 
+def set_options(widget: ui.Dropdown, options: tuple[str], onchange_callback) -> None:
+    widget.unobserve(onchange_callback, "value")
+    widget.options = options
+    widget.value = None
+    widget.observe(onchange_callback, "value")
+
+
 class View:
+    DATA_SPEC_PAGE_IS_BEING_UPDATED = (
+        False  # to assert that a page update will not recursively trigger another page update
+    )
     # The following comment is to silence complaints about assigning None to a non-optional type in constructor
     # pyright: reportGeneralTypeIssues=false
     def __init__(self):
@@ -200,7 +216,7 @@ class View:
         self.value_column_dropdown: ui.Dropdown = None
         self.uploaded_data_preview_table: ui.GridBox = None
         self.output_data_preview_table: ui.GridBox = None
-        self._uploaded_data_preview_table_children_cache: Optional[list] = None
+        self._cached_children_of_uploaded_data_preview_table: Optional[list] = None
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -209,6 +225,8 @@ class View:
 
     def display(self) -> None:
         """Build and show notebook user interface"""
+        from scripts.model import JSAppModel
+
         self.app_container = self.build()
         # Display the appropriate html files and our ipywidgets app
         display(HTML(filename="style.html"))
@@ -274,13 +292,15 @@ class View:
         app.add_class(CSS.APP)
         return app
 
-    def set_progress_cursor_style(self) -> None:
+    def set_cursor_style(self, cursor_mod_css_class: str) -> None:
         """Change cursor style to 'progress'"""
-        self.app_container.add_class(CSS.CURSOR_MOD__PROGRESS)
+        self.reset_cursor_style()
+        self.app_container.add_class(cursor_mod_css_class)
 
     def reset_cursor_style(self) -> None:
         """Change cursor style to 'progress'"""
         self.app_container.remove_class(CSS.CURSOR_MOD__PROGRESS)
+        self.app_container.remove_class(CSS.CURSOR_MOD__WAIT)
 
     def show_notification(self, variant: str, content: str) -> None:
         """Display a notification to the user"""
@@ -321,7 +341,7 @@ class View:
             assert len("Variant does not exists") == 0
 
         # Create a timer to hide notification after X seconds
-        self.notification_timer = Timer(4.0, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
+        self.notification_timer = Timer(3.5, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self.notification_timer.start()
 
     def switch_page(self, requested_page_number: int, is_last_active_page: bool = False) -> None:
@@ -391,57 +411,73 @@ class View:
 
     def update_data_specification_page(self):
         """Update the state of data specification page"""
+        # TODO: Replace this with a proper test suite
+        assert self.DATA_SPEC_PAGE_IS_BEING_UPDATED != True
+        self.DATA_SPEC_PAGE_IS_BEING_UPDATED = True
         # Format specification controls
-        self.model_name_dropdown.options = ("", *self.model.model_names)
+        set_options(self.model_name_dropdown, ("", *self.model.model_names), self.ctrl.onchange_model_name_dropdown)
         self.model_name_dropdown.value = self.model.model_name
-        self.delimiter_dropdown.options = ("", *Delimiter.get_views())
+        set_options(self.delimiter_dropdown, ("", *Delimiter.get_views()), self.ctrl.onchange_delimiter_dropdown)
         self.delimiter_dropdown.value = Delimiter.get_view(self.model.delimiter)
         self.header_is_included_checkbox.value = self.model.header_is_included
         self.lines_to_skip_text.value = self.model.lines_to_skip
         self.scenarios_to_ignore_text.value = self.model.scenarios_to_ignore
         # Column assignment controls
+        column_options = ("", *self.model.column_options)
         self.model_name_label.value = self.model.model_name if len(self.model.model_name) > 0 else "<Model Name>"
-        self.scenario_column_dropdown.options = self.model.column_options
+        set_options(self.scenario_column_dropdown, column_options, self.ctrl.onchange_scenario_column_dropdown)
         self.scenario_column_dropdown.value = self.model.scenario_column
-        self.region_column_dropdown.options = self.model.column_options
+        set_options(self.region_column_dropdown, column_options, self.ctrl.onchange_region_column_dropdown)
         self.region_column_dropdown.value = self.model.region_column
-        self.variable_column_dropdown.options = self.model.column_options
+        set_options(self.variable_column_dropdown, column_options, self.ctrl.onchange_variable_column_dropdown)
         self.variable_column_dropdown.value = self.model.variable_column
-        self.item_column_dropdown.options = self.model.column_options
+        set_options(self.item_column_dropdown, column_options, self.ctrl.onchange_item_column_dropdown)
         self.item_column_dropdown.value = self.model.item_column
-        self.unit_column_dropdown.options = self.model.column_options
+        set_options(self.unit_column_dropdown, column_options, self.ctrl.onchange_unit_column_dropdown)
         self.unit_column_dropdown.value = self.model.unit_column
-        self.year_column_dropdown.options = self.model.column_options
+        set_options(self.year_column_dropdown, column_options, self.ctrl.onchange_year_column_dropdown)
         self.year_column_dropdown.value = self.model.year_column
-        self.value_column_dropdown.options = self.model.column_options
+        set_options(self.value_column_dropdown, column_options, self.ctrl.onchange_value_column_dropdown)
         self.value_column_dropdown.value = self.model.value_column
-        # Preview tables
+        # Upload data preview table
         table_content = self.model.uploaded_data_preview_content
         number_of_columns = table_content.shape[1]
         table_content = table_content.flatten()
+        # -Increase cache size if it's insufficient
+        if len(table_content) > len(self._cached_children_of_uploaded_data_preview_table):
+            cache_addition = [ui.Box([ui.Label("")]) for i in range(len(table_content))]
+            self._cached_children_of_uploaded_data_preview_table += cache_addition
         content_index = 0
         for content in table_content:
-            content_box = self._uploaded_data_preview_table_children_cache[content_index]
+            content_box = self._cached_children_of_uploaded_data_preview_table[content_index]
             assert isinstance(content_box, ui.Box)
             content_label = content_box.children[0]
             assert isinstance(content_label, ui.Label)
             content_label.value = content
             content_index += 1
-        self.uploaded_data_preview_table.children = self._uploaded_data_preview_table_children_cache[:table_content.size]
+        self.uploaded_data_preview_table.children = self._cached_children_of_uploaded_data_preview_table[
+            : table_content.size
+        ]
         self.uploaded_data_preview_table.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
-
+        # Output data preview table
         table_content = self.model.output_data_preview_content
         table_content = table_content.flatten()
+        assert table_content.size == len(self.output_data_preview_table.children)
         content_index = 0
-        for content_box in self.output_data_preview_table.children:
+        for content in table_content:
+            content_box = self.output_data_preview_table.children[content_index]
             assert isinstance(content_box, ui.Box)
             content_label = content_box.children[0]
             assert isinstance(content_label, ui.Label)
             content_label.value = table_content[content_index]
             content_index += 1
+        # TODO: remove this after a proper test suite has been created
+        self.DATA_SPEC_PAGE_IS_BEING_UPDATED = False
 
     def _build_file_upload_page(self) -> ui.Box:
         """Build the file upload page"""
+        from scripts.model import JSAppModel
+
         INSTRUCTION = '<h3 style="margin: 0px;">Upload file to be processed</h3>'
         SUB_INSTRUCTION = (
             '<span style="font-size: 15px; line-height: 20px; margin: 0px; color: var(--grey);">'
@@ -542,13 +578,13 @@ class View:
         # Create all control widgets in this page
         # -specification widgets
         control_layout = ui.Layout(flex="1 1", max_width="100%", display="flex")
-        self.model_name_dropdown = ui.Dropdown(layout=control_layout)
+        self.model_name_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.model_name_dropdown.observe(self.ctrl.onchange_model_name_dropdown, "value")
         self.header_is_included_checkbox = ui.Checkbox(indent=False, value=False, description="", layout=control_layout)
         self.header_is_included_checkbox.observe(self.ctrl.onchange_header_is_included_checkbox, "value")
         self.lines_to_skip_text = ui.Text(layout=control_layout, continuous_update=False)
         self.lines_to_skip_text.observe(self.ctrl.onchange_lines_to_skip_text, "value")
-        self.delimiter_dropdown = ui.Dropdown(layout=control_layout)
+        self.delimiter_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.delimiter_dropdown.observe(self.ctrl.onchange_delimiter_dropdown, "value")
         self.scenarios_to_ignore_text = ui.Textarea(
             placeholder="(Optional) Enter comma-separated scenario values",
@@ -558,25 +594,29 @@ class View:
         self.scenarios_to_ignore_text.observe(self.ctrl.onchange_scenarios_to_ignore_text, "value")
         # -column assignment widgets
         self.model_name_label = ui.Label("")
-        self.scenario_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.scenario_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.scenario_column_dropdown.observe(self.ctrl.onchange_scenario_column_dropdown, "value")
-        self.region_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.region_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.region_column_dropdown.observe(self.ctrl.onchange_region_column_dropdown, "value")
-        self.variable_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.variable_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.variable_column_dropdown.observe(self.ctrl.onchange_variable_column_dropdown, "value")
-        self.item_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.item_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.item_column_dropdown.observe(self.ctrl.onchange_item_column_dropdown, "value")
-        self.unit_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.unit_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.unit_column_dropdown.observe(self.ctrl.onchange_unit_column_dropdown, "value")
-        self.year_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.year_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.year_column_dropdown.observe(self.ctrl.onchange_year_column_dropdown, "value")
-        self.value_column_dropdown = ui.Dropdown(layout=control_layout)
+        self.value_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.value_column_dropdown.observe(self.ctrl.onchange_value_column_dropdown, "value")
         # -preview table widgets
-        self._uploaded_data_preview_table_children_cache = [ui.Box([ui.Label("")]) for i in range(100)]  # 100 is random
+        self._cached_children_of_uploaded_data_preview_table = [
+            ui.Box([ui.Label("")]) for i in range(100)
+        ]  # 100 is random
         self.uploaded_data_preview_table = CSS.assign_class(
             ui.GridBox(
-                self._uploaded_data_preview_table_children_cache[:24],  # 24 because we assume the table dimension to be
+                self._cached_children_of_uploaded_data_preview_table[
+                    :24
+                ],  # 24 because we assume the table dimension to be
                 # 3 x 8 (the row number will stay the same, but the column number may vary)
                 layout=ui.Layout(grid_template_columns="repeat(8, 1fr)"),
             ),

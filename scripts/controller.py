@@ -3,7 +3,7 @@ from __future__ import annotations  # Delay the evaluation of undefined types
 from pathlib import Path
 import ipywidgets as ui
 
-from .view import Notification
+from .view import CSS, Delimiter, Notification
 
 
 class Controller:
@@ -29,37 +29,37 @@ class Controller:
         if self.model.finished_steps == current_finished_step:
             return
         self.model.finished_steps = current_finished_step
-        current_page_number = current_finished_step + 1 
+        current_page_number = current_finished_step + 1
         self.view.switch_page(current_page_number, is_last_active_page=True)
 
-    def validate_data_specification_input(self) -> bool:
+    def validate_data_specification_input(self) -> bool:  # TODO: Should be moved to model
         """Return true if all input are entered correctly, and false if not"""
         is_valid = False
         try:
             if len(self.model.model_name) == 0:
-                self.view.show_notification(Notification.WARNING, "Please select the model name")
+                self.view.show_notification(Notification.WARNING, "Model name is empty")
             elif len(self.model.delimiter) == 0:
-                self.view.show_notification(Notification.WARNING, "Please select the delimiter")
+                self.view.show_notification(Notification.WARNING, "Delimiter is empty")
             elif len(self.model.lines_to_skip) == 0:
-                self.view.show_notification(Notification.WARNING, "Please enter the initial number of lines to skip")
+                self.view.show_notification(Notification.WARNING, "Initial number of lines to skip is empty")
             elif int(self.model.lines_to_skip) < 0:
                 self.view.show_notification(
-                    Notification.WARNING, "Please enter a positive integer for the number of lines to skip"
+                    Notification.WARNING, "Number of lines cannot be negative"
                 )
             elif len(self.model.scenario_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Please select the scenario column")
+                self.view.show_notification(Notification.WARNING, "Scenario column is empty")
             elif len(self.model.region_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Please select the region column")
+                self.view.show_notification(Notification.WARNING, "Region column is empty")
             elif len(self.model.variable_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Please select the variable column")
+                self.view.show_notification(Notification.WARNING, "Variable column is empty")
             elif len(self.model.item_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Please select the item column")
+                self.view.show_notification(Notification.WARNING, "Item column is empty")
             elif len(self.model.unit_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Please select the unit column")
+                self.view.show_notification(Notification.WARNING, "Unit column is empty")
             elif len(self.model.year_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Please select the year column")
+                self.view.show_notification(Notification.WARNING, "Year column is empty")
             elif len(self.model.value_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Please select the value column")
+                self.view.show_notification(Notification.WARNING, "Value column is empty")
             elif (
                 len(
                     set(
@@ -74,15 +74,15 @@ class Controller:
                         ]
                     )
                 )
-                < 7
+                < 7  # If there are no duplicate assignment, we should have a set of 7 columns
             ):
-                self.view.show_notification(Notification.WARNING, "Please assign an input column to only 1 output column")
+                self.view.show_notification(
+                    Notification.WARNING, "Output data has duplicate columns"
+                )
             else:
                 is_valid = True
         except ValueError:
-            self.view.show_notification(
-                Notification.WARNING, "Please enter an integer for the number of lines to skip"
-            )
+            self.view.show_notification(Notification.WARNING, "Invalid number of lines")
         return is_valid
 
     def onchange_ua_file_label(self, change: dict) -> None:
@@ -117,7 +117,7 @@ class Controller:
             return
         if self.model.finished_steps == 0:
             self.model.finished_steps = 1
-            self.view.set_progress_cursor_style()
+            self.view.set_cursor_style(CSS.CURSOR_MOD__WAIT)
             error_message = self.model.load_file(self.model.uploaded_filename)
             self.view.update_data_specification_page()
             if error_message is not None:
@@ -138,3 +138,121 @@ class Controller:
     def onclick_previous_from_page_2(self, widget: ui.Button) -> None:
         """'Previous' button on the data specification page was clicked"""
         self.view.switch_page(1)
+
+    def onchange_model_name_dropdown(self, change: dict) -> None:
+        """The selection in 'model name' dropdown changed"""
+        new_value = change["new"]
+        previously_entered_value = self.model.data_specification.model_name
+        guessed_value = self.model.data_specification.model_name
+        # If the event is triggered programmatically by page update, and not by dropdown selection
+        if guessed_value == new_value:
+            return
+        self.model.data_specification.model_name = new_value
+        self.view.update_data_specification_page()
+
+    def onchange_header_is_included_checkbox(self, change: dict) -> None:
+        """The state of 'header is included' checkbox changed"""
+        new_value = change["new"]
+        previously_entered_value = self.model.data_specification.header_is_included
+        guessed_value = self.model.data_specification.header_is_included
+        # If the onchange event is triggered programmatically by page update, and not by checkbox selection
+        if guessed_value == new_value:
+            return
+        self.model.data_specification.header_is_included = new_value
+        self.view.update_data_specification_page()
+
+    def onchange_lines_to_skip_text(self, change: dict) -> None:
+        """The content of 'lines to skip' text changed"""
+        new_value = change["new"]
+        previously_entered_value = self.model.data_specification.lines_to_skip
+        guessed_value = self.model.data_specification.lines_to_skip
+        # If the onchange event is triggered programmatically by page update, and not by user actions
+        if guessed_value == new_value:
+            return
+        self.model.data_specification.lines_to_skip = new_value
+        self.view.update_data_specification_page()
+
+    def onchange_delimiter_dropdown(self, change: dict) -> None:
+        """The selection in 'delimiter' dropdown changed"""
+        new_value = Delimiter.get_model(change["new"])
+        previously_entered_value = self.model.data_specification.delimiter
+        guessed_value = self.model.data_specification.delimiter
+        # If the onchange event is triggered programmatically by page update, and not by dropdown selection
+        if guessed_value == new_value:
+            return
+        self.model.data_specification.delimiter = new_value
+        self.view.update_data_specification_page()
+
+    def onchange_scenarios_to_ignore_text(self, change: dict) -> None:
+        """The content of 'scenarios to ignore' text changed"""
+        new_value = change["new"]
+        previously_entered_value = self.model.data_specification.scenarios_to_ignore
+        guessed_value = self.model.data_specification.scenarios_to_ignore
+        # If the onchange event is triggered programmatically by page update, and not by user actions
+        if guessed_value == new_value:
+            return
+        self.model.data_specification.scenarios_to_ignore = new_value
+        self.view.update_data_specification_page()
+
+    def onchange_scenario_column_dropdown(self, change: dict) -> None:
+        """The selection in 'scenario column' dropdown was changed"""
+        new_value = change["new"]
+        # The event is triggered programmatically, instead of by a user action
+        if new_value == self.model.scenario_column:
+            return
+        self.model.scenario_column = new_value
+        self.view.update_data_specification_page()
+
+    def onchange_region_column_dropdown(self, change: dict) -> None:
+        """The selection in 'region column' dropdown changed"""
+        new_value = change["new"]
+        # The event is triggered programmatically, instead of by a user action
+        if new_value == self.model.region_column:
+            return
+        self.model.region_column = new_value
+        self.view.update_data_specification_page()
+
+    def onchange_variable_column_dropdown(self, change: dict) -> None:
+        """The selection in 'variable column' dropdown changed"""
+        new_value = change["new"]
+        # The event is triggered programmatically, instead of by a user action
+        if new_value == self.model.variable_column:
+            return
+        self.model.variable_column = new_value
+        self.view.update_data_specification_page()
+
+    def onchange_item_column_dropdown(self, change: dict) -> None:
+        """The selection in 'item column' dropdown changed"""
+        new_value = change["new"]
+        # The event is triggered programmatically, instead of by a user action
+        if new_value == self.model.item_column:
+            return
+        self.model.item_column = new_value
+        self.view.update_data_specification_page()
+
+    def onchange_unit_column_dropdown(self, change: dict) -> None:
+        """The selection in 'unit column' dropdown changed"""
+        new_value = change["new"]
+        # The event is triggered programmatically, instead of by a user action
+        if new_value == self.model.unit_column:
+            return
+        self.model.unit_column = new_value
+        self.view.update_data_specification_page()
+
+    def onchange_year_column_dropdown(self, change: dict) -> None:
+        """The selection in 'year column' dropdown changed"""
+        new_value = change["new"]
+        # The event is triggered programmatically, instead of by a user action
+        if new_value == self.model.year_column:
+            return
+        self.model.year_column = new_value
+        self.view.update_data_specification_page()
+
+    def onchange_value_column_dropdown(self, change: dict) -> None:
+        """The selection in 'value column' dropdown changed"""
+        new_value = change["new"]
+        # The event is triggered programmatically, instead of by a user action
+        if new_value == self.model.value_column:
+            return
+        self.model.value_column = new_value
+        self.view.update_data_specification_page()
