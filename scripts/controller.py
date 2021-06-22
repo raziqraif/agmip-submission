@@ -46,31 +46,31 @@ class Controller:
                 self.view.show_notification(
                     Notification.WARNING, "Number of lines cannot be negative"
                 )
-            elif len(self.model.scenario_column) == 0:
+            elif len(self.model.assigned_scenario_column) == 0:
                 self.view.show_notification(Notification.WARNING, "Scenario column is empty")
-            elif len(self.model.region_column) == 0:
+            elif len(self.model.assigned_region_column) == 0:
                 self.view.show_notification(Notification.WARNING, "Region column is empty")
-            elif len(self.model.variable_column) == 0:
+            elif len(self.model.assigned_variable_column) == 0:
                 self.view.show_notification(Notification.WARNING, "Variable column is empty")
-            elif len(self.model.item_column) == 0:
+            elif len(self.model.assigned_item_column) == 0:
                 self.view.show_notification(Notification.WARNING, "Item column is empty")
-            elif len(self.model.unit_column) == 0:
+            elif len(self.model.assigned_unit_column) == 0:
                 self.view.show_notification(Notification.WARNING, "Unit column is empty")
-            elif len(self.model.year_column) == 0:
+            elif len(self.model.assigned_year_column) == 0:
                 self.view.show_notification(Notification.WARNING, "Year column is empty")
-            elif len(self.model.value_column) == 0:
+            elif len(self.model.assigned_value_column) == 0:
                 self.view.show_notification(Notification.WARNING, "Value column is empty")
             elif (
                 len(
                     set(
                         [
-                            self.model.scenario_column,
-                            self.model.region_column,
-                            self.model.variable_column,
-                            self.model.item_column,
-                            self.model.unit_column,
-                            self.model.year_column,
-                            self.model.value_column,
+                            self.model.assigned_scenario_column,
+                            self.model.assigned_region_column,
+                            self.model.assigned_variable_column,
+                            self.model.assigned_item_column,
+                            self.model.assigned_unit_column,
+                            self.model.assigned_year_column,
+                            self.model.assigned_value_column,
                         ]
                     )
                 )
@@ -188,61 +188,61 @@ class Controller:
         """The selection in 'scenario column' dropdown was changed"""
         new_value = change["new"]
         # The event is triggered programmatically by page update, instead of by a user action
-        if new_value == self.model.scenario_column:
+        if new_value == self.model.assigned_scenario_column:
             return
-        self.model.scenario_column = new_value
+        self.model.assigned_scenario_column = new_value
         self.view.update_data_specification_page()
 
     def onchange_region_column_dropdown(self, change: dict) -> None:
         """The selection in 'region column' dropdown changed"""
         new_value = change["new"]
         # The event is triggered programmatically by page update, instead of by a user action
-        if new_value == self.model.region_column:
+        if new_value == self.model.assigned_region_column:
             return
-        self.model.region_column = new_value
+        self.model.assigned_region_column = new_value
         self.view.update_data_specification_page()
 
     def onchange_variable_column_dropdown(self, change: dict) -> None:
         """The selection in 'variable column' dropdown changed"""
         new_value = change["new"]
         # The event is triggered programmatically by page update, instead of by a user action
-        if new_value == self.model.variable_column:
+        if new_value == self.model.assigned_variable_column:
             return
-        self.model.variable_column = new_value
+        self.model.assigned_variable_column = new_value
         self.view.update_data_specification_page()
 
     def onchange_item_column_dropdown(self, change: dict) -> None:
         """The selection in 'item column' dropdown changed"""
         new_value = change["new"]
         # The event is triggered programmatically by page update, instead of by a user action
-        if new_value == self.model.item_column:
+        if new_value == self.model.assigned_item_column:
             return
-        self.model.item_column = new_value
+        self.model.assigned_item_column = new_value
         self.view.update_data_specification_page()
 
     def onchange_unit_column_dropdown(self, change: dict) -> None:
         """The selection in 'unit column' dropdown changed"""
         new_value = change["new"]
         # The event is triggered programmatically by page update, instead of by a user action
-        if new_value == self.model.unit_column:
+        if new_value == self.model.assigned_unit_column:
             return
-        self.model.unit_column = new_value
+        self.model.assigned_unit_column = new_value
         self.view.update_data_specification_page()
 
     def onchange_year_column_dropdown(self, change: dict) -> None:
         """The selection in 'year column' dropdown changed"""
         new_value = change["new"]
         # The event is triggered programmatically by page update, instead of by a user action
-        if new_value == self.model.year_column:
+        if new_value == self.model.assigned_year_column:
             return
-        self.model.year_column = new_value
+        self.model.assigned_year_column = new_value
         self.view.update_data_specification_page()
 
     def onchange_value_column_dropdown(self, change: dict) -> None:
         """The selection in 'value column' dropdown changed"""
         new_value = change["new"]
         # The event is triggered programmatically by page update, instead of by a user action
-        if new_value == self.model.value_column:
+        if new_value == self.model.assigned_value_column:
             return
-        self.model.value_column = new_value
+        self.model.assigned_value_column = new_value
         self.view.update_data_specification_page()

@@ -76,15 +76,15 @@ class Model:
         self.model_name: str = ""
         self._delimiter: str = ""
         self.header_is_included: bool = False
-        self.lines_to_skip_str: str = "0"
+        self._lines_to_skip_str: str = "0"
         self.scenarios_to_ignore: str = ""
-        self._scenario_colnum: int = 0
-        self._region_colnum: int = 0
-        self._variable_colnum: int = 0
-        self._item_colnum: int = 0
-        self._unit_colnum: int = 0
-        self._year_colnum: int = 0
-        self._value_colnum: int = 0
+        self._assigned_colnum_for_scenario: int = 0
+        self._assigned_colnum_for_region: int = 0
+        self._assigned_colnum_for_variable: int = 0
+        self._assigned_colnum_for_item: int = 0
+        self._assigned_colnum_for_unit: int = 0
+        self._assigned_colnum_for_year: int = 0
+        self._assigned_colnum_for_value: int = 0
         self.raw_csv_rows: list[str] = []  # "raw" -> each row is not separated by the csv delimiter yet
         self.csv_rows: list[list[str]] = []
         self.most_frequent_ncolumn: int = 0
@@ -115,86 +115,109 @@ class Model:
     def delimiter(self, value: str) -> None:
         assert value in Delimiter.get_models() or value == ""
         self._delimiter = value
-        self._scenario_colnum = 0
-        self._region_colnum = 0
-        self._variable_colnum = 0
-        self._item_colnum = 0
-        self._unit_colnum = 0
-        self._year_colnum = 0
-        self._value_colnum = 0
+        self._assigned_colnum_for_scenario = 0
+        self._assigned_colnum_for_region = 0
+        self._assigned_colnum_for_variable = 0
+        self._assigned_colnum_for_item = 0
+        self._assigned_colnum_for_unit = 0
+        self._assigned_colnum_for_year = 0
+        self._assigned_colnum_for_value = 0
         self.build_csv_rows()
+
+    @property
+    def lines_to_skip_str(self) -> str:
+        return self._lines_to_skip_str
+
+    @lines_to_skip_str.setter
+    def lines_to_skip_str(self, value: str) -> None:
+        try:
+            lines_to_skip = int(value)  # convert float or int string to int
+            self.lines_to_skip_str = str(lines_to_skip)
+            if lines_to_skip >= len(self.csv_rows):
+                self._assigned_colnum_for_scenario = 0
+                self._assigned_colnum_for_region = 0
+                self._assigned_colnum_for_variable = 0
+                self._assigned_colnum_for_item = 0
+                self._assigned_colnum_for_unit = 0
+                self._assigned_colnum_for_year = 0
+                self._assigned_colnum_for_value = 0
+        except:
+            self._lines_to_skip_str = value
 
     @property
     def column_options(self) -> list[str]:
         return list(self.uploaded_data_preview_content[0])
 
     @property
-    def scenario_column(self) -> str:
-        return ("", *self.column_options)[self._scenario_colnum]
+    def assigned_scenario_column(self) -> str:
+        return ("", *self.column_options)[self._assigned_colnum_for_scenario]
 
-    @scenario_column.setter
-    def scenario_column(self, value):
-        self._scenario_colnum = ([""] + self.column_options).index(value)
-
-    @property
-    def region_column(self) -> str:
-        return ([""] + self.column_options)[self._region_colnum]
-
-    @region_column.setter
-    def region_column(self, value: str):
-        self._region_colnum = ([""] + self.column_options).index(value)
+    @assigned_scenario_column.setter
+    def assigned_scenario_column(self, value: str):
+        self._assigned_colnum_for_scenario = ([""] + self.column_options).index(value)
 
     @property
-    def variable_column(self) -> str:
-        return ([""] + self.column_options)[self._variable_colnum]
+    def assigned_region_column(self) -> str:
+        return ([""] + self.column_options)[self._assigned_colnum_for_region]
 
-    @variable_column.setter
-    def variable_column(self, value: str):
-        self._variable_colnum = ([""] + self.column_options).index(value)
-
-    @property
-    def item_column(self) -> str:
-        return ([""] + self.column_options)[self._item_colnum]
-
-    @item_column.setter
-    def item_column(self, value: str):
-        self._item_colnum = ([""] + self.column_options).index(value)
+    @assigned_region_column.setter
+    def assigned_region_column(self, value: str):
+        self._assigned_colnum_for_region = ([""] + self.column_options).index(value)
 
     @property
-    def unit_column(self) -> str:
-        return ([""] + self.column_options)[self._unit_colnum]
+    def assigned_variable_column(self) -> str:
+        return ([""] + self.column_options)[self._assigned_colnum_for_variable]
 
-    @unit_column.setter
-    def unit_column(self, value: str) -> None:
-        self._unit_colnum = ([""] + self.column_options).index(value)
-
-    @property
-    def year_column(self) -> str:
-        return ([""] + self.column_options)[self._year_colnum]
-
-    @year_column.setter
-    def year_column(self, value: str) -> None:
-        self._year_colnum = ([""] + self.column_options).index(value)
+    @assigned_variable_column.setter
+    def assigned_variable_column(self, value: str):
+        self._assigned_colnum_for_variable = ([""] + self.column_options).index(value)
 
     @property
-    def value_column(self) -> str:
-        return ([""] + self.column_options)[self._value_colnum]
+    def assigned_item_column(self) -> str:
+        return ([""] + self.column_options)[self._assigned_colnum_for_item]
 
-    @value_column.setter
-    def value_column(self, value: str) -> None:
-        self._value_colnum = ([""] + self.column_options).index(value)
+    @assigned_item_column.setter
+    def assigned_item_column(self, value: str):
+        self._assigned_colnum_for_item = ([""] + self.column_options).index(value)
+
+    @property
+    def assigned_unit_column(self) -> str:
+        return ([""] + self.column_options)[self._assigned_colnum_for_unit]
+
+    @assigned_unit_column.setter
+    def assigned_unit_column(self, value: str) -> None:
+        self._assigned_colnum_for_unit = ([""] + self.column_options).index(value)
+
+    @property
+    def assigned_year_column(self) -> str:
+        return ([""] + self.column_options)[self._assigned_colnum_for_year]
+
+    @assigned_year_column.setter
+    def assigned_year_column(self, value: str) -> None:
+        self._assigned_colnum_for_year = ([""] + self.column_options).index(value)
+
+    @property
+    def assigned_value_column(self) -> str:
+        return ([""] + self.column_options)[self._assigned_colnum_for_value]
+
+    @assigned_value_column.setter
+    def assigned_value_column(self, value: str) -> None:
+        self._assigned_colnum_for_value = ([""] + self.column_options).index(value)
 
     @property
     def uploaded_data_preview_content(self) -> np.ndarray:
-        """Return preview table content"""
-        if self.csv_rows is None:
-            return np.array(["" for _ in range(24)]).reshape((3, 8))  # default value
+        """Return preview table content in a 2D ndarray"""
+        # Get constants
+        DEFAULT_CONTENT = np.array(["" for _ in range(24)]).reshape((3, 8)) 
         try:
-            lines_to_skip = int(self.lines_to_skip_str)
+            LINES_TO_SKIP = int(self.lines_to_skip_str) 
         except ValueError:
-            lines_to_skip = 0
+            LINES_TO_SKIP = 0
+        if (len(self.csv_rows) == 0) or (LINES_TO_SKIP >= len(self.csv_rows)):
+            return DEFAULT_CONTENT
+        # Process table content 
         preview_table = []
-        for row_index in range(lines_to_skip, len(self.csv_rows)):
+        for row_index in range(LINES_TO_SKIP, len(self.csv_rows)):
             row = self.csv_rows[row_index]
             if len(row) == self.most_frequent_ncolumn:  # row's ncolumn is correct
                 preview_table.append(row)
@@ -214,7 +237,7 @@ class Model:
 
     @property
     def output_data_preview_content(self) -> np.ndarray:
-        """Return preview table content"""
+        """Return preview table content in a 2d ndarray"""
         model_col = ["Model", self.model_name, self.model_name]
         # Lambda function to return a column content, given the title and column assignment
         get_column_content: Callable[[str, int], list[str]] = (
@@ -223,13 +246,13 @@ class Model:
             else [title] + [self.uploaded_data_preview_content[row][assigned_colnum - 1] for row in (1, 2)]
         )
         # Get the content of all columns
-        scenario_col = get_column_content("Scenario", self._scenario_colnum)
-        region_col = get_column_content("Region", self._region_colnum)
-        variable_col = get_column_content("Variable", self._variable_colnum)
-        item_col = get_column_content("Item", self._item_colnum)
-        unit_col = get_column_content("Unit", self._unit_colnum)
-        year_col = get_column_content("Year", self._year_colnum)
-        value_col = get_column_content("Value", self._value_colnum)
+        scenario_col = get_column_content("Scenario", self._assigned_colnum_for_scenario)
+        region_col = get_column_content("Region", self._assigned_colnum_for_region)
+        variable_col = get_column_content("Variable", self._assigned_colnum_for_variable)
+        item_col = get_column_content("Item", self._assigned_colnum_for_item)
+        unit_col = get_column_content("Unit", self._assigned_colnum_for_unit)
+        year_col = get_column_content("Year", self._assigned_colnum_for_year)
+        value_col = get_column_content("Value", self._assigned_colnum_for_value)
         return np.array(
             [model_col, scenario_col, region_col, variable_col, item_col, unit_col, year_col, value_col]
         ).transpose()
@@ -296,26 +319,26 @@ class Model:
                     self.model_name = cell
                     break
                 if cell in self.scenarios:
-                    self._scenario_colnum = col_index + 1
+                    self._assigned_colnum_for_scenario = col_index + 1
                     break
                 if cell in self.regions:
-                    self._region_colnum = col_index + 1
+                    self._assigned_colnum_for_region = col_index + 1
                     break
                 if cell in self.variables:
-                    self._variable_colnum = col_index + 1
+                    self._assigned_colnum_for_variable = col_index + 1
                     break
                 if cell in self.items:
-                    self._item_colnum = col_index + 1
+                    self._assigned_colnum_for_item = col_index + 1
                     break
                 if cell in self.units:
-                    self._unit_colnum = col_index + 1
+                    self._assigned_colnum_for_unit = col_index + 1
                     break
                 if cell in self.years:
-                    self._year_colnum = col_index + 1
+                    self._assigned_colnum_for_year = col_index + 1
                     break
-                try: 
+                try:
                     float(cell)
-                    self._value_colnum = col_index + 1
+                    self._assigned_colnum_for_value = col_index + 1
                 except ValueError:
                     pass
         return None

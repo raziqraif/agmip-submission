@@ -428,19 +428,19 @@ class View:
         column_options = ("", *self.model.column_options)
         self.model_name_label.value = self.model.model_name if len(self.model.model_name) > 0 else "<Model Name>"
         set_options(self.scenario_column_dropdown, column_options, self.ctrl.onchange_scenario_column_dropdown)
-        self.scenario_column_dropdown.value = self.model.scenario_column
+        self.scenario_column_dropdown.value = self.model.assigned_scenario_column
         set_options(self.region_column_dropdown, column_options, self.ctrl.onchange_region_column_dropdown)
-        self.region_column_dropdown.value = self.model.region_column
+        self.region_column_dropdown.value = self.model.assigned_region_column
         set_options(self.variable_column_dropdown, column_options, self.ctrl.onchange_variable_column_dropdown)
-        self.variable_column_dropdown.value = self.model.variable_column
+        self.variable_column_dropdown.value = self.model.assigned_variable_column
         set_options(self.item_column_dropdown, column_options, self.ctrl.onchange_item_column_dropdown)
-        self.item_column_dropdown.value = self.model.item_column
+        self.item_column_dropdown.value = self.model.assigned_item_column
         set_options(self.unit_column_dropdown, column_options, self.ctrl.onchange_unit_column_dropdown)
-        self.unit_column_dropdown.value = self.model.unit_column
+        self.unit_column_dropdown.value = self.model.assigned_unit_column
         set_options(self.year_column_dropdown, column_options, self.ctrl.onchange_year_column_dropdown)
-        self.year_column_dropdown.value = self.model.year_column
+        self.year_column_dropdown.value = self.model.assigned_year_column
         set_options(self.value_column_dropdown, column_options, self.ctrl.onchange_value_column_dropdown)
-        self.value_column_dropdown.value = self.model.value_column
+        self.value_column_dropdown.value = self.model.assigned_value_column
         # Upload data preview table
         table_content = self.model.uploaded_data_preview_content
         number_of_columns = table_content.shape[1]
