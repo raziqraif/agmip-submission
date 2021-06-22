@@ -6,7 +6,7 @@
 
 	/* Clickaway listener for notification */
 
-	document.addEventListener('click', function(event) {
+	document.addEventListener('mousedown', function(event) {  // cannot be 'click' as it will interfere with the 'blur'
 		notification = document.getElementsByClassName('c-notification')[0]
 		// Ignore if user clicks inside notification
 		if (notification === undefined || notification.contains(event.target)) {

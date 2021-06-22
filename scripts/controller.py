@@ -163,7 +163,15 @@ class Controller:
         # The event is triggered programmatically by page update, and not by a user action
         if new_value == self.model.lines_to_skip_str:
             return
-        self.model.lines_to_skip_str = new_value
+        try:
+            new_value = int(new_value)
+            if new_value < 0:
+                self.view.show_notification(Notification.WARNING, "Number of lines cannot be negative")
+                new_value = 0
+            self.model.lines_to_skip_str = str(new_value)
+        except:
+            self.view.show_notification(Notification.WARNING, "Invalid number of lines")
+            self.model.lines_to_skip_str = "0" 
         self.view.update_data_specification_page()
 
     def onchange_delimiter_dropdown(self, change: dict) -> None:
