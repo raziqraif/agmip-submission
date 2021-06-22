@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import math
-import numpy as np
 from typing import Optional, Union  # Delay the evaluation of undefined types
 from threading import Timer
 
+import numpy as np
 import ipywidgets as ui
-from ipywidgets.widgets.domwidget import DOMWidget
 from IPython.core.display import display
 from IPython.core.display import HTML
 
@@ -74,18 +72,19 @@ class Delimiter:
     _model_postfix = "_MODEL"
     _view_postfix = "_VIEW"
     COMMA_MODEL = ","
-    COMMA_VIEW = "Comma  < , >"
+    COMMA_VIEW = "Comma  ( , )"
     SPACE_MODEL = " "
-    SPACE_VIEW = "Space  <   >"
+    SPACE_VIEW = "Space  (   )"
     SEMICOLON_MODEL = ";"
-    SEMICOLON_VIEW = "Semicolon  < ; >"
+    SEMICOLON_VIEW = "Semicolon  ( ; )"
     TAB_MODEL = "\t"
-    TAB_VIEW = "Tab  <      >"
+    TAB_VIEW = "Tab  (      )"
     PIPE_MODEL = "|"
-    PIPE_VIEW = "Pipe  < | >"
+    PIPE_VIEW = "Pipe  ( | )"
 
     @classmethod
     def get_view(cls, delimiter_model: str) -> str:
+        """Given a delimiter model, return a delimiter view"""
         if delimiter_model == "":  # Edge case
             return ""
         delimiter_model_names = [name for name in cls.__dict__.keys() if cls._model_postfix in name]
@@ -99,6 +98,7 @@ class Delimiter:
 
     @classmethod
     def get_model(cls, delimiter_view: str) -> str:
+        """Given a delimiter view, return a delimiter model"""
         if delimiter_view == "":  # Edge case
             return ""
         delimiter_view_names = [name for name in cls.__dict__.keys() if cls._view_postfix in name]
@@ -112,11 +112,13 @@ class Delimiter:
 
     @classmethod
     def get_views(cls) -> list[str]:
+        """Return all delimiter views"""
         delimiter_view_names = [name for name in cls.__dict__.keys() if cls._view_postfix in name]
         return [getattr(cls, name) for name in delimiter_view_names]
 
     @classmethod
     def get_models(cls) -> list[str]:
+        """Return all delimiter models"""
         delimiter_model_names = [name for name in cls.__dict__.keys() if cls._model_postfix in name]
         return [getattr(cls, name) for name in delimiter_model_names]
 
@@ -159,17 +161,19 @@ class CSS:
     UA__FILE_LABEL = "c-upload-area__file-label"
 
     @classmethod
-    def assign_class(cls, widget: DOMWidget, class_name: str) -> DOMWidget:
+    def assign_class(cls, widget: ui.DOMWidget, class_name: str) -> ui.DOMWidget:
+        """Assign a CSS class to a widget and returns the widget back"""
         # Get attribute names by filtering out method names from __dict__.keys()
         attribute_names = [name for name in cls.__dict__.keys() if name[:1] != "__"]
         defined_css_classes = [getattr(cls, name) for name in attribute_names]
         assert class_name in defined_css_classes
-        assert isinstance(widget, DOMWidget)
+        assert isinstance(widget, ui.DOMWidget)
         widget.add_class(class_name)
         return widget
 
 
 def set_options(widget: ui.Dropdown, options: tuple[str], onchange_callback) -> None:
+    """Utility function to reassign options without triggering onchange callback"""
     widget.unobserve(onchange_callback, "value")
     widget.options = options
     widget.value = None
@@ -177,10 +181,8 @@ def set_options(widget: ui.Dropdown, options: tuple[str], onchange_callback) -> 
 
 
 class View:
-    DATA_SPEC_PAGE_IS_BEING_UPDATED = (
-        False  # to assert that a page update will not recursively trigger another page update
-    )
-    # The following comment is to silence complaints about assigning None to a non-optional type in constructor
+    DATA_SPEC_PAGE_IS_BEING_UPDATED = False  # to assert that a page update will not recursively trigger another page update  # TODO: replace this with a proper test suite
+    # The following is to silence complaints about assigning None to a non-optional type in constructor
     # pyright: reportGeneralTypeIssues=false
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
@@ -355,25 +357,25 @@ class View:
         requested_page_number = requested_page_number - 1
         page: ui.Box = self.page_container.children[requested_page_number]
         page.remove_class(CSS.DISPLAY_MOD__NONE)
-        # Change stepper element with the "current" modifier to be "active"
+        # Change widget with the "current" modifier to be "active"
         for child_element in self.page_stepper.children:
             assert isinstance(child_element, ui.DOMWidget)
             if CSS.STEPPER__NUMBER__CURRENT in child_element._dom_classes:
                 child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__ACTIVE)
-        # Update the stepper elements belonging to the current page
-        # Format of the page stepper's children = [number el, title el, separator el, ..., number el, title el]
+        # Update stepper elements belonging to the current page
+        # Format of children elements = [number el, title el, separator el, ..., number el, title el]
         number_element = self.page_stepper.children[requested_page_number * 3 + 0]
         title_element = self.page_stepper.children[requested_page_number * 3 + 1]
         assert isinstance(number_element, ui.DOMWidget)
         assert isinstance(title_element, ui.DOMWidget)
         number_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__CURRENT)
         title_element._dom_classes = (CSS.STEPPER__TITLE__ACTIVE,)
-        # If the current page "just" become active, then its left separator would still be inactive, so activate it
+        # Make sure that the left page separator is "active"
         if requested_page_number > 0:
             separator_element = self.page_stepper.children[requested_page_number * 3 - 1]
-            assert isinstance(separator_element, DOMWidget)
+            assert isinstance(separator_element, ui.DOMWidget)
             separator_element._dom_classes = (CSS.STEPPER__SEPARATOR__ACTIVE,)
-        # If this the last active page, make sure the stepper elements belonging to the upcoming pages are inactive
+        # Make sure the stepper elements belonging to the upcoming pages are inactive (if "last active page" is specified)
         if is_last_active_page:
             for child_element in self.page_stepper.children[requested_page_number * 3 + 2 :]:
                 assert isinstance(child_element, ui.DOMWidget)
@@ -418,9 +420,9 @@ class View:
         set_options(self.model_name_dropdown, ("", *self.model.model_names), self.ctrl.onchange_model_name_dropdown)
         self.model_name_dropdown.value = self.model.model_name
         set_options(self.delimiter_dropdown, ("", *Delimiter.get_views()), self.ctrl.onchange_delimiter_dropdown)
-        self.delimiter_dropdown.value = Delimiter.get_view(self.model.delimiter)
+        self.delimiter_dropdown.value = Delimiter.get_view(self.model._delimiter)
         self.header_is_included_checkbox.value = self.model.header_is_included
-        self.lines_to_skip_text.value = self.model.lines_to_skip
+        self.lines_to_skip_text.value = self.model.lines_to_skip_str
         self.scenarios_to_ignore_text.value = self.model.scenarios_to_ignore
         # Column assignment controls
         column_options = ("", *self.model.column_options)
@@ -445,7 +447,7 @@ class View:
         table_content = table_content.flatten()
         # -Increase cache size if it's insufficient
         if len(table_content) > len(self._cached_children_of_uploaded_data_preview_table):
-            cache_addition = [ui.Box([ui.Label("")]) for i in range(len(table_content))]
+            cache_addition = [ui.Box([ui.Label("")]) for _ in range(len(table_content))]
             self._cached_children_of_uploaded_data_preview_table += cache_addition
         content_index = 0
         for content in table_content:
@@ -512,7 +514,7 @@ class View:
         )
         upload_area._dom_classes = [CSS.UA]
 
-        # Create a box to show that there's no file uploaded or to show the the uploaded file's name
+        # Create uploaded filename box
         # -Create snackbar to tell the user that no file has been uploaded
         no_file_uploaded = ui.HTML(
             '<div style="width: 365px; line-height: 36px; border-radius: 4px; padding: 0px 16px;'
@@ -610,8 +612,8 @@ class View:
         self.value_column_dropdown.observe(self.ctrl.onchange_value_column_dropdown, "value")
         # -preview table widgets
         self._cached_children_of_uploaded_data_preview_table = [
-            ui.Box([ui.Label("")]) for i in range(100)
-        ]  # 100 is random
+            ui.Box([ui.Label("")]) for _ in range(33)  # Using 33 as cache size is random
+        ]
         self.uploaded_data_preview_table = CSS.assign_class(
             ui.GridBox(
                 self._cached_children_of_uploaded_data_preview_table[
@@ -624,7 +626,7 @@ class View:
         )
         self.output_data_preview_table = CSS.assign_class(
             ui.GridBox(
-                [ui.Box([ui.Label("")]) for i in range(24)],  # 24 because of the 3 x 8 table dimension (invariant)
+                [ui.Box([ui.Label("")]) for _ in range(24)],  # 24 because of the 3 x 8 table dimension (invariant)
                 layout=ui.Layout(grid_template_columns="repeat(8, 1fr"),
             ),
             CSS.PREVIEW_TABLE,
@@ -637,8 +639,8 @@ class View:
             description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
         )
         previous.on_click(self.ctrl.onclick_previous_from_page_2)
-        # Create specifications container
-        # The process is abstracted away from the page build below to avoid too many indentations
+        # Create specifications section
+        # this section is separated from the page build below to avoid too many indentations
         label_layout = ui.Layout(width="205px")
         specifications_area = ui.VBox(  # Specification box
             (
