@@ -117,14 +117,14 @@ class Controller:
             return
         if self.model.last_finished_step == 0:
             self.model.last_finished_step = 1
-            self.view.set_cursor_style(CSS.CURSOR_MOD__WAIT)
+            self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
             error_message = self.model.init_data_specification_states(self.model.uploaded_filename)
             self.view.update_data_specification_page()
             if error_message is not None:
                 self.view.show_notification(Notification.ERROR, error_message)
             else:
                 self.view.show_notification(Notification.INFO, Notification.FIELDS_WERE_PREPOPULATED)
-            self.view.reset_cursor_style()
+            self.view.modify_cursor(None)
         self.view.switch_page(2)
 
     def onclick_next_from_page_2(self, widget: ui.Button) -> None:
@@ -181,7 +181,9 @@ class Controller:
         if new_value == self.model.delimiter:
             return
         self.model.delimiter = new_value
+        self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
         self.view.update_data_specification_page()
+        self.view.modify_cursor(None)
 
     def onchange_scenarios_to_ignore_text(self, change: dict) -> None:
         """The content of 'scenarios to ignore' text changed"""

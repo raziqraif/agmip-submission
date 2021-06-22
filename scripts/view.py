@@ -171,6 +171,12 @@ class CSS:
         widget.add_class(class_name)
         return widget
 
+    @classmethod
+    def get_cursor_mod_classes(cls) -> list[str]:
+        name_prefix = "CURSOR_MOD__"
+        names = [name for name in cls.__dict__.keys() if name_prefix in name]
+        return [getattr(cls, name) for name in names]
+
 
 def set_options(widget: ui.Dropdown, options: tuple[str], onchange_callback) -> None:
     """Utility function to reassign options without triggering onchange callback"""
@@ -294,15 +300,17 @@ class View:
         app.add_class(CSS.APP)
         return app
 
-    def set_cursor_style(self, cursor_mod_css_class: str) -> None:
-        """Change cursor style to 'progress'"""
-        self.reset_cursor_style()
-        self.app_container.add_class(cursor_mod_css_class)
-
-    def reset_cursor_style(self) -> None:
-        """Change cursor style to 'progress'"""
-        self.app_container.remove_class(CSS.CURSOR_MOD__PROGRESS)
-        self.app_container.remove_class(CSS.CURSOR_MOD__WAIT)
+    def modify_cursor(self, new_cursor_mod_class: Optional[str]) -> None:
+        """
+        Change cursor style by assigning the passed CSS class to the app's DOM
+        If None was passed, the cursor style will be reset
+        """
+        cursor_mod_classes = CSS.get_cursor_mod_classes() 
+        for cursor_mod_class in cursor_mod_classes:      # Remove all other cursor mods from DOM
+            self.app_container.remove_class(cursor_mod_class)
+        if new_cursor_mod_class is not None:
+            assert new_cursor_mod_class in cursor_mod_classes
+            self.app_container.add_class(new_cursor_mod_class)
 
     def show_notification(self, variant: str, content: str) -> None:
         """Display a notification to the user"""
