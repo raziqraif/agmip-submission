@@ -76,7 +76,7 @@ class Model:
         self.model_name: str = ""
         self._delimiter: str = ""
         self.header_is_included: bool = False
-        self._lines_to_skip_str: str = "0"
+        self._lines_to_skip: int = 0
         self.scenarios_to_ignore: str = ""
         self._assigned_colnum_for_scenario: int = 0
         self._assigned_colnum_for_region: int = 0
@@ -95,11 +95,6 @@ class Model:
     def build_csv_rows(self):
         if len(self.raw_csv_rows) == 0:
             return
-        try:
-            lines_to_skip = int(self.lines_to_skip_str)
-        except:
-            lines_to_skip = 0
-
         if self.delimiter == "":
             self.csv_rows = [[row] for row in self.raw_csv_rows]
         else:
@@ -125,24 +120,21 @@ class Model:
         self.build_csv_rows()
 
     @property
-    def lines_to_skip_str(self) -> str:
-        return self._lines_to_skip_str
+    def lines_to_skip(self) -> int:
+        return self._lines_to_skip
 
-    @lines_to_skip_str.setter
-    def lines_to_skip_str(self, value: str) -> None:
-        try:
-            lines_to_skip = int(value)  # convert float or int string to int
-            self.lines_to_skip_str = str(lines_to_skip)
-            if lines_to_skip >= len(self.csv_rows):
-                self._assigned_colnum_for_scenario = 0
-                self._assigned_colnum_for_region = 0
-                self._assigned_colnum_for_variable = 0
-                self._assigned_colnum_for_item = 0
-                self._assigned_colnum_for_unit = 0
-                self._assigned_colnum_for_year = 0
-                self._assigned_colnum_for_value = 0
-        except:
-            self._lines_to_skip_str = value
+    @lines_to_skip.setter
+    def lines_to_skip(self, value: int) -> None:
+        assert value >= 0
+        self._lines_to_skip = value
+        if value >= len(self.csv_rows):
+            self._assigned_colnum_for_scenario = 0
+            self._assigned_colnum_for_region = 0
+            self._assigned_colnum_for_variable = 0
+            self._assigned_colnum_for_item = 0
+            self._assigned_colnum_for_unit = 0
+            self._assigned_colnum_for_year = 0
+            self._assigned_colnum_for_value = 0
 
     @property
     def column_options(self) -> list[str]:
@@ -209,15 +201,11 @@ class Model:
         """Return preview table content in a 2D ndarray"""
         # Get constants
         DEFAULT_CONTENT = np.array(["" for _ in range(24)]).reshape((3, 8)) 
-        try:
-            LINES_TO_SKIP = int(self.lines_to_skip_str) 
-        except ValueError:
-            LINES_TO_SKIP = 0
-        if (len(self.csv_rows) == 0) or (LINES_TO_SKIP >= len(self.csv_rows)):
+        if (len(self.csv_rows) == 0) or (self.lines_to_skip >= len(self.csv_rows)):
             return DEFAULT_CONTENT
         # Process table content 
         preview_table = []
-        for row_index in range(LINES_TO_SKIP, len(self.csv_rows)):
+        for row_index in range(self.lines_to_skip, len(self.csv_rows)):
             row = self.csv_rows[row_index]
             if len(row) == self.most_frequent_ncolumn:  # row's ncolumn is correct
                 preview_table.append(row)
@@ -273,7 +261,7 @@ class Model:
         self.model_name = ""
         self.delimiter = ""  # Note that the setter property will initialize some other states as well
         self.header_is_included = False
-        self.lines_to_skip_str = "0"
+        self.lines_to_skip = 0
         self.scenarios_to_ignore = ""
         self.raw_csv_rows = []
         self.csv_rows = []
@@ -305,7 +293,7 @@ class Model:
         self.csv_rows = [row.split(self.delimiter) for row in self.raw_csv_rows]
         self.most_frequent_ncolumn = np.bincount([len(row) for row in self.csv_rows]).argmax()
         for row_index in range(len(self.csv_rows)):  # Guess the number of lines to skip
-            self.lines_to_skip_str = str(row_index)
+            self.lines_to_skip = row_index 
             if len(self.csv_rows[row_index]) == self.most_frequent_ncolumn:  # Number of column is correct
                 break
         for col_index in range(self.most_frequent_ncolumn):  # Guess the column assignments

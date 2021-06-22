@@ -422,7 +422,7 @@ class View:
         set_options(self.delimiter_dropdown, ("", *Delimiter.get_views()), self.ctrl.onchange_delimiter_dropdown)
         self.delimiter_dropdown.value = Delimiter.get_view(self.model._delimiter)
         self.header_is_included_checkbox.value = self.model.header_is_included
-        self.lines_to_skip_text.value = self.model.lines_to_skip_str
+        self.lines_to_skip_text.value = str(self.model.lines_to_skip)
         self.scenarios_to_ignore_text.value = self.model.scenarios_to_ignore
         # Column assignment controls
         column_options = ("", *self.model.column_options)
