@@ -549,7 +549,7 @@ class View:
         download_button = ui.HTML(
             """
                 <a
-                    href="SampleData.csv" 
+                    href="workingdir/SampleData.csv" 
                     download="SampleData.csv"
                     class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-danger" 
                     title=""
