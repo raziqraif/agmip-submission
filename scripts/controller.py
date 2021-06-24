@@ -1,5 +1,6 @@
 from __future__ import annotations  # Delay the evaluation of undefined types
 from pathlib import Path
+from scripts.model import Step
 
 import ipywidgets as ui
 
@@ -24,12 +25,14 @@ class Controller:
         """Load data, build UI"""
         self.view.display()
 
-    def reset_later_steps(self, current_finished_step: int) -> None:
-        """Set the last active page to the given argument"""
-        if self.model.last_finished_step == current_finished_step:
+    def reset_later_steps(self, last_finished_step: int) -> None:
+        """Set the last active page based on the given argument
+        Last active page number = Last finished step + 1
+        """
+        if self.model.last_finished_step == last_finished_step:
             return
-        self.model.last_finished_step = current_finished_step
-        current_page_number = current_finished_step + 1
+        self.model.last_finished_step = last_finished_step
+        current_page_number = last_finished_step + 1
         self.view.switch_page(current_page_number, is_last_active_page=True)
 
     def validate_data_specification_input(self) -> bool:  # TODO: Should be moved to model
@@ -89,7 +92,6 @@ class Controller:
         file_name: str = change["new"]
         if len(file_name) == 0:  # This change was triggered by View's internal operation, not by a user aciton
             return
-
         self.model.uploaded_filename = file_name
         if file_name.endswith(CSV):
             self.view.show_notification(Notification.SUCCESS, Notification.FILE_UPLOAD_SUCCESS)
@@ -98,7 +100,7 @@ class Controller:
             self.view.show_notification(Notification.ERROR, Notification.INVALID_FILE_FORMAT)
             self.model.remove_file(file_name)
             self.model.uploaded_filename = ""
-        self.reset_later_steps(current_finished_step=0)
+        self.reset_later_steps(last_finished_step=Step.INITIAL)
 
     def onclick_remove_file(self, widget: ui.Button) -> None:
         """'x' button in the file upload snackbar was clicked"""
@@ -106,15 +108,15 @@ class Controller:
         self.model.remove_file(self.model.uploaded_filename)
         self.model.uploaded_filename = ""
         self.view.update_file_upload_page(None)
-        self.reset_later_steps(current_finished_step=0)
+        self.reset_later_steps(last_finished_step=Step.INITIAL)
 
     def onclick_next_from_page_1(self, widget: ui.Button) -> None:
         """'Next' button on the file upload page was clicked"""
         if len(self.model.uploaded_filename) == 0:
             self.view.show_notification(Notification.INFO, Notification.PLEASE_UPLOAD)
             return
-        if self.model.last_finished_step == 0:
-            self.model.last_finished_step = 1
+        if self.model.last_finished_step == Step.INITIAL:
+            self.model.last_finished_step = Step.FILE_UPLOAD
             self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
             error_message = self.model.init_data_specification_states(self.model.uploaded_filename)
             self.view.update_data_specification_page()
@@ -129,8 +131,8 @@ class Controller:
         """'Next' button on the data specification page was clicked"""
         if not self.validate_data_specification_input():
             return
-        if self.model.last_finished_step == 1:
-            self.model.last_finished_step = 2
+        if self.model.last_finished_step == Step.FILE_UPLOAD:
+            self.model.last_finished_step = Step.DATA_SPECIFICATION 
         self.view.show_notification(Notification.INFO, "Integrity checking page is still under construction")
 
     def onclick_previous_from_page_2(self, widget: ui.Button) -> None:
@@ -145,6 +147,7 @@ class Controller:
             return
         self.model.model_name = new_value
         self.view.update_data_specification_page()
+        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
 
     def onchange_header_is_included_checkbox(self, change: dict) -> None:
         """The state of 'header is included' checkbox changed"""
@@ -154,6 +157,7 @@ class Controller:
             return
         self.model.header_is_included = new_value
         self.view.update_data_specification_page()
+        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
 
     def onchange_lines_to_skip_text(self, change: dict) -> None:
         """The content of 'lines to skip' text changed"""
@@ -171,6 +175,7 @@ class Controller:
             self.view.show_notification(Notification.WARNING, "Invalid number of lines")
             self.model.lines_to_skip = 0 
         self.view.update_data_specification_page()
+        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
 
     def onchange_delimiter_dropdown(self, change: dict) -> None:
         """The selection in 'delimiter' dropdown changed"""
@@ -182,6 +187,7 @@ class Controller:
         self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
         self.view.update_data_specification_page()
         self.view.modify_cursor(None)
+        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
 
     def onchange_scenarios_to_ignore_text(self, change: dict) -> None:
         """The content of 'scenarios to ignore' text changed"""
@@ -191,6 +197,7 @@ class Controller:
             return
         self.model.scenarios_to_ignore_str = new_value
         self.view.update_data_specification_page()
+        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
 
     def onchange_scenario_column_dropdown(self, change: dict) -> None:
         """The selection in 'scenario column' dropdown was changed"""
@@ -200,6 +207,7 @@ class Controller:
             return
         self.model.assigned_scenario_column = new_value
         self.view.update_data_specification_page()
+        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
 
     def onchange_region_column_dropdown(self, change: dict) -> None:
         """The selection in 'region column' dropdown changed"""
@@ -209,6 +217,7 @@ class Controller:
             return
         self.model.assigned_region_column = new_value
         self.view.update_data_specification_page()
+        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
 
     def onchange_variable_column_dropdown(self, change: dict) -> None:
         """The selection in 'variable column' dropdown changed"""
@@ -218,6 +227,7 @@ class Controller:
             return
         self.model.assigned_variable_column = new_value
         self.view.update_data_specification_page()
+        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
 
     def onchange_item_column_dropdown(self, change: dict) -> None:
         """The selection in 'item column' dropdown changed"""
@@ -227,6 +237,7 @@ class Controller:
             return
         self.model.assigned_item_column = new_value
         self.view.update_data_specification_page()
+        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
 
     def onchange_unit_column_dropdown(self, change: dict) -> None:
         """The selection in 'unit column' dropdown changed"""
@@ -236,6 +247,7 @@ class Controller:
             return
         self.model.assigned_unit_column = new_value
         self.view.update_data_specification_page()
+        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
 
     def onchange_year_column_dropdown(self, change: dict) -> None:
         """The selection in 'year column' dropdown changed"""
@@ -245,6 +257,7 @@ class Controller:
             return
         self.model.assigned_year_column = new_value
         self.view.update_data_specification_page()
+        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
 
     def onchange_value_column_dropdown(self, change: dict) -> None:
         """The selection in 'value column' dropdown changed"""
@@ -254,3 +267,4 @@ class Controller:
             return
         self.model.assigned_value_column = new_value
         self.view.update_data_specification_page()
+        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
