@@ -40,8 +40,6 @@ class Controller:
                 self.view.show_notification(Notification.WARNING, "Model name is empty")
             elif len(self.model.delimiter) == 0:
                 self.view.show_notification(Notification.WARNING, "Delimiter is empty")
-            elif len(self.model.lines_to_skip) == 0:
-                self.view.show_notification(Notification.WARNING, "Initial number of lines to skip is empty")
             elif int(self.model.lines_to_skip) < 0:
                 self.view.show_notification(
                     Notification.WARNING, "Number of lines cannot be negative"
@@ -189,9 +187,9 @@ class Controller:
         """The content of 'scenarios to ignore' text changed"""
         new_value = change["new"]
         # The event is triggered programmatically by page update, and not by user actions
-        if new_value == self.model.scenarios_to_ignore:
+        if new_value == self.model.scenarios_to_ignore_str:
             return
-        self.model.scenarios_to_ignore = new_value
+        self.model.scenarios_to_ignore_str = new_value
         self.view.update_data_specification_page()
 
     def onchange_scenario_column_dropdown(self, change: dict) -> None:

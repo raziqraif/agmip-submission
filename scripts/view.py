@@ -222,9 +222,9 @@ class View:
         self.unit_column_dropdown: ui.Dropdown = None
         self.year_column_dropdown: ui.Dropdown = None
         self.value_column_dropdown: ui.Dropdown = None
-        self.uploaded_data_preview_table: ui.GridBox = None
+        self.input_data_preview_table: ui.GridBox = None
         self.output_data_preview_table: ui.GridBox = None
-        self._cached_children_of_uploaded_data_preview_table: Optional[list] = None
+        self._cached_children_of_input_data_preview_table: Optional[list] = None
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -431,9 +431,9 @@ class View:
         self.delimiter_dropdown.value = Delimiter.get_view(self.model._delimiter)
         self.header_is_included_checkbox.value = self.model.header_is_included
         self.lines_to_skip_text.value = str(self.model.lines_to_skip)
-        self.scenarios_to_ignore_text.value = self.model.scenarios_to_ignore
+        self.scenarios_to_ignore_text.value = self.model.scenarios_to_ignore_str
         # Column assignment controls
-        column_options = ("", *self.model.column_options)
+        column_options = ("", *self.model.column_assignment_options)
         self.model_name_label.value = self.model.model_name if len(self.model.model_name) > 0 else "<Model Name>"
         set_options(self.scenario_column_dropdown, column_options, self.ctrl.onchange_scenario_column_dropdown)
         self.scenario_column_dropdown.value = self.model.assigned_scenario_column
@@ -450,25 +450,25 @@ class View:
         set_options(self.value_column_dropdown, column_options, self.ctrl.onchange_value_column_dropdown)
         self.value_column_dropdown.value = self.model.assigned_value_column
         # Upload data preview table
-        table_content = self.model.uploaded_data_preview_content
+        table_content = self.model.input_data_preview_content
         number_of_columns = table_content.shape[1]
         table_content = table_content.flatten()
         # -Increase cache size if it's insufficient
-        if len(table_content) > len(self._cached_children_of_uploaded_data_preview_table):
+        if len(table_content) > len(self._cached_children_of_input_data_preview_table):
             cache_addition = [ui.Box([ui.Label("")]) for _ in range(len(table_content))]
-            self._cached_children_of_uploaded_data_preview_table += cache_addition
+            self._cached_children_of_input_data_preview_table += cache_addition
         content_index = 0
         for content in table_content:
-            content_box = self._cached_children_of_uploaded_data_preview_table[content_index]
+            content_box = self._cached_children_of_input_data_preview_table[content_index]
             assert isinstance(content_box, ui.Box)
             content_label = content_box.children[0]
             assert isinstance(content_label, ui.Label)
             content_label.value = content
             content_index += 1
-        self.uploaded_data_preview_table.children = self._cached_children_of_uploaded_data_preview_table[
+        self.input_data_preview_table.children = self._cached_children_of_input_data_preview_table[
             : table_content.size
         ]
-        self.uploaded_data_preview_table.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
+        self.input_data_preview_table.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
         # Output data preview table
         table_content = self.model.output_data_preview_content
         table_content = table_content.flatten()
@@ -619,12 +619,12 @@ class View:
         self.value_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.value_column_dropdown.observe(self.ctrl.onchange_value_column_dropdown, "value")
         # -preview table widgets
-        self._cached_children_of_uploaded_data_preview_table = [
+        self._cached_children_of_input_data_preview_table = [
             ui.Box([ui.Label("")]) for _ in range(33)  # Using 33 as cache size is random
         ]
-        self.uploaded_data_preview_table = CSS.assign_class(
+        self.input_data_preview_table = CSS.assign_class(
             ui.GridBox(
-                self._cached_children_of_uploaded_data_preview_table[
+                self._cached_children_of_input_data_preview_table[
                     :24
                 ],  # 24 because we assume the table dimension to be
                 # 3 x 8 (the row number will stay the same, but the column number may vary)
@@ -682,9 +682,9 @@ class View:
                     (
                         ui.VBox(  # --Box for the page's main components
                             (
-                                ui.HTML("<b>Specify the format of the uploaded data</b>"),  # ---Title
+                                ui.HTML("<b>Specify the format of the uploaded input data</b>"),  # ---Title
                                 specifications_area,  # ---Specifications area
-                                ui.HTML("<b>Assign columns from the uploaded data to the output data</b>"),  # ---Title
+                                ui.HTML("<b>Assign columns from the uploaded input data to the output data</b>"),  # ---Title
                                 CSS.assign_class(
                                     ui.GridBox(  # --Column assignment table
                                         (
@@ -708,8 +708,8 @@ class View:
                                     ),
                                     CSS.COLUMN_ASSIGNMENT_TABLE,
                                 ),
-                                ui.HTML("<b>Preview of the uploaded data</b>"),
-                                self.uploaded_data_preview_table,  # --preview table
+                                ui.HTML("<b>Preview of the input data</b>"),
+                                self.input_data_preview_table,  # --preview table
                                 ui.HTML("<b>Preview of the output data</b>"),
                                 self.output_data_preview_table,  # --preview table
                             ),
