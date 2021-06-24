@@ -43,7 +43,7 @@
 		const CURRENT_URL = window.location.href;
 		const BASE_URL = CURRENT_URL.split("/notebooks/")[0];
 
-		let fileDestinationPath = "uploads/" + filename;
+		let fileDestinationPath = "workingdir/uploads/" + filename;
 		let url = BASE_URL + "/api/contents/" + fileDestinationPath;
 
 		// Jupyter's upload API requires chunk number to start with 1 and end with -1
