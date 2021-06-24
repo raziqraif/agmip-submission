@@ -39,12 +39,17 @@
 	function _getUploadInfo(chunks, chunk_index, filename) {
 		/* Return upload URL and payload */
 
-		// Format: <BASE_URL>/notebooks/<PATH_TO_CURRENT_NOTEBOOK>
+		// Format: <BASE_URL>/notebooks/<PATH_TO_CURRENT_NOTEBOOK> or <BASE_URL>/apps/<PATH_TO_CURRENT_NOTEBOOK>
 		const CURRENT_URL = window.location.href;
-		const BASE_URL = CURRENT_URL.split("/notebooks/")[0];
+		if (CURRENT_URL.includes("/notebooks/"))	// Normal notebook URL
+			var BASE_URL = CURRENT_URL.split("/notebooks/")[0];
+		else if (CURRENT_URL.includes("/apps/"))	// URL when appmode is on 
+			var BASE_URL = CURRENT_URL.split("/apps/")[0];
+		else
+			throw "Unexpected URL"	
 
-		let fileDestinationPath = "workingdir/uploads/" + filename;
-		let url = BASE_URL + "/api/contents/" + fileDestinationPath;
+		const FILE_DESTINATION_PATH = "workingdir/uploads/" + filename;
+		var url = BASE_URL + "/api/contents/" + FILE_DESTINATION_PATH;
 
 		// Jupyter's upload API requires chunk number to start with 1 and end with -1
 		let chunk_number = chunk_index + 1;
@@ -53,7 +58,7 @@
 		let payload = {
 			content: chunks[chunk_index],
 			name: filename,
-			path: fileDestinationPath,
+			path: FILE_DESTINATION_PATH,
 			format: "base64",
 			type: "file",
 		};
@@ -85,8 +90,6 @@
 		 */
 
 		var file = this.files[0];
-		console.log(this.files)
-		console.log({file})
 
 		this.disabled = true;
 		document.body.classList.add("c-cursor-mod--progress")
@@ -105,7 +108,6 @@
 			// Upload files in chunks
 			for (let i = 0; i < chunks.length; i++) {
 				let { url, payload } = _getUploadInfo(chunks, i, file.name);
-
 				let http = new XMLHttpRequest();
 				http.open("PUT", url, true);
 

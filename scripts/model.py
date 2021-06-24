@@ -49,7 +49,7 @@ class Step:
 
 
 class Model:
-    UPLOAD_DIR: Path = Path(__name__).parent.parent / Path("uploads")  # <PROJECT_DIR>/uploads
+    UPLOAD_DIR: Path = Path(__name__).parent.parent / "workingdir" / "uploads" # <PROJECT_DIR>/workingdir/uploads
 
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
