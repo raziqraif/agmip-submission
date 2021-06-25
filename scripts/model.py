@@ -99,6 +99,13 @@ class Model:
         self.view = view
         self.controller = controller
 
+    def remove_file(self, file_name: str) -> None:
+        """Remove uploaded file from the upload directory"""
+        assert len(file_name) > 0
+        file_path = self.UPLOAD_DIR / Path(file_name)
+        assert file_path.is_file()
+        file_path.unlink()
+    
     @property
     def delimiter(self) -> str:
         return self._delimiter
@@ -148,7 +155,8 @@ class Model:
     @property
     def column_assignment_options(self) -> list[str]:
         input_header = list(self.input_data_preview_content[0])  # The header / first row of the input data preview
-        return [] if "" in input_header else input_header
+        return [] if "" in input_header else input_header  # Assumption: Empty string is only present when the header
+        # row is empty
 
     @property
     def assigned_scenario_column(self) -> str:
@@ -207,16 +215,20 @@ class Model:
         self._assigned_colnum_for_value = ([""] + self.column_assignment_options).index(value)
 
     @property
-    def sample_processed_csv_rows(self) -> list[list[str]]:
+    def _sample_processed_csv_rows(self) -> list[list[str]]:
         """
         Process a subset of raw CSV rows by using delimiter, scenarios to ignore, and number of lines to skip;
-        and return the result
+        and return the result. The result is meant to be used for preview content & column assignment guessing.
 
-        NOTE: The processing done in this method is not exhaustive, since it does not check for type mismatch.
-        E.g. if there's a non-integer label in the year column
+        The processing done is not exhaustive and only includes:
+        - Skipping initial rows
+        - Splitting rows based on the delimiter
+        - Removing rows containing ignored scenarios
+        - Guessing the correct number of columns and removing rows with mismatched number of columns
+
         NOTE: To reduce performance hit, we limit the number of rows processed in this method and memoize
         the result
-        @date 6/23/21
+        @date 6/25/21
         """
         if self._sample_processed_csv_rows_memo is not None:
             return self._sample_processed_csv_rows_memo
@@ -224,9 +236,6 @@ class Model:
         ORIGINAL_NROWS = len(self.raw_csv_rows)
         TARGET_NROWS_BEFORE_DETECTING_NCOLS = 5000
         rows = []
-        if self.lines_to_skip > ORIGINAL_NROWS:
-            self._sample_processed_csv_rows_memo = rows
-            return rows
         for row_idx in range(self.lines_to_skip, ORIGINAL_NROWS):
             raw_row = self.raw_csv_rows[row_idx]
             if self._row_contains_ignored_scenario(raw_row):
@@ -271,7 +280,7 @@ class Model:
         NROWS = 3
         DEFAULT_CONTENT = np.array(["" for _ in range(3)]).reshape((NROWS, 1))
         # Process table content
-        preview_table = self.sample_processed_csv_rows[:NROWS]
+        preview_table = self._sample_processed_csv_rows[:NROWS]
         if len(preview_table) == 0:
             return DEFAULT_CONTENT
         elif len(preview_table) < 3:
@@ -403,7 +412,7 @@ class Model:
         Guess the model name and column assignments, and mutate the appropariate states
         Return True if some guesses were successful, else False
         """
-        sample_processed_csv_rows = self.sample_processed_csv_rows
+        sample_processed_csv_rows = self._sample_processed_csv_rows
         nrows = len(sample_processed_csv_rows)
         ncols = len(sample_processed_csv_rows[0]) if nrows > 0 else 0
         if nrows == 0 or ncols == 0:
@@ -455,10 +464,3 @@ class Model:
         except ValueError:
             pass
         return -1
-
-    def remove_file(self, file_name: str) -> None:
-        """Remove uploaded file from the upload directory"""
-        assert len(file_name) > 0
-        file_path = self.UPLOAD_DIR / Path(file_name)
-        assert file_path.is_file()
-        file_path.unlink()
