@@ -7,6 +7,7 @@ from selenium import webdriver
 import selenium
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
@@ -33,16 +34,33 @@ def invalid_file_ext_spath() -> str:
     return str(INPUT_DIRPATH / Path("InvalidExtension.wxyz"))
 
 
+class presence_of_class_name:
+    """Class to emulate a callback in Selenium's expected_conditions"""
+
+    def __init__(self, locator: tuple, class_name: str):
+        self.locator = locator
+        self.class_name = class_name
+
+    def __call__(self, driver: WebDriver):
+        try:
+            element: WebElement = driver.find_element(*self.locator)
+            class_names: str = element.get_attribute("class")  # html attribute 'class'
+            return self.class_name in class_names
+        except:
+            return False
+
+
 class TestFileUploadSuite:
     def setup_method(self, method):
         # Note: With the current CI environment, chrome needs to be in headless mode before pushing to github
         options = webdriver.ChromeOptions()
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--window-size=1440, 900")
         options.add_argument("--headless")
         self.driver = webdriver.Chrome(options=options)
-        self.wait = WebDriverWait(self.driver, 10)  # Set explicit wait time to 10 seconds
-        self.driver.implicitly_wait(10)  # Set implicit wait time to 10 seconds
+        self.wait = WebDriverWait(self.driver, 20)  # Set explicit wait time to X seconds
+        self.driver.implicitly_wait(20)  # Set implicit wait time to X seconds
         self.driver.get(nb_url())
         self._run_notebook()
 
@@ -130,3 +148,34 @@ class TestFileUploadSuite:
         # Verify that we're still on the file upload page
         download_button: WebElement = self.driver.find_element_by_link_text("Download")
         assert download_button.is_displayed()
+
+    def test_3(self, sample_file_spath: str) -> None:
+        """Test case: upload > next"""
+        self._test_valid_upload(sample_file_spath)
+        next_button: WebElement = self.driver.find_element_by_xpath(
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[2]/div/div[2]/button'
+        )
+        next_button.click()
+        # Check if we switched page
+        self.wait.until(expected_conditions.invisibility_of_element((By.CLASS_NAME, CSS.UA__BACKGROUND)))
+        # Check if stepper element changes color appropriately
+        page_1_number_locator = (
+            By.XPATH,
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[1]',
+        )
+        page_1_2_separator_locator = (
+            By.XPATH,
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[3]',
+        )
+        page_2_number_locator = (
+            By.XPATH,
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[4]',
+        )
+        page_2_title_locator = (
+            By.XPATH,
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[5]',
+        )
+        self.wait.until(presence_of_class_name(page_1_number_locator, CSS.STEPPER__NUMBER__ACTIVE))
+        self.wait.until(presence_of_class_name(page_1_2_separator_locator, CSS.STEPPER__SEPARATOR__ACTIVE))
+        self.wait.until(presence_of_class_name(page_2_number_locator, CSS.STEPPER__NUMBER__CURRENT))
+        self.wait.until(presence_of_class_name(page_2_title_locator, CSS.STEPPER__TITLE__ACTIVE))

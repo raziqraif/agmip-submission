@@ -1,8 +1,9 @@
 from __future__ import annotations
-from scripts.model import JSAppModel
-from typing import Union  # Delay the evaluation of undefined types
+
+from typing import Optional, Union  # Delay the evaluation of undefined types
 from threading import Timer
 
+import numpy as np
 import ipywidgets as ui
 from IPython.core.display import display
 from IPython.core.display import HTML
@@ -60,15 +61,78 @@ class Notification:
     FILE_UPLOAD_SUCCESS = "File uploaded successfully"
     INVALID_FILE_FORMAT = "File format must be CSV"
     PLEASE_UPLOAD = "Please upload a CSV file first"
+    FIELDS_WERE_PREPOPULATED = "Some fields have been prepopulated for you"
+
+
+class Delimiter:
+    """
+    Namespace for supported CSV delimiters and relevant utilities
+    """
+
+    _model_postfix = "_MODEL"
+    _view_postfix = "_VIEW"
+    COMMA_MODEL = ","
+    COMMA_VIEW = "Comma  ( , )"
+    SPACE_MODEL = " "
+    SPACE_VIEW = "Space  (   )"
+    SEMICOLON_MODEL = ";"
+    SEMICOLON_VIEW = "Semicolon  ( ; )"
+    TAB_MODEL = "\t"
+    TAB_VIEW = "Tab  (      )"
+    PIPE_MODEL = "|"
+    PIPE_VIEW = "Pipe  ( | )"
+
+    @classmethod
+    def get_view(cls, delimiter_model: str) -> str:
+        """Given a delimiter model, return a delimiter view"""
+        if delimiter_model == "":  # Edge case
+            return ""
+        delimiter_model_names = [name for name in cls.__dict__.keys() if cls._model_postfix in name]
+        delimiter_models = [getattr(cls, name) for name in delimiter_model_names]
+        assert delimiter_model in delimiter_models
+        for i in range(len(delimiter_models)):
+            if delimiter_model == delimiter_models[i]:
+                delimiter_model_name = delimiter_model_names[i]
+                delimiter_view_name = delimiter_model_name.replace(cls._model_postfix, cls._view_postfix)
+                return getattr(cls, delimiter_view_name)
+
+    @classmethod
+    def get_model(cls, delimiter_view: str) -> str:
+        """Given a delimiter view, return a delimiter model"""
+        if delimiter_view == "":  # Edge case
+            return ""
+        delimiter_view_names = [name for name in cls.__dict__.keys() if cls._view_postfix in name]
+        delimiter_views = [getattr(cls, name) for name in delimiter_view_names]
+        assert delimiter_view in delimiter_views
+        for i in range(len(delimiter_views)):
+            if delimiter_view == delimiter_views[i]:
+                delimiter_view_name = delimiter_view_names[i]
+                delimiter_model_name = delimiter_view_name.replace(cls._view_postfix, cls._model_postfix)
+                return getattr(cls, delimiter_model_name)
+
+    @classmethod
+    def get_views(cls) -> list[str]:
+        """Return all delimiter views"""
+        delimiter_view_names = [name for name in cls.__dict__.keys() if cls._view_postfix in name]
+        return [getattr(cls, name) for name in delimiter_view_names]
+
+    @classmethod
+    def get_models(cls) -> list[str]:
+        """Return all delimiter models"""
+        delimiter_model_names = [name for name in cls.__dict__.keys() if cls._model_postfix in name]
+        return [getattr(cls, name) for name in delimiter_model_names]
 
 
 class CSS:
-    """Namespace for CSS classes declared in style.html and used in Python"""
+    """Namespace for CSS classes declared in style.html and used inside Python"""
 
     APP = "c-app-container"
     COLOR_MOD__WHITE = "c-color-mod--white"
     COLOR_MOD__BLACK = "c-color-mod--black"
     COLOR_MOD__GREY = "c-color-mod--grey"
+    COLUMN_ASSIGNMENT_TABLE = "c-column-assignment-table"
+    CURSOR_MOD__PROGRESS = "c-cursor-mod--progress"
+    CURSOR_MOD__WAIT = "c-cursor-mod--wait"
     DISPLAY_MOD__NONE = "c-display-mod--none"
     FILENAME_SNACKBAR = "c-filename-snackbar"
     FILENAME_SNACKBAR__TEXT = "c-filename-snackbar__text"
@@ -80,6 +144,7 @@ class CSS:
     NOTIFICATION__SHOW = "c-notification--show"
     NOTIFICATION__SUCCESS = "c-notification--success"
     NOTIFICATION__WARNING = "c-notification--warning"
+    PREVIEW_TABLE = "c-preview-table"
     STEPPER = "c-stepper"
     STEPPER__NUMBER = "c-stepper__number"
     STEPPER__NUMBER__ACTIVE = "c-stepper__number--active"
@@ -95,9 +160,36 @@ class CSS:
     UA__OVERLAY = "c-upload-area__overlay"
     UA__FILE_LABEL = "c-upload-area__file-label"
 
+    @classmethod
+    def assign_class(cls, widget: ui.DOMWidget, class_name: str) -> ui.DOMWidget:
+        """Assign a CSS class to a widget and returns the widget back"""
+        # Get attribute names by filtering out method names from __dict__.keys()
+        attribute_names = [name for name in cls.__dict__.keys() if name[:1] != "__"]
+        defined_css_classes = [getattr(cls, name) for name in attribute_names]
+        assert class_name in defined_css_classes
+        assert isinstance(widget, ui.DOMWidget)
+        widget.add_class(class_name)
+        return widget
 
-# pyright: reportGeneralTypeIssues=false
+    @classmethod
+    def get_cursor_mod_classes(cls) -> list[str]:
+        name_prefix = "CURSOR_MOD__"
+        names = [name for name in cls.__dict__.keys() if name_prefix in name]
+        return [getattr(cls, name) for name in names]
+
+
+def set_options(widget: ui.Dropdown, options: tuple[str], onchange_callback) -> None:
+    """Utility function to reassign options without triggering onchange callback"""
+    widget.unobserve(onchange_callback, "value")
+    widget.options = options
+    widget.value = None
+    widget.observe(onchange_callback, "value")
+
+
 class View:
+    DATA_SPEC_PAGE_IS_BEING_UPDATED = False  # to assert that a page update will not recursively trigger another page update  # TODO: replace this with a proper test suite
+    # The following is to silence complaints about assigning None to a non-optional type in constructor
+    # pyright: reportGeneralTypeIssues=false
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
         from .controller import Controller
@@ -107,20 +199,32 @@ class View:
         self.model: Model
         self.ctrl: Controller
 
-        # Page container & other app pages
-        self.page_container: ui.Box
-        self.file_upload_page: ui.Box
-        self.data_specification_page: ui.Box
-        self.integrity_checking_page: ui.Box
-        self.plausibility_checking_page: ui.Box
-
-        self.stepper: ui.Box
-        self.notification: ui.Box
+        # Main app's widgets that need to be manipulated
+        self.app_container: ui.Box = None
+        self.page_container: ui.Box = None
+        self.page_stepper: ui.Box = None
+        self.notification: ui.Box = None
         self.notification_timer: Timer = Timer(0.0, None)
-
-        # Widgets in file upload page that needs to be manipulated
+        # Widgets in the file upload page that need to be manipulated
         self.ua_file_label: ui.Label  # ua here stands for "upload area"
         self.uploaded_file_name_box: ui.Box
+        # Widgets in the data specification page that need to be manipulated
+        self.model_name_dropdown: ui.Dropdown = None
+        self.delimiter_dropdown: ui.Dropdown = None
+        self.header_is_included_checkbox: ui.Checkbox = None
+        self.lines_to_skip_text: ui.Text = None
+        self.scenarios_to_ignore_text: ui.Textarea = None
+        self.model_name_label: ui.Label = None
+        self.scenario_column_dropdown: ui.Dropdown = None
+        self.region_column_dropdown: ui.Dropdown = None
+        self.variable_column_dropdown: ui.Dropdown = None
+        self.item_column_dropdown: ui.Dropdown = None
+        self.unit_column_dropdown: ui.Dropdown = None
+        self.year_column_dropdown: ui.Dropdown = None
+        self.value_column_dropdown: ui.Dropdown = None
+        self.input_data_preview_table: ui.GridBox = None
+        self.output_data_preview_table: ui.GridBox = None
+        self._cached_children_of_input_data_preview_table: Optional[list] = None
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -129,10 +233,12 @@ class View:
 
     def display(self) -> None:
         """Build and show notebook user interface"""
-        app_container = self.build()
+        from scripts.model import JSAppModel
+
+        self.app_container = self.build()
         # Display the appropriate html files and our ipywidgets app
         display(HTML(filename="style.html"))
-        display(app_container)
+        display(self.app_container)
         # Embed Javascript app model in Javascript context
         javascript_model: JSAppModel = self.model.javascript_model
         display(HTML(f"<script> APP_MODEL = {javascript_model.serialize()}</script>"))
@@ -165,23 +271,28 @@ class View:
 
             is_last_page = i == NUM_OF_PAGES - 1
             stepper_children += [page_number, page_title] if is_last_page else [page_number, page_title, separator]
-        self.stepper = ui.HBox(stepper_children)
-        self.stepper.add_class(CSS.STEPPER)
+        self.page_stepper = ui.HBox(stepper_children)
+        self.page_stepper.add_class(CSS.STEPPER)
         # Create app pages & page container
-        self.file_upload_page = self._build_file_upload_page()
-        self.data_specification_page = self._build_data_specification_page()
-        self.integrity_checkgin_page = self._build_integrity_checking_page()
-        self.integrity_checkgin_page = self._build_plausibility_checking_page()
         self.page_container = ui.Box(
-            [self.file_upload_page], layout=ui.Layout(flex="1", width="100%")  # page container stores the current page
+            [
+                self._build_file_upload_page(),
+                self._build_data_specification_page(),
+                self._build_integrity_checking_page(),
+                self._build_plausibility_checking_page(),
+            ],
+            layout=ui.Layout(flex="1", width="100%"),  # page container stores the current page
         )
+        # Hide all pages, except for the first one
+        for page in self.page_container.children[1:]:
+            page.add_class(CSS.DISPLAY_MOD__NONE)
 
         app = ui.VBox(  # app container
             [
                 self.notification,
                 header_bar,  # -header bar
                 ui.VBox(  # -body container
-                    children=[self.stepper, self.page_container],  # --stepper, page container
+                    children=[self.page_stepper, self.page_container],  # --page stepper, page container
                     layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
                 ),
             ],
@@ -189,7 +300,17 @@ class View:
         app.add_class(CSS.APP)
         return app
 
-    counter = 0
+    def modify_cursor(self, new_cursor_mod_class: Optional[str]) -> None:
+        """
+        Change cursor style by assigning the passed CSS class to the app's DOM
+        If None was passed, the cursor style will be reset
+        """
+        cursor_mod_classes = CSS.get_cursor_mod_classes() 
+        for cursor_mod_class in cursor_mod_classes:      # Remove all other cursor mods from DOM
+            self.app_container.remove_class(cursor_mod_class)
+        if new_cursor_mod_class is not None:
+            assert new_cursor_mod_class in cursor_mod_classes
+            self.app_container.add_class(new_cursor_mod_class)
 
     def show_notification(self, variant: str, content: str) -> None:
         """Display a notification to the user"""
@@ -200,8 +321,8 @@ class View:
 
         # Reset the notification's DOM classes
         # This is important because we implement a clickaway listener in JS which removes a DOM class from the
-        # notification view without notifying the notification model. Doing this will reset the DOM classes that the
-        # notification models in both server-side & client-side are maintaining
+        # notification view without notifying the notification model. Doing this will reset the DOM classes that both
+        # the notification models in server-side & client-side are maintaining
         self.notification._dom_classes = (CSS.NOTIFICATION,)
 
         # Update notification content
@@ -230,8 +351,48 @@ class View:
             assert len("Variant does not exists") == 0
 
         # Create a timer to hide notification after X seconds
-        self.notification_timer = Timer(3.0, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
+        self.notification_timer = Timer(3.5, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self.notification_timer.start()
+
+    def switch_page(self, requested_page_number: int, is_last_active_page: bool = False) -> None:
+        """Show the requested page and update the page stepper accordingly"""
+        assert requested_page_number > 0 and requested_page_number <= len(self.page_container.children)
+        # Hide all pages
+        for page in self.page_container.children:
+            assert isinstance(page, ui.Box)
+            page.add_class(CSS.DISPLAY_MOD__NONE)
+        # Show the requested page
+        requested_page_number = requested_page_number - 1
+        page: ui.Box = self.page_container.children[requested_page_number]
+        page.remove_class(CSS.DISPLAY_MOD__NONE)
+        # Change widget with the "current" modifier to be "active"
+        for child_element in self.page_stepper.children:
+            assert isinstance(child_element, ui.DOMWidget)
+            if CSS.STEPPER__NUMBER__CURRENT in child_element._dom_classes:
+                child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__ACTIVE)
+        # Update stepper elements belonging to the current page
+        # Format of children elements = [number el, title el, separator el, ..., number el, title el]
+        number_element = self.page_stepper.children[requested_page_number * 3 + 0]
+        title_element = self.page_stepper.children[requested_page_number * 3 + 1]
+        assert isinstance(number_element, ui.DOMWidget)
+        assert isinstance(title_element, ui.DOMWidget)
+        number_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__CURRENT)
+        title_element._dom_classes = (CSS.STEPPER__TITLE__ACTIVE,)
+        # Make sure that the left page separator is "active"
+        if requested_page_number > 0:
+            separator_element = self.page_stepper.children[requested_page_number * 3 - 1]
+            assert isinstance(separator_element, ui.DOMWidget)
+            separator_element._dom_classes = (CSS.STEPPER__SEPARATOR__ACTIVE,)
+        # Make sure the stepper elements belonging to the upcoming pages are inactive (if "last active page" is specified)
+        if is_last_active_page:
+            for child_element in self.page_stepper.children[requested_page_number * 3 + 2 :]:
+                assert isinstance(child_element, ui.DOMWidget)
+                if CSS.STEPPER__NUMBER__ACTIVE in child_element._dom_classes:
+                    child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__INACTIVE)
+                elif CSS.STEPPER__TITLE__ACTIVE in child_element._dom_classes:
+                    child_element._dom_classes = (CSS.STEPPER__TITLE__INACTIVE,)
+                elif CSS.STEPPER__SEPARATOR__ACTIVE in child_element._dom_classes:
+                    child_element._dom_classes = (CSS.STEPPER__SEPARATOR__INACTIVE,)
 
     def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
         """
@@ -258,8 +419,75 @@ class View:
         # Reset the hidden filename value
         self.ua_file_label.value = ""
 
+    def update_data_specification_page(self):
+        """Update the state of data specification page"""
+        # TODO: Replace this with a proper test suite
+        assert self.DATA_SPEC_PAGE_IS_BEING_UPDATED != True
+        self.DATA_SPEC_PAGE_IS_BEING_UPDATED = True
+        # Format specification controls
+        set_options(self.model_name_dropdown, ("", *self.model.model_names), self.ctrl.onchange_model_name_dropdown)
+        self.model_name_dropdown.value = self.model.model_name
+        set_options(self.delimiter_dropdown, ("", *Delimiter.get_views()), self.ctrl.onchange_delimiter_dropdown)
+        self.delimiter_dropdown.value = Delimiter.get_view(self.model._delimiter)
+        self.header_is_included_checkbox.value = self.model.header_is_included
+        self.lines_to_skip_text.value = str(self.model.lines_to_skip)
+        self.scenarios_to_ignore_text.value = self.model.scenarios_to_ignore_str
+        # Column assignment controls
+        column_options = ("", *self.model.column_assignment_options)
+        self.model_name_label.value = self.model.model_name if len(self.model.model_name) > 0 else "<Model Name>"
+        set_options(self.scenario_column_dropdown, column_options, self.ctrl.onchange_scenario_column_dropdown)
+        self.scenario_column_dropdown.value = self.model.assigned_scenario_column
+        set_options(self.region_column_dropdown, column_options, self.ctrl.onchange_region_column_dropdown)
+        self.region_column_dropdown.value = self.model.assigned_region_column
+        set_options(self.variable_column_dropdown, column_options, self.ctrl.onchange_variable_column_dropdown)
+        self.variable_column_dropdown.value = self.model.assigned_variable_column
+        set_options(self.item_column_dropdown, column_options, self.ctrl.onchange_item_column_dropdown)
+        self.item_column_dropdown.value = self.model.assigned_item_column
+        set_options(self.unit_column_dropdown, column_options, self.ctrl.onchange_unit_column_dropdown)
+        self.unit_column_dropdown.value = self.model.assigned_unit_column
+        set_options(self.year_column_dropdown, column_options, self.ctrl.onchange_year_column_dropdown)
+        self.year_column_dropdown.value = self.model.assigned_year_column
+        set_options(self.value_column_dropdown, column_options, self.ctrl.onchange_value_column_dropdown)
+        self.value_column_dropdown.value = self.model.assigned_value_column
+        # Upload data preview table
+        table_content = self.model.input_data_preview_content
+        number_of_columns = table_content.shape[1]
+        table_content = table_content.flatten()
+        # -Increase cache size if it's insufficient
+        if len(table_content) > len(self._cached_children_of_input_data_preview_table):
+            cache_addition = [ui.Box([ui.Label("")]) for _ in range(len(table_content))]
+            self._cached_children_of_input_data_preview_table += cache_addition
+        content_index = 0
+        for content in table_content:
+            content_box = self._cached_children_of_input_data_preview_table[content_index]
+            assert isinstance(content_box, ui.Box)
+            content_label = content_box.children[0]
+            assert isinstance(content_label, ui.Label)
+            content_label.value = content
+            content_index += 1
+        self.input_data_preview_table.children = self._cached_children_of_input_data_preview_table[
+            : table_content.size
+        ]
+        self.input_data_preview_table.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
+        # Output data preview table
+        table_content = self.model.output_data_preview_content
+        table_content = table_content.flatten()
+        assert table_content.size == len(self.output_data_preview_table.children)
+        content_index = 0
+        for content in table_content:
+            content_box = self.output_data_preview_table.children[content_index]
+            assert isinstance(content_box, ui.Box)
+            content_label = content_box.children[0]
+            assert isinstance(content_label, ui.Label)
+            content_label.value = table_content[content_index]
+            content_index += 1
+        # TODO: remove this after a proper test suite has been created
+        self.DATA_SPEC_PAGE_IS_BEING_UPDATED = False
+
     def _build_file_upload_page(self) -> ui.Box:
         """Build the file upload page"""
+        from scripts.model import JSAppModel
+
         INSTRUCTION = '<h3 style="margin: 0px;">Upload file to be processed</h3>'
         SUB_INSTRUCTION = (
             '<span style="font-size: 15px; line-height: 20px; margin: 0px; color: var(--grey);">'
@@ -294,7 +522,7 @@ class View:
         )
         upload_area._dom_classes = [CSS.UA]
 
-        # Create a box to show that there's no file uploaded or to show the the uploaded file's name
+        # Create uploaded filename box
         # -Create snackbar to tell the user that no file has been uploaded
         no_file_uploaded = ui.HTML(
             '<div style="width: 365px; line-height: 36px; border-radius: 4px; padding: 0px 16px;'
@@ -321,9 +549,9 @@ class View:
         download_button = ui.HTML(
             """
                 <a
-                    href="SampleData.csv" 
+                    href="workingdir/SampleData.csv" 
                     download="SampleData.csv"
-                    class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-info" 
+                    class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-danger" 
                     title=""
                 >
                     Download
@@ -335,9 +563,9 @@ class View:
         next_button.on_click(self.ctrl.onclick_next_from_page_1)
         return ui.VBox(  # page
             [
-                ui.VBox(  # -container to fill up the space above navigation button area
+                ui.VBox(  # -container to fill up the space above navigation buttons
                     [
-                        ui.VBox(  # --instruction container
+                        ui.VBox(  # --instructions container
                             layout=ui.Layout(width="500px"), children=[ui.HTML(INSTRUCTION), ui.HTML(SUB_INSTRUCTION)]
                         ),
                         upload_area,  # --upload area
@@ -351,13 +579,152 @@ class View:
                     ],
                     layout=ui.Layout(flex="1", justify_content="center"),
                 ),
-                ui.VBox([next_button], layout=ui.Layout(align_self="flex-end")),  # -container for navgation button
+                ui.HBox([next_button], layout=ui.Layout(align_self="flex-end")),  # -navigation button box
             ],
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
         )
 
     def _build_data_specification_page(self) -> ui.Box:
-        return ui.Box()
+        # Create all control widgets in this page
+        # -specification widgets
+        control_layout = ui.Layout(flex="1 1", max_width="100%", display="flex")
+        self.model_name_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.model_name_dropdown.observe(self.ctrl.onchange_model_name_dropdown, "value")
+        self.header_is_included_checkbox = ui.Checkbox(indent=False, value=False, description="", layout=control_layout)
+        self.header_is_included_checkbox.observe(self.ctrl.onchange_header_is_included_checkbox, "value")
+        self.lines_to_skip_text = ui.Text(layout=control_layout, continuous_update=False)
+        self.lines_to_skip_text.observe(self.ctrl.onchange_lines_to_skip_text, "value")
+        self.delimiter_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.delimiter_dropdown.observe(self.ctrl.onchange_delimiter_dropdown, "value")
+        self.scenarios_to_ignore_text = ui.Textarea(
+            placeholder="(Optional) Enter comma-separated scenario values",
+            layout=ui.Layout(flex="1", height="66px"),
+            continuous_update=False,
+        )
+        self.scenarios_to_ignore_text.observe(self.ctrl.onchange_scenarios_to_ignore_text, "value")
+        # -column assignment widgets
+        self.model_name_label = ui.Label("")
+        self.scenario_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.scenario_column_dropdown.observe(self.ctrl.onchange_scenario_column_dropdown, "value")
+        self.region_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.region_column_dropdown.observe(self.ctrl.onchange_region_column_dropdown, "value")
+        self.variable_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.variable_column_dropdown.observe(self.ctrl.onchange_variable_column_dropdown, "value")
+        self.item_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.item_column_dropdown.observe(self.ctrl.onchange_item_column_dropdown, "value")
+        self.unit_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.unit_column_dropdown.observe(self.ctrl.onchange_unit_column_dropdown, "value")
+        self.year_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.year_column_dropdown.observe(self.ctrl.onchange_year_column_dropdown, "value")
+        self.value_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.value_column_dropdown.observe(self.ctrl.onchange_value_column_dropdown, "value")
+        # -preview table widgets
+        self._cached_children_of_input_data_preview_table = [
+            ui.Box([ui.Label("")]) for _ in range(33)  # Using 33 as cache size is random
+        ]
+        self.input_data_preview_table = CSS.assign_class(
+            ui.GridBox(
+                self._cached_children_of_input_data_preview_table[
+                    :24
+                ],  # 24 because we assume the table dimension to be
+                # 3 x 8 (the row number will stay the same, but the column number may vary)
+                layout=ui.Layout(grid_template_columns="repeat(8, 1fr)"),
+            ),
+            CSS.PREVIEW_TABLE,
+        )
+        self.output_data_preview_table = CSS.assign_class(
+            ui.GridBox(
+                [ui.Box([ui.Label("")]) for _ in range(24)],  # 24 because of the 3 x 8 table dimension (invariant)
+                layout=ui.Layout(grid_template_columns="repeat(8, 1fr"),
+            ),
+            CSS.PREVIEW_TABLE,
+        )
+
+        # -page navigation widgets
+        next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
+        next_.on_click(self.ctrl.onclick_next_from_page_2)
+        previous = ui.Button(
+            description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
+        )
+        previous.on_click(self.ctrl.onclick_previous_from_page_2)
+        # Create specifications section
+        # this section is separated from the page build below to avoid too many indentations
+        label_layout = ui.Layout(width="205px")
+        specifications_area = ui.VBox(  # Specification box
+            (
+                ui.GridBox(  # -Grid box for all specifications except for "Scenarios to ignore"
+                    (
+                        ui.HBox((ui.Label("Model name *", layout=label_layout), self.model_name_dropdown)),
+                        ui.HBox((ui.Label("Delimiter *", layout=label_layout), self.delimiter_dropdown)),
+                        ui.HBox(
+                            (ui.Label("Header is included *", layout=label_layout), self.header_is_included_checkbox)
+                        ),
+                        ui.HBox(
+                            (
+                                ui.Label("Number of initial lines to skip *", layout=label_layout),
+                                self.lines_to_skip_text,
+                            )
+                        ),
+                    ),
+                    layout=ui.Layout(width="100%", grid_template_columns="auto auto", grid_gap="4px 56px"),
+                ),
+                ui.HBox(  # -Scenarios to ignore box
+                    (ui.Label("Scenarios to ignore", layout=label_layout), self.scenarios_to_ignore_text),
+                    layout=ui.Layout(margin="4px 0px 0px 0px"),
+                ),
+            ),
+            layout=ui.Layout(padding="8px 0px 16px 0px"),
+        )
+
+        page = ui.VBox(  # Page
+            (
+                ui.VBox(  # -Box to fill up the space above navigation buttons
+                    (
+                        ui.VBox(  # --Box for the page's main components
+                            (
+                                ui.HTML("<b>Specify the format of the input data</b>"),  # ---Title
+                                specifications_area,  # ---Specifications area
+                                ui.HTML("<b>Assign columns from the input data to the output data</b>"),  # ---Title
+                                CSS.assign_class(
+                                    ui.GridBox(  # --Column assignment table
+                                        (
+                                            ui.Box((ui.Label("Model"),)),
+                                            ui.Box((ui.Label("Scenario"),)),
+                                            ui.Box((ui.Label("Region"),)),
+                                            ui.Box((ui.Label("Variable"),)),
+                                            ui.Box((ui.Label("Item"),)),
+                                            ui.Box((ui.Label("Unit"),)),
+                                            ui.Box((ui.Label("Year"),)),
+                                            ui.Box((ui.Label("Value"),)),
+                                            ui.Box((self.model_name_label,)),
+                                            self.scenario_column_dropdown,
+                                            self.region_column_dropdown,
+                                            self.variable_column_dropdown,
+                                            self.item_column_dropdown,
+                                            self.unit_column_dropdown,
+                                            self.year_column_dropdown,
+                                            self.value_column_dropdown,
+                                        )
+                                    ),
+                                    CSS.COLUMN_ASSIGNMENT_TABLE,
+                                ),
+                                ui.HTML("<b>Preview of the input data</b>"),
+                                self.input_data_preview_table,  # --preview table
+                                ui.HTML("<b>Preview of the output data</b>"),
+                                self.output_data_preview_table,  # --preview table
+                            ),
+                            layout=ui.Layout(width="900px"),
+                        ),
+                    ),
+                    layout=ui.Layout(flex="1", width="100%", justify_content="center", align_items="center"),
+                ),
+                ui.HBox(  # -Navigation buttons box
+                    [previous, next_], layout=ui.Layout(justify_content="flex-end", width="100%")
+                ),
+            ),
+            layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
+        )
+        return page
 
     def _build_integrity_checking_page(self) -> ui.Box:
         return ui.Box()

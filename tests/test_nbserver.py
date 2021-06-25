@@ -106,7 +106,7 @@ def test_jupyter_file_upload_api(nbserver_baseurl_f: str, nbserver_token_f: str)
     assert newfile
 
     # Check upload destination
-    uploaddir_path = Path(__name__).parent.parent / Path("uploads")  # <project_dir>/uploads
+    uploaddir_path = Path(__name__).parent.parent / "workingdir" / "uploads"  # <project_dir>/workingdir/uploads
     newfiledest_path = Path(uploaddir_path / NEWFILE_NAME)
 
     if newfiledest_path.exists():
@@ -114,7 +114,7 @@ def test_jupyter_file_upload_api(nbserver_baseurl_f: str, nbserver_token_f: str)
     assert newfiledest_path.exists() == False
 
     # Upload file
-    fileupload_dest = "uploads/" + NEWFILE_NAME
+    fileupload_dest = "workingdir/uploads/" + NEWFILE_NAME
     url = nbserver_baseurl_f + "/api/contents/" + fileupload_dest
     print("url =", url)
     headers = {}
@@ -134,7 +134,6 @@ def test_jupyter_file_upload_api(nbserver_baseurl_f: str, nbserver_token_f: str)
         }
     )
     response = requests.put(url, data=body, headers=headers, verify=True)
-
     # Test & cleanup
     assert response.status_code == 201  # HTTP created
     assert newfiledest_path.exists() == True
