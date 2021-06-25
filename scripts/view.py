@@ -682,9 +682,9 @@ class View:
                     (
                         ui.VBox(  # --Box for the page's main components
                             (
-                                ui.HTML("<b>Specify the format of the uploaded input data</b>"),  # ---Title
+                                ui.HTML("<b>Specify the format of the input data</b>"),  # ---Title
                                 specifications_area,  # ---Specifications area
-                                ui.HTML("<b>Assign columns from the uploaded input data to the output data</b>"),  # ---Title
+                                ui.HTML("<b>Assign columns from the input data to the output data</b>"),  # ---Title
                                 CSS.assign_class(
                                     ui.GridBox(  # --Column assignment table
                                         (
