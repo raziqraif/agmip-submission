@@ -76,7 +76,7 @@ class Model:
         self.scenarios: set[str] = set(self._labels_spreadsheet["Scenarios"]["Scenario"])
         self.regions: set[str] = set(self._labels_spreadsheet["Regions"]["Region"])
         self.variables: set[str] = set(self._labels_spreadsheet["Variables"]["Variable"])
-        self.items: set[str] = set(self._labels_spreadsheet["Sectors"]["Sector"])
+        self.items: set[str] = set(self._labels_spreadsheet["Items"]["Item"])
         self.units: set[str] = set(self._labels_spreadsheet["Units"]["Unit"])
         self.years: set[str] = set(self._labels_spreadsheet["Years"]["Year"])
         self.model_name: str = ""
