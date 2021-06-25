@@ -59,8 +59,8 @@ class TestFileUploadSuite:
         options.add_argument("--window-size=1440, 900")
         options.add_argument("--headless")
         self.driver = webdriver.Chrome(options=options)
-        self.wait = WebDriverWait(self.driver, 10)  # Set explicit wait time to 10 seconds
-        self.driver.implicitly_wait(10)  # Set implicit wait time to 10 seconds
+        self.wait = WebDriverWait(self.driver, 20)  # Set explicit wait time to X seconds
+        self.driver.implicitly_wait(20)  # Set implicit wait time to X seconds
         self.driver.get(nb_url())
         self._run_notebook()
 
