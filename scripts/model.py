@@ -49,7 +49,9 @@ class Step:
 
 
 class Model:
-    UPLOAD_DIR: Path = Path(__name__).parent.parent / "workingdir" / "uploads" # <PROJECT_DIR>/workingdir/uploads
+    WORKING_DIR: Path = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
+    UPLOAD_DIR: Path = WORKING_DIR / "uploads"
+    VALID_LABELS_SPREADSHEET: Path = WORKING_DIR / "valid_labels.xlsx"
 
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
@@ -65,13 +67,18 @@ class Model:
         # States for file upload page
         self.uploaded_filename: str = ""  # Tracks uploaded file's name (should be empty when the file was removed)
         # States for data specification page
-        self.model_names: list[str] = ["Model 1", "Model 2", "Model 3"]
-        self.scenarios: list[str] = ["SSP2_NoMt_NoCC_FlexA_DEV"]
-        self.regions: list[str] = ["CAN"]
-        self.variables: list[str] = ["CONS"]
-        self.items: list[str] = ["RIC"]
-        self.units: list[str] = ["1000 t dm"]
-        self.years: list[str] = ["2010"]
+        self._labels_spreadsheet: dict[str, pd.DataFrame] = pd.read_excel(
+            str(self.VALID_LABELS_SPREADSHEET), engine="openpyxl", sheet_name=None
+        )
+        self.model_names: set[str] = set(
+            self._labels_spreadsheet["Models"]["Model"]
+        )  # Get the pd dataframe, then the series
+        self.scenarios: set[str] = set(self._labels_spreadsheet["Scenarios"]["Scenario"])
+        self.regions: set[str] = set(self._labels_spreadsheet["Regions"]["Region"])
+        self.variables: set[str] = set(self._labels_spreadsheet["Variables"]["Variable"])
+        self.items: set[str] = set(self._labels_spreadsheet["Sectors"]["Sector"])
+        self.units: set[str] = set(self._labels_spreadsheet["Units"]["Unit"])
+        self.years: set[str] = set(self._labels_spreadsheet["Years"]["Year"])
         self.model_name: str = ""
         self._delimiter: str = ""
         self.header_is_included: bool = False
@@ -86,8 +93,11 @@ class Model:
         self._assigned_colnum_for_value: int = 0
         self.raw_csv_rows: list[str] = []  # "raw" -> each row is not separated by the csv delimiter yet
         self._sample_processed_csv_rows_memo: Optional[list[list[str]]] = None
-        # Directory setup
-        self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+    def intro(self, view: View, controller: Controller) -> None:  # type: ignore # noqa
+        """Introduce MVC modules to each other"""
+        self.view = view
+        self.controller = controller
 
     @property
     def delimiter(self) -> str:
@@ -308,11 +318,6 @@ class Model:
             [model_col, scenario_col, region_col, variable_col, item_col, unit_col, year_col, value_col]
         ).transpose()
 
-    def intro(self, view: View, controller: Controller) -> None:  # type: ignore # noqa
-        """Introduce MVC modules to each other"""
-        self.view = view
-        self.controller = controller
-
     def init_data_specification_states(self, file_name: str) -> Optional[str]:
         """
         Do necessary steps when entering the data specification page (only when it had just become active)
@@ -437,9 +442,12 @@ class Model:
         elif cell_value in self.units:
             self._assigned_colnum_for_unit = col_index + 1
             return 5
-        elif cell_value in self.years:
+        try:
+            int(cell_value)  # Reminder: int(<float value in str repr>) will raise an error
             self._assigned_colnum_for_year = col_index + 1
             return 6
+        except ValueError:
+            pass
         try:
             float(cell_value)
             self._assigned_colnum_for_value = col_index + 1
