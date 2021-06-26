@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, Union  # Delay the evaluation of undefined types
 from threading import Timer
+from ipywidgets.widgets.widget_box import HBox
 
 import numpy as np
 import ipywidgets as ui
@@ -127,6 +128,7 @@ class CSS:
     """Namespace for CSS classes declared in style.html and used inside Python"""
 
     APP = "c-app-container"
+    BAD_ROWS_OVERVIEW_TABLE = "c-bad-rows-overview-table"
     COLOR_MOD__WHITE = "c-color-mod--white"
     COLOR_MOD__BLACK = "c-color-mod--black"
     COLOR_MOD__GREY = "c-color-mod--grey"
@@ -138,6 +140,7 @@ class CSS:
     FILENAME_SNACKBAR__TEXT = "c-filename-snackbar__text"
     HEADER_BAR = "c-header-bar"
     ICON_BUTTON = "c-icon-button"
+    LABELS_OVERVIEW_TABLE = "c-labels-overview-table"
     NOTIFICATION = "c-notification"
     NOTIFICATION__ERROR = "c-notification--error"
     NOTIFICATION__INFO = "c-notification--info"
@@ -225,6 +228,13 @@ class View:
         self.input_data_preview_table: ui.GridBox = None
         self.output_data_preview_table: ui.GridBox = None
         self._cached_children_of_input_data_preview_table: Optional[list] = None
+        # Widgets in the integrity checking page that need to be manipulated
+        self.duplicates_lbl: ui.Label = None
+        self.rows_w_missing_fields_lbl: ui.Label = None
+        self.rows_w_mismatched_nfields_lbl: ui.Label = None
+        self.rows_w_non_numerics_lbl: ui.Label = None
+        self.bad_labels_overview_table: ui.HTML = None
+        self.unknown_labels_overview_table: ui.HTML = None
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -286,27 +296,27 @@ class View:
         # Hide all pages, except for the first one
         for page in self.page_container.children[1:]:
             page.add_class(CSS.DISPLAY_MOD__NONE)
-
-        app = ui.VBox(  # app container
-            [
-                self.notification,
-                header_bar,  # -header bar
-                ui.VBox(  # -body container
-                    children=[self.page_stepper, self.page_container],  # --page stepper, page container
-                    layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
-                ),
-            ],
+        return CSS.assign_class(
+            ui.VBox(  # app container
+                [
+                    self.notification,
+                    header_bar,  # -header bar
+                    ui.VBox(  # -body container
+                        children=[self.page_stepper, self.page_container],  # --page stepper, page container
+                        layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
+                    ),
+                ],
+            ),
+            CSS.APP,
         )
-        app.add_class(CSS.APP)
-        return app
 
     def modify_cursor(self, new_cursor_mod_class: Optional[str]) -> None:
         """
         Change cursor style by assigning the passed CSS class to the app's DOM
         If None was passed, the cursor style will be reset
         """
-        cursor_mod_classes = CSS.get_cursor_mod_classes() 
-        for cursor_mod_class in cursor_mod_classes:      # Remove all other cursor mods from DOM
+        cursor_mod_classes = CSS.get_cursor_mod_classes()
+        for cursor_mod_class in cursor_mod_classes:  # Remove all other cursor mods from DOM
             self.app_container.remove_class(cursor_mod_class)
         if new_cursor_mod_class is not None:
             assert new_cursor_mod_class in cursor_mod_classes
@@ -466,9 +476,7 @@ class View:
             assert isinstance(content_label, ui.Label)
             content_label.value = content
             content_index += 1
-        self.input_data_preview_table.children = self._cached_children_of_input_data_preview_table[
-            : table_content.size
-        ]
+        self.input_data_preview_table.children = self._cached_children_of_input_data_preview_table[: table_content.size]
         self.input_data_preview_table.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
         # Output data preview table
         table_content = self.model.output_data_preview_content
@@ -496,7 +504,6 @@ class View:
         )
         UPLOADED_FILE = '<div style="width: 125px; line-height: 36px;">Uploaded file</div>'
         SAMPLE_FILE = '<div style="width: 125px; line-height: 36px;">Sample file</div>'
-
         # Create file upload area / ua
         ua_background = ui.Box(
             [
@@ -522,7 +529,6 @@ class View:
             layout=ui.Layout(margin="32px 0px"),
         )
         upload_area._dom_classes = [CSS.UA]
-
         # Create uploaded filename box
         # -Create snackbar to tell the user that no file has been uploaded
         no_file_uploaded = ui.HTML(
@@ -545,7 +551,6 @@ class View:
         uploaded_file_snackbar.add_class(CSS.DISPLAY_MOD__NONE)  # By default this snackbar is hidden
         # -Create the box
         self.uploaded_file_name_box = ui.Box([no_file_uploaded, uploaded_file_snackbar])
-
         # Buttons
         download_button = ui.HTML(
             """
@@ -733,6 +738,52 @@ class View:
         download_missing_fields_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
         download_mismatched_ncols_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
         download_non_numeric_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
+        self.duplicates_lbl = ui.Label("0")
+        self.rows_w_missing_fields_lbl = ui.Label("0")
+        self.rows_w_mismatched_nfields_lbl = ui.Label("0")
+        self.rows_w_non_numerics_lbl = ui.Label("0")
+        request_new_protocol_checkbox = ui.Checkbox(
+            indent=False, value=False, description="", layout=ui.Layout(margin="5px 0px 0px 0px")
+        )
+        _empty_row = """
+            <tr>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+            <tr>
+        """
+        self.bad_labels_overview_table = ui.HTML(
+            f"""
+            <table class={CSS.LABELS_OVERVIEW_TABLE}>
+                <thead>
+                    <tr>
+                        <th>Label</th>
+                        <th>Associated column</th>
+                        <th>Fix</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {_empty_row * 3}
+                </tbody>
+            </table>
+            """
+        )
+        self.unknown_labels_overview_table = ui.HTML(
+            f"""
+            <table class={CSS.LABELS_OVERVIEW_TABLE}>
+                <thead>
+                    <tr>
+                        <th>Label</th>
+                        <th>Associated column</th>
+                        <th>Closest match</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {_empty_row * 3}
+                </tbody>
+            </table>
+            """
+        )
         # -page navigation widgets
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_.on_click(self.ctrl.onclick_next_from_page_3)
@@ -740,15 +791,77 @@ class View:
             description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
         )
         previous.on_click(self.ctrl.onclick_previous_from_page_3)
-        # Create page        
+        # Create page
         return ui.VBox(  # Page
             (
                 ui.VBox(  # -Box to fill up the space above navigation buttons
                     (
                         ui.VBox(  # --Box for the page's main components
                             (
+                                ui.HTML('<b style="line-height:13px; margin-bottom:4px;">Bad rows overview</b>'),
+                                ui.HTML(
+                                    '<span style="line-height: 13px; color: var(--grey);">The'
+                                    " following table shows the number of bad rows that were detected and removed. The"
+                                    " rows can be downloaded to be analyzed.</span>"
+                                ),
+                                ui.HBox(
+                                    [
+                                        CSS.assign_class(
+                                            ui.GridBox(  # ----Bad rows overview table
+                                                (
+                                                    ui.HTML("Duplicate rows"),
+                                                    ui.Box((self.duplicates_lbl,)),
+                                                    ui.Box((ui.Label("Rows with missing fields"),)),
+                                                    ui.Box((self.rows_w_missing_fields_lbl,)),
+                                                    ui.Box((ui.Label("Rows with a mismatched number of fields"),)),
+                                                    ui.Box((self.rows_w_mismatched_nfields_lbl,)),
+                                                    ui.Box(
+                                                        (ui.Label("Rows with a non-numeric label in a numeric field"),)
+                                                    ),
+                                                    ui.Box((self.rows_w_non_numerics_lbl,)),
+                                                ),
+                                            ),
+                                            CSS.BAD_ROWS_OVERVIEW_TABLE,
+                                        ),
+                                        ui.VBox(
+                                            children=[
+                                                download_duplicates_btn,
+                                                download_missing_fields_btn,
+                                                download_mismatched_ncols_btn,
+                                                download_non_numeric_btn,
+                                            ],
+                                            layout=ui.Layout(margin="16px 0px 20px 0px")
+                                        ),
+                                    ]
+                                ),
+                                ui.HTML('<b style="line-height:13px; margin-bottom:4px;">Bad labels overview</b>'),
+                                ui.HTML(
+                                    '<span style="line-height: 13px; color: var(--grey);">The listed labels are'
+                                    " recognized by the program but do not adhere to the correct standard. They have"
+                                    " been fixed automatically."
+                                ),
+                                self.bad_labels_overview_table,
+                                ui.HTML(
+                                    '<b style="line-height:13px; margin: 20px 0px 4px;">Unknown labels overview</b>'
+                                ),
+                                ui.HTML(
+                                    '<span style="line-height: 13px; color: var(--grey);">The listed labels are not'
+                                    " recognized by the program. Please fix them and reupload your file, or proceed if"
+                                    " you wish to add them into the protocol."
+                                ),
+                                self.unknown_labels_overview_table,
+                                ui.HBox(
+                                    [
+                                        ui.HTML(
+                                            '<span style="line-height: 13px; margin-right: 8px;">Request to add these'
+                                            " labels into the dataset protocol:</span>"
+                                        ),
+                                        request_new_protocol_checkbox,
+                                    ],
+                                    layout=ui.Layout(align_items="center", margin="4px 0px 0px 0px"),
+                                ),
                             ),
-                            layout=ui.Layout(width="900px"),
+                            layout=ui.Layout(width="850px"),
                         ),
                     ),
                     layout=ui.Layout(flex="1", width="100%", justify_content="center", align_items="center"),
