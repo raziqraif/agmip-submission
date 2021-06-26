@@ -743,7 +743,7 @@ class View:
         self.rows_w_mismatched_nfields_lbl = ui.Label("0")
         self.rows_w_non_numerics_lbl = ui.Label("0")
         request_new_protocol_checkbox = ui.Checkbox(
-            indent=False, value=False, description="", layout=ui.Layout(margin="5px 0px 0px 0px")
+            indent=False, value=False, description="", layout=ui.Layout(margin="6px 0px 0px 0px")
         )
         _empty_row = """
             <tr>
@@ -830,7 +830,7 @@ class View:
                                                 download_mismatched_ncols_btn,
                                                 download_non_numeric_btn,
                                             ],
-                                            layout=ui.Layout(margin="16px 0px 20px 0px")
+                                            layout=ui.Layout(margin="16px 0px 20px 0px"),
                                         ),
                                     ]
                                 ),
