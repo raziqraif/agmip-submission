@@ -458,6 +458,7 @@ class View:
             cache_addition = [ui.Box([ui.Label("")]) for _ in range(len(table_content))]
             self._cached_children_of_input_data_preview_table += cache_addition
         content_index = 0
+        assert self._cached_children_of_input_data_preview_table is not None
         for content in table_content:
             content_box = self._cached_children_of_input_data_preview_table[content_index]
             assert isinstance(content_box, ui.Box)
@@ -585,6 +586,7 @@ class View:
         )
 
     def _build_data_specification_page(self) -> ui.Box:
+        """Build the data specification page"""
         # Create all control widgets in this page
         # -specification widgets
         control_layout = ui.Layout(flex="1 1", max_width="100%", display="flex")
@@ -639,7 +641,6 @@ class View:
             ),
             CSS.PREVIEW_TABLE,
         )
-
         # -page navigation widgets
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_.on_click(self.ctrl.onclick_next_from_page_2)
@@ -675,8 +676,8 @@ class View:
             ),
             layout=ui.Layout(padding="8px 0px 16px 0px"),
         )
-
-        page = ui.VBox(  # Page
+        # Create page
+        return ui.VBox(  # Page
             (
                 ui.VBox(  # -Box to fill up the space above navigation buttons
                     (
@@ -724,10 +725,40 @@ class View:
             ),
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
         )
-        return page
 
     def _build_integrity_checking_page(self) -> ui.Box:
-        return ui.Box()
+        """Build the integrity checking page"""
+        # Create the control widgets
+        download_duplicates_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
+        download_missing_fields_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
+        download_mismatched_ncols_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
+        download_non_numeric_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
+        # -page navigation widgets
+        next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
+        next_.on_click(self.ctrl.onclick_next_from_page_3)
+        previous = ui.Button(
+            description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
+        )
+        previous.on_click(self.ctrl.onclick_previous_from_page_3)
+        # Create page        
+        return ui.VBox(  # Page
+            (
+                ui.VBox(  # -Box to fill up the space above navigation buttons
+                    (
+                        ui.VBox(  # --Box for the page's main components
+                            (
+                            ),
+                            layout=ui.Layout(width="900px"),
+                        ),
+                    ),
+                    layout=ui.Layout(flex="1", width="100%", justify_content="center", align_items="center"),
+                ),
+                ui.HBox(  # -Navigation buttons box
+                    [previous, next_], layout=ui.Layout(justify_content="flex-end", width="100%")
+                ),
+            ),
+            layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
+        )
 
     def _build_plausibility_checking_page(self) -> ui.Box:
         return ui.Box()

@@ -44,9 +44,7 @@ class Controller:
             elif len(self.model.delimiter) == 0:
                 self.view.show_notification(Notification.WARNING, "Delimiter is empty")
             elif int(self.model.lines_to_skip) < 0:
-                self.view.show_notification(
-                    Notification.WARNING, "Number of lines cannot be negative"
-                )
+                self.view.show_notification(Notification.WARNING, "Number of lines cannot be negative")
             elif len(self.model.assigned_scenario_column) == 0:
                 self.view.show_notification(Notification.WARNING, "Scenario column is empty")
             elif len(self.model.assigned_region_column) == 0:
@@ -77,9 +75,7 @@ class Controller:
                 )
                 < 7  # If there are no duplicate assignment, we should have a set of 7 columns
             ):
-                self.view.show_notification(
-                    Notification.WARNING, "Output data has duplicate columns"
-                )
+                self.view.show_notification(Notification.WARNING, "Output data has duplicate columns")
             else:
                 is_valid = True
         except ValueError:
@@ -132,12 +128,22 @@ class Controller:
         if not self.validate_data_specification_input():
             return
         if self.model.last_finished_step == Step.FILE_UPLOAD:
-            self.model.last_finished_step = Step.DATA_SPECIFICATION 
-        self.view.show_notification(Notification.INFO, "Integrity checking page is still under construction")
+            self.model.last_finished_step = Step.DATA_SPECIFICATION
+        self.view.switch_page(3)
 
     def onclick_previous_from_page_2(self, widget: ui.Button) -> None:
         """'Previous' button on the data specification page was clicked"""
         self.view.switch_page(1)
+
+    def onclick_next_from_page_3(self, widget: ui.Button) -> None:
+        """'Next' button on the data specification page was clicked"""
+        if self.model.last_finished_step == Step.DATA_SPECIFICATION:
+            self.model.last_finished_step = Step.INTEGRITY_CHECKING
+        self.view.show_notification(Notification.INFO, "Plausibility checking page is still under construction")
+
+    def onclick_previous_from_page_3(self, widget: ui.Button) -> None:
+        """'Previous' button on the data specification page was clicked"""
+        self.view.switch_page(2)
 
     def onchange_model_name_dropdown(self, change: dict) -> None:
         """The selection in 'model name' dropdown changed"""
@@ -173,7 +179,7 @@ class Controller:
             self.model.lines_to_skip = new_value
         except:
             self.view.show_notification(Notification.WARNING, "Invalid number of lines")
-            self.model.lines_to_skip = 0 
+            self.model.lines_to_skip = 0
         self.view.update_data_specification_page()
         self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
 
