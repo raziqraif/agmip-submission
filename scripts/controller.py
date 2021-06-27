@@ -139,7 +139,8 @@ class Controller:
         """'Next' button on the data specification page was clicked"""
         if self.model.last_finished_step == Step.DATA_SPECIFICATION:
             self.model.last_finished_step = Step.INTEGRITY_CHECKING
-        self.view.show_notification(Notification.INFO, "Plausibility checking page is still under construction")
+        # TODO: Perform data validation first
+        self.view.switch_page(4)
 
     def onclick_previous_from_page_3(self, widget: ui.Button) -> None:
         """'Previous' button on the data specification page was clicked"""
@@ -274,3 +275,11 @@ class Controller:
         self.model.assigned_value_column = new_value
         self.view.update_data_specification_page()
         self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+
+    def onclick_submit(self, widget: ui.Button) -> None:
+        """The 'submit' button in the last page was clicked"""
+        self.view.show_notification(Notification.INFO, "Submission feature is still in progress.")
+
+    def onclick_previous_from_page_4(self, widget: ui.Button) -> None:
+        """The 'submit' button in the last page was clicked"""
+        self.view.switch_page(3)

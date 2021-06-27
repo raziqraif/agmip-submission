@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Optional, Union  # Delay the evaluation of undefined types
 from threading import Timer
-from ipywidgets.widgets.widget_box import HBox
 
 import numpy as np
 import ipywidgets as ui
@@ -558,6 +557,7 @@ class View:
                     href="workingdir/SampleData.csv" 
                     download="SampleData.csv"
                     class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-danger" 
+                    style="line-height:36px;"
                     title=""
                 >
                     Download
@@ -846,8 +846,8 @@ class View:
                                 ),
                                 ui.HTML(
                                     '<span style="line-height: 13px; color: var(--grey);">The listed labels are not'
-                                    " recognized by the program. Please fix them and reupload your file, or proceed if"
-                                    " you wish to add them into the protocol."
+                                    " recognized by the program. Please fix them and reupload your file, or request"
+                                    " to add them into the protocol."
                                 ),
                                 self.unknown_labels_overview_table,
                                 ui.HBox(
@@ -874,4 +874,63 @@ class View:
         )
 
     def _build_plausibility_checking_page(self) -> ui.Box:
-        return ui.Box()
+        # Control widgets
+        _select_layout = ui.Layout(width="200px")
+        scenario_select = ui.Select(layout=_select_layout, options=[""])
+        region_select = ui.Select(layout=_select_layout, options=[""])
+        variable_select = ui.Select(layout=_select_layout, options=[""])
+        item_select = ui.Select(layout=_select_layout, options=[""])
+        year_select = ui.Select(layout=_select_layout, options=[""])
+        visualize_button = ui.Button(
+            description="Visualize",
+            layout=ui.Layout(align_select="center", width="100px", height="32px", justify_content="center"),
+        )
+        # -page navigation widgets
+        submit = ui.Button(description="Submit", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
+        submit.on_click(self.ctrl.onclick_submit)
+        previous = ui.Button(
+            description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
+        )
+        previous.on_click(self.ctrl.onclick_previous_from_page_4)
+        # Create page
+        return ui.VBox(  # Page
+            (
+                ui.VBox(  # -Box to fill up the space above navigation buttons
+                    (
+                        ui.VBox(  # --Box for the page's main components
+                            (
+                                ui.HTML('<b style="line-height:13px; margin-bottom:4px;">Data selection</b>'),
+                                ui.HTML(
+                                    '<span style="line-height: 13px; color: var(--grey);">Select the data that you want'
+                                    " to visualize.</span>"
+                                ),
+                                ui.GridBox(  # ---data selection section
+                                    (
+                                        ui.HTML("1. Scenario"),
+                                        scenario_select,
+                                        ui.HTML("2. Region"),
+                                        region_select,
+                                        ui.HTML("3. Variable"),
+                                        variable_select,
+                                        ui.HTML("4. Item"),
+                                        item_select,
+                                        ui.HTML("5. Year"),
+                                        year_select,
+                                    ),
+                                    layout=ui.Layout(
+                                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr",
+                                        grid_gap="16px 16px",
+                                        margin="20px 0px 16px",
+                                    ),
+                                ),
+                                visualize_button,
+                            ),
+                            layout=ui.Layout(width="900px"),
+                        ),
+                    ),
+                    layout=ui.Layout(flex="1", width="100%", justify_content="center", align_items="center"),
+                ),
+                ui.HBox([previous, submit], layout=ui.Layout(justify_content="flex-end", width="100%")),  # -buttons box
+            ),
+            layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
+        )
