@@ -127,7 +127,6 @@ class CSS:
     """Namespace for CSS classes declared in style.html and used inside Python"""
 
     APP = "c-app-container"
-    BAD_ROWS_OVERVIEW_TABLE = "c-bad-rows-overview-table"
     COLOR_MOD__WHITE = "c-color-mod--white"
     COLOR_MOD__BLACK = "c-color-mod--black"
     COLOR_MOD__GREY = "c-color-mod--grey"
@@ -147,6 +146,7 @@ class CSS:
     NOTIFICATION__SUCCESS = "c-notification--success"
     NOTIFICATION__WARNING = "c-notification--warning"
     PREVIEW_TABLE = "c-preview-table"
+    ROWS_OVERVIEW_TABLE = "c-rows-overview-table"
     STEPPER = "c-stepper"
     STEPPER__NUMBER = "c-stepper__number"
     STEPPER__NUMBER__ACTIVE = "c-stepper__number--active"
@@ -161,6 +161,9 @@ class CSS:
     UA__FILE_UPLOADER = "c-upload-area__file-uploader"
     UA__OVERLAY = "c-upload-area__overlay"
     UA__FILE_LABEL = "c-upload-area__file-label"
+    VISUALIZATION_TAB = "c-visualization-tab"
+    VISUALIZATION_TAB__ELEMENT = "c-visualization-tab__element"
+    VISUALIZATION_TAB__ELEMENT__ACTIVE = "c-visualization-tab__element--active"
 
     @classmethod
     def assign_class(cls, widget: ui.DOMWidget, class_name: str) -> ui.DOMWidget:
@@ -605,7 +608,7 @@ class View:
         self.delimiter_dropdown.observe(self.ctrl.onchange_delimiter_dropdown, "value")
         self.scenarios_to_ignore_text = ui.Textarea(
             placeholder="(Optional) Enter comma-separated scenario values",
-            layout=ui.Layout(flex="1", height="66px"),
+            layout=ui.Layout(flex="1", height="72px"),
             continuous_update=False,
         )
         self.scenarios_to_ignore_text.observe(self.ctrl.onchange_scenarios_to_ignore_text, "value")
@@ -798,10 +801,10 @@ class View:
                     (
                         ui.VBox(  # --Box for the page's main components
                             (
-                                ui.HTML('<b style="line-height:13px; margin-bottom:4px;">Bad rows overview</b>'),
+                                ui.HTML('<b style="line-height:13px; margin-bottom:4px;">Rows overview</b>'),
                                 ui.HTML(
                                     '<span style="line-height: 13px; color: var(--grey);">The'
-                                    " following table shows the number of bad rows that were detected and removed. The"
+                                    " table shows an overview of the uploaded data's rows. The"
                                     " rows can be downloaded to be analyzed.</span>"
                                 ),
                                 ui.HBox(
@@ -809,19 +812,25 @@ class View:
                                         CSS.assign_class(
                                             ui.GridBox(  # ----Bad rows overview table
                                                 (
-                                                    ui.HTML("Duplicate rows"),
-                                                    ui.Box((self.duplicates_lbl,)),
-                                                    ui.Box((ui.Label("Rows with missing fields"),)),
-                                                    ui.Box((self.rows_w_missing_fields_lbl,)),
-                                                    ui.Box((ui.Label("Rows with a mismatched number of fields"),)),
-                                                    ui.Box((self.rows_w_mismatched_nfields_lbl,)),
                                                     ui.Box(
-                                                        (ui.Label("Rows with a non-numeric label in a numeric field"),)
+                                                        (
+                                                            ui.Label(
+                                                                "Number of rows with field issues (missing fields, etc)"
+                                                            ),
+                                                        )
                                                     ),
+                                                    ui.Box((self.duplicates_lbl,)),
+                                                    ui.Box(
+                                                        (ui.Label("Number of rows containing an ignored scenario"),)
+                                                    ),
+                                                    ui.Box((self.rows_w_missing_fields_lbl,)),
+                                                    ui.HTML("Number of duplicate rows"),
+                                                    ui.Box((self.rows_w_mismatched_nfields_lbl,)),
+                                                    ui.Box((ui.Label("Number of accepted rows"),)),
                                                     ui.Box((self.rows_w_non_numerics_lbl,)),
                                                 ),
                                             ),
-                                            CSS.BAD_ROWS_OVERVIEW_TABLE,
+                                            CSS.ROWS_OVERVIEW_TABLE,
                                         ),
                                         ui.VBox(
                                             children=[
@@ -836,18 +845,18 @@ class View:
                                 ),
                                 ui.HTML('<b style="line-height:13px; margin-bottom:4px;">Bad labels overview</b>'),
                                 ui.HTML(
-                                    '<span style="line-height: 13px; color: var(--grey);">The listed labels are'
-                                    " recognized by the program but do not adhere to the correct standard. They have"
-                                    " been fixed automatically."
+                                    '<span style="line-height: 13px; color: var(--grey);">The table lists'
+                                    " labels that are recognized by the program but do not adhere to the correct"
+                                    " standard. They have been fixed automatically."
                                 ),
                                 self.bad_labels_overview_table,
                                 ui.HTML(
                                     '<b style="line-height:13px; margin: 20px 0px 4px;">Unknown labels overview</b>'
                                 ),
                                 ui.HTML(
-                                    '<span style="line-height: 13px; color: var(--grey);">The listed labels are not'
-                                    " recognized by the program. Please fix them and reupload your file, or request"
-                                    " to add them into the protocol."
+                                    '<span style="line-height: 13px; color: var(--grey);">The table lists'
+                                    " labels that are not recognized by the program. Please fix them and reupload your"
+                                    " file, or request to add them into the protocol."
                                 ),
                                 self.unknown_labels_overview_table,
                                 ui.HBox(
@@ -875,16 +884,56 @@ class View:
 
     def _build_plausibility_checking_page(self) -> ui.Box:
         # Control widgets
+        value_tab_btn = ui.Button()
+        growth_tab_btn = ui.Button()
+        box_tab_btn = ui.Button()
+        visualization_tab = CSS.assign_class(
+            ui.GridBox(
+                [
+                    CSS.assign_class(ui.Box([ui.Label("Value trends"), value_tab_btn]), CSS.VISUALIZATION_TAB__ELEMENT),
+                    CSS.assign_class(
+                        ui.Box([ui.Label("Growth trends"), growth_tab_btn]), CSS.VISUALIZATION_TAB__ELEMENT
+                    ),
+                    CSS.assign_class(ui.Box([ui.Label("Box plot"), box_tab_btn]), CSS.VISUALIZATION_TAB__ELEMENT),
+                ]
+            ),
+            CSS.VISUALIZATION_TAB,
+        )
+        visualization_tab.children[0].add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+        # value trends tab page
         _select_layout = ui.Layout(width="200px")
         scenario_select = ui.Select(layout=_select_layout, options=[""])
         region_select = ui.Select(layout=_select_layout, options=[""])
         variable_select = ui.Select(layout=_select_layout, options=[""])
         item_select = ui.Select(layout=_select_layout, options=[""])
         year_select = ui.Select(layout=_select_layout, options=[""])
-        visualize_button = ui.Button(
-            description="Visualize",
-            layout=ui.Layout(align_select="center", width="100px", height="32px", justify_content="center"),
+        value_trends_tab_page = ui.VBox(
+            [
+                ui.GridBox(
+                    (
+                        ui.HTML("1. Scenario"),
+                        scenario_select,
+                        ui.HTML("2. Region"),
+                        region_select,
+                        ui.HTML("3. Variable"),
+                        variable_select,
+                        ui.HTML("4. Item"),
+                        item_select,
+                        ui.HTML("5. Year"),
+                        year_select,
+                    ),
+                    layout=ui.Layout(
+                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr",
+                        grid_gap="16px 16px",
+                    ),
+                ),
+                ui.Box(
+                    [], layout=ui.Layout(width="600px", height="300px", border="1px solid grey", margin="24px 0px 0px")
+                ),
+            ],
+            layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
         )
+
         # -page navigation widgets
         submit = ui.Button(description="Submit", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         submit.on_click(self.ctrl.onclick_submit)
@@ -899,33 +948,30 @@ class View:
                     (
                         ui.VBox(  # --Box for the page's main components
                             (
-                                ui.HTML('<b style="line-height:13px; margin-bottom:4px;">Data selection</b>'),
-                                ui.HTML(
-                                    '<span style="line-height: 13px; color: var(--grey);">Select the data that you want'
-                                    " to visualize.</span>"
-                                ),
-                                ui.GridBox(  # ---data selection section
-                                    (
-                                        ui.HTML("1. Scenario"),
-                                        scenario_select,
-                                        ui.HTML("2. Region"),
-                                        region_select,
-                                        ui.HTML("3. Variable"),
-                                        variable_select,
-                                        ui.HTML("4. Item"),
-                                        item_select,
-                                        ui.HTML("5. Year"),
-                                        year_select,
-                                    ),
+                                ui.HBox(
+                                    [
+                                        ui.VBox(
+                                            [
+                                                ui.HTML(
+                                                    '<b style="line-height:13px; margin-bottom:4px;">Plausibility'
+                                                    " checking</b>"
+                                                ),
+                                                ui.HTML(
+                                                    '<span style="line-height: 13px; color: var(--grey);">Visualize the'
+                                                    " uploaded data and verify that it looks plausible.</span>"
+                                                ),
+                                            ],
+                                            layout=ui.Layout(height="32px"),
+                                        ),
+                                        visualization_tab,
+                                    ],
                                     layout=ui.Layout(
-                                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr",
-                                        grid_gap="16px 16px",
-                                        margin="20px 0px 16px",
+                                        align_items="center", justify_content="space-between", width="100%"
                                     ),
                                 ),
-                                visualize_button,
+                                value_trends_tab_page,
                             ),
-                            layout=ui.Layout(width="900px"),
+                            layout=ui.Layout(width="900px", align_items="center"),
                         ),
                     ),
                     layout=ui.Layout(flex="1", width="100%", justify_content="center", align_items="center"),

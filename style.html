@@ -407,8 +407,8 @@
         padding: 0px 16px;
     }
 
-    /* Bad rows overview table */
-    .c-bad-rows-overview-table {
+    /* Rows overview table */
+    .c-rows-overview-table {
         background: var(--light-grey);
         border: 1px solid var(--light-grey);
         margin: 16px 0px 20px 0px;
@@ -416,13 +416,13 @@
         width: 480px;
         grid-gap: 1px 1px;
     }
-    .c-bad-rows-overview-table > *:nth-child(2n - 1) {  /*target children in the second last column out of 2 columns*/
+    .c-rows-overview-table > *:nth-child(2n - 1) {  /*target children in the second last column out of 2 columns*/
         width: 100%;
         background: white;
         justify-content: flex-start;
         padding: 0px 16px;
     }
-    .c-bad-rows-overview-table > *:nth-child(2n) {  /*target children in the last column out of 2 columns*/
+    .c-rows-overview-table > *:nth-child(2n) {  /*target children in the last column out of 2 columns*/
         width: 100%;
         background: white;
         justify-content: center;
@@ -442,6 +442,45 @@
         text-align: center;
         color: var(--grey);
         /* justify-content: center; */
+    }
+
+    /* Visualization tab */
+        .c-visualization-tab {
+        grid-template-columns: 1fr 1fr 1fr;
+        width: 330px;
+        height: 36px;
+        border-radius: 5px;
+        border: 1px solid #60A5FA;
+        grid-gap: 1px;
+        background: #60A5FA;
+    }
+    .c-visualization-tab__element {
+        position: relative;
+        background: white;
+        color: #60A5FA;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .c-visualization-tab__element--active {
+        background: #60A5FA;
+        color: white;
+    }
+    .c-visualization-tab__element > .widget-label {     /* .widget-label is defined by ipywidgets */
+        color: inherit;
+    }
+    .c-visualization-tab__element > button {    /* Style the hidden button that gives the tab clickable functionality */
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        background: transparent;
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+    }
+    .c-visualization-tab button:active:enabled {
+        background: transparent;
     }
 
 </style>

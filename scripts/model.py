@@ -71,8 +71,8 @@ class Model:
             str(self.VALID_LABELS_SPREADSHEET), engine="openpyxl", sheet_name=None
         )
         self.model_names: set[str] = set(
-            self._labels_spreadsheet["Models"]["Model"]
-        )  # Get the pd dataframe, then the series
+            self._labels_spreadsheet["Models"]["Model"]  # Get the pd dataframe, then the series
+        )
         self.scenarios: set[str] = set(self._labels_spreadsheet["Scenarios"]["Scenario"])
         self.regions: set[str] = set(self._labels_spreadsheet["Regions"]["Region"])
         self.variables: set[str] = set(self._labels_spreadsheet["Variables"]["Variable"])
@@ -93,6 +93,8 @@ class Model:
         self._assigned_colnum_for_value: int = 0
         self.raw_csv_rows: list[str] = []  # "raw" -> each row is not separated by the csv delimiter yet
         self._sample_processed_csv_rows_memo: Optional[list[list[str]]] = None
+        # States for integrity checking page
+        self.duplicate_rows: pd.DataFrame = pd.DataFrame()
 
     def intro(self, view: View, controller: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -105,7 +107,7 @@ class Model:
         file_path = self.UPLOAD_DIR / Path(file_name)
         assert file_path.is_file()
         file_path.unlink()
-    
+
     @property
     def delimiter(self) -> str:
         return self._delimiter
@@ -464,3 +466,23 @@ class Model:
         except ValueError:
             pass
         return -1
+
+    def init_integrity_checking_states(
+        self,
+        raw_csv: list[str],
+        delimiter: str,
+        header_is_included: bool,
+        lines_to_skip: int,
+        scenarios_to_ignore: list[str],
+        model_name: str,
+        scenario_colnum: int,
+        region_colnum: int,
+        variable_colnum: int,
+        item_colnum: int,
+        unit_colnum: int,
+        year_colnum: int,
+        value_colnum: int,
+    ) -> None:
+        assert delimiter != ""
+        dataframe = pd.DataFrame([row.split(delimiter) for row in raw_csv])
+        self.duplicate_rows = dataframe[dataframe.duplicated()]
