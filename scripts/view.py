@@ -940,7 +940,7 @@ class View:
         )
         visualization_tab.children[0].add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
         # value trends tab page
-        _select_layout = ui.Layout(width="200px")
+        _select_layout = ui.Layout(width="200px", height="76px")
         scenario_select = ui.Select(layout=_select_layout, options=[""])
         region_select = ui.Select(layout=_select_layout, options=[""])
         variable_select = ui.Select(layout=_select_layout, options=[""])
@@ -956,9 +956,7 @@ class View:
                         region_select,
                         ui.HTML("3. Variable"),
                         variable_select,
-                        ui.HTML("4. Item"),
-                        item_select,
-                        ui.HTML("5. Year"),
+                        ui.HTML("4. Base year"),
                         year_select,
                     ),
                     layout=ui.Layout(
@@ -967,7 +965,15 @@ class View:
                     ),
                 ),
                 ui.Box(
-                    [], layout=ui.Layout(width="600px", height="300px", border="1px solid grey", margin="24px 0px 0px")
+                    [ui.HTML('<img src="value_trends.png">')],
+                    layout=ui.Layout(
+                        width="600px",
+                        height="330px",
+                        border="1px solid grey",
+                        margin="24px 0px 0px",
+                        justify_content="center",
+                        align_items="center",
+                    ),
                 ),
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
@@ -983,18 +989,21 @@ class View:
                         region_select,
                         ui.HTML("3. Variable"),
                         variable_select,
-                        ui.HTML("4. Item"),
-                        item_select,
-                        ui.HTML("5. Year"),
-                        year_select,
                     ),
                     layout=ui.Layout(
-                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr",
-                        grid_gap="16px 16px",
+                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", min_height="168px"
                     ),
                 ),
                 ui.Box(
-                    [], layout=ui.Layout(width="600px", height="300px", border="1px solid grey", margin="24px 0px 0px")
+                    [ui.HTML('<img src="growth_trends.png">')],
+                    layout=ui.Layout(
+                        width="600px",
+                        height="330px",
+                        border="1px solid grey",
+                        margin="24px 0px 0px",
+                        justify_content="center",
+                        align_items="center",
+                    ),
                 ),
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
@@ -1022,7 +1031,15 @@ class View:
                     ),
                 ),
                 ui.Box(
-                    [], layout=ui.Layout(width="600px", height="300px", border="1px solid grey", margin="24px 0px 0px")
+                    [ui.HTML('<img src="box_plot.png">')],
+                    layout=ui.Layout(
+                        width="600px",
+                        height="330px",
+                        border="1px solid grey",
+                        margin="24px 0px 0px",
+                        justify_content="center",
+                        align_items="center",
+                    ),
                 ),
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
