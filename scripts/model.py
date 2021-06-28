@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from .view import Delimiter
+from .namespaces import VisualizationTab
 
 
 def get_notebook_auth_token() -> str:
@@ -95,6 +96,8 @@ class Model:
         self._sample_processed_csv_rows_memo: Optional[list[list[str]]] = None
         # States for integrity checking page
         self.duplicate_rows: pd.DataFrame = pd.DataFrame()
+        # States for plausibility checking page
+        self.active_visualization_tab: VisualizationTab = VisualizationTab.VALUE_TRENDS
 
     def intro(self, view: View, controller: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""

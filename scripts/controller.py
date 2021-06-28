@@ -4,6 +4,7 @@ from scripts.model import Step
 
 import ipywidgets as ui
 
+from .namespaces import VisualizationTab
 from .view import CSS, Delimiter, Notification
 
 
@@ -283,3 +284,18 @@ class Controller:
     def onclick_previous_from_page_4(self, widget: ui.Button) -> None:
         """The 'submit' button in the last page was clicked"""
         self.view.switch_page(3)
+
+    def onclick_value_trends_tab(self, widget: ui.Button) -> None:
+        """Value trends tab was clicked"""
+        self.model.active_visualization_tab = VisualizationTab.VALUE_TRENDS
+        self.view.update_plausibility_checking_page()
+
+    def onclick_growth_trends_tab(self, widget: ui.Button) -> None:
+        """Growth trends tab was clicked"""
+        self.model.active_visualization_tab = VisualizationTab.GROWTH_TRENDS
+        self.view.update_plausibility_checking_page()
+
+    def onclick_box_plot_tab(self, widget: ui.Button) -> None:
+        """Box plot tab was clicked"""
+        self.model.active_visualization_tab = VisualizationTab.BOX_PLOT
+        self.view.update_plausibility_checking_page()

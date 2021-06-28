@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .namespaces import VisualizationTab
 
 from typing import Optional, Union  # Delay the evaluation of undefined types
 from threading import Timer
@@ -237,6 +238,13 @@ class View:
         self.rows_w_non_numerics_lbl: ui.Label = None
         self.bad_labels_overview_table: ui.HTML = None
         self.unknown_labels_overview_table: ui.HTML = None
+        # Widgets in the plausibility checking page that need to be manipulated
+        self.box_plot_tab_page: ui.Box = None
+        self.value_trends_tab_page: ui.Box = None
+        self.growth_trends_tab_page: ui.Box = None
+        self.value_trends_tab_element: ui.Box = None
+        self.growth_trends_tab_element: ui.Box = None
+        self.box_plot_tab_element: ui.Box = None
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -494,6 +502,30 @@ class View:
             content_index += 1
         # TODO: remove this after a proper test suite has been created
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = False
+
+    def update_plausibility_checking_page(self) -> None:
+        """Update the plausibility checking page"""
+
+        # Update tab bar and tab page
+        # -hide all tab pages/make all tabs inactive
+        self.value_trends_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+        self.value_trends_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
+        self.growth_trends_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+        self.growth_trends_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
+        self.box_plot_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+        self.box_plot_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
+        self.value_trends_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
+        self.growth_trends_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
+        # -show current tab page/make current tab active
+        if self.model.active_visualization_tab == VisualizationTab.VALUE_TRENDS:
+            self.value_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.value_trends_tab_page.remove_class(CSS.DISPLAY_MOD__NONE)
+        elif self.model.active_visualization_tab == VisualizationTab.GROWTH_TRENDS:
+            self.growth_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.growth_trends_tab_page.remove_class(CSS.DISPLAY_MOD__NONE)
+        elif self.model.active_visualization_tab == VisualizationTab.BOX_PLOT:
+            self.box_plot_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.box_plot_tab_page.remove_class(CSS.DISPLAY_MOD__NONE)
 
     def _build_file_upload_page(self) -> ui.Box:
         """Build the file upload page"""
@@ -885,16 +917,23 @@ class View:
     def _build_plausibility_checking_page(self) -> ui.Box:
         # Control widgets
         value_tab_btn = ui.Button()
+        value_tab_btn.on_click(self.ctrl.onclick_value_trends_tab)
         growth_tab_btn = ui.Button()
+        growth_tab_btn.on_click(self.ctrl.onclick_growth_trends_tab)
         box_tab_btn = ui.Button()
+        box_tab_btn.on_click(self.ctrl.onclick_box_plot_tab)
+        self.value_trends_tab_element = ui.Box([ui.Label("Value trends"), value_tab_btn])
+        self.value_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT)
+        self.growth_trends_tab_element = ui.Box([ui.Label("Growth trends"), growth_tab_btn])
+        self.growth_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT)
+        self.box_plot_tab_element = ui.Box([ui.Label("Box plot"), box_tab_btn])
+        self.box_plot_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT)
         visualization_tab = CSS.assign_class(
             ui.GridBox(
                 [
-                    CSS.assign_class(ui.Box([ui.Label("Value trends"), value_tab_btn]), CSS.VISUALIZATION_TAB__ELEMENT),
-                    CSS.assign_class(
-                        ui.Box([ui.Label("Growth trends"), growth_tab_btn]), CSS.VISUALIZATION_TAB__ELEMENT
-                    ),
-                    CSS.assign_class(ui.Box([ui.Label("Box plot"), box_tab_btn]), CSS.VISUALIZATION_TAB__ELEMENT),
+                    self.value_trends_tab_element,
+                    self.growth_trends_tab_element,
+                    self.box_plot_tab_element,
                 ]
             ),
             CSS.VISUALIZATION_TAB,
@@ -907,7 +946,7 @@ class View:
         variable_select = ui.Select(layout=_select_layout, options=[""])
         item_select = ui.Select(layout=_select_layout, options=[""])
         year_select = ui.Select(layout=_select_layout, options=[""])
-        value_trends_tab_page = ui.VBox(
+        self.value_trends_tab_page = ui.VBox(
             [
                 ui.GridBox(
                     (
@@ -933,7 +972,62 @@ class View:
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
         )
-
+        # growth trends tab page
+        self.growth_trends_tab_page = ui.VBox(
+            [
+                ui.GridBox(
+                    (
+                        ui.HTML("1. Scenario"),
+                        scenario_select,
+                        ui.HTML("2. Region"),
+                        region_select,
+                        ui.HTML("3. Variable"),
+                        variable_select,
+                        ui.HTML("4. Item"),
+                        item_select,
+                        ui.HTML("5. Year"),
+                        year_select,
+                    ),
+                    layout=ui.Layout(
+                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr",
+                        grid_gap="16px 16px",
+                    ),
+                ),
+                ui.Box(
+                    [], layout=ui.Layout(width="600px", height="300px", border="1px solid grey", margin="24px 0px 0px")
+                ),
+            ],
+            layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
+        )
+        self.growth_trends_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
+        # box plot tab page
+        self.box_plot_tab_page = ui.VBox(
+            [
+                ui.GridBox(
+                    (
+                        ui.HTML("1. Scenario"),
+                        scenario_select,
+                        ui.HTML("2. Region"),
+                        region_select,
+                        ui.HTML("3. Variable"),
+                        variable_select,
+                        ui.HTML("4. Item"),
+                        item_select,
+                        ui.HTML("5. Year"),
+                        year_select,
+                    ),
+                    layout=ui.Layout(
+                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr",
+                        grid_gap="16px 16px",
+                    ),
+                ),
+                ui.Box(
+                    [], layout=ui.Layout(width="600px", height="300px", border="1px solid grey", margin="24px 0px 0px")
+                ),
+            ],
+            layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
+        )
+        self.box_plot_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
         # -page navigation widgets
         submit = ui.Button(description="Submit", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         submit.on_click(self.ctrl.onclick_submit)
@@ -969,7 +1063,9 @@ class View:
                                         align_items="center", justify_content="space-between", width="100%"
                                     ),
                                 ),
-                                value_trends_tab_page,
+                                self.value_trends_tab_page,
+                                self.growth_trends_tab_page,
+                                self.box_plot_tab_page,
                             ),
                             layout=ui.Layout(width="900px", align_items="center"),
                         ),
