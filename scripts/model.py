@@ -6,6 +6,7 @@ from typing import Any, Callable, Optional
 
 import numpy as np
 import pandas as pd
+from pandas.core.frame import DataFrame
 
 from .view import Delimiter
 from .namespaces import VisualizationTab
@@ -95,7 +96,10 @@ class Model:
         self.raw_csv_rows: list[str] = []  # "raw" -> each row is not separated by the csv delimiter yet
         self._sample_processed_csv_rows_memo: Optional[list[list[str]]] = None
         # States for integrity checking page
+        self.rows_w_field_issues: pd.DataFrame = pd.DataFrame()
+        self.rows_w_ignored_scenario: pd.DataFrame = pd.DataFrame()
         self.duplicate_rows: pd.DataFrame = pd.DataFrame()
+        self.accepted_rows: pd.DataFrame = pd.DataFrame()
         # States for plausibility checking page
         self.active_visualization_tab: VisualizationTab = VisualizationTab.VALUE_TRENDS
 
@@ -486,6 +490,46 @@ class Model:
         year_colnum: int,
         value_colnum: int,
     ) -> None:
+        # Split raw csv rows
         assert delimiter != ""
-        dataframe = pd.DataFrame([row.split(delimiter) for row in raw_csv])
-        self.duplicate_rows = dataframe[dataframe.duplicated()]
+        ROWS = [  # Each row contains the line number in the first column & header row is skipped
+            [str(i + 1)] + raw_csv[i].split(delimiter) for i in range(int(header_is_included), len(raw_csv))
+        ]
+        MOST_FREQUENT_NCOLS = int(np.bincount([len(row) for row in ROWS]).argmax())
+        # From ROWS, prune rows with field issues
+        # - rows with mismatched number of fields
+        # - rows with empty fields
+        # - rows with a non-numeric value in a numeric field
+        _rows_w_field_issues = []
+        _rows_w_no_field_issues = []  # rows without field issues
+        for row in ROWS:
+            if len(row) != MOST_FREQUENT_NCOLS:
+                row += ["Mismatched number of fields"]
+                _rows_w_field_issues.append(row)
+                continue
+            elif "" in row:
+                row += ["Contains empty fields"]
+                _rows_w_field_issues.append(row)
+                continue
+            try:
+                int(row[year_colnum])  # no need to set to 0-index due to the previously added line number column
+                float(row[value_colnum])
+            except:
+                row += ["Non-numeric value in a numeric field"]
+                _rows_w_field_issues.append(row)
+                continue
+            _rows_w_no_field_issues.append(row)
+        # From rows with no field issues, prune rows containing an ignored scenario
+        _rows_w_ignored_scenario = [
+            row for row in _rows_w_no_field_issues if row[scenario_colnum] in scenarios_to_ignore
+        ]
+        _rows_w_no_ignored_scenario = [
+            row for row in _rows_w_no_field_issues if row[scenario_colnum] not in scenarios_to_ignore
+        ]
+        # Initialize the integrity checking states
+        _remaining_rows = pd.DataFrame(_rows_w_no_ignored_scenario)
+        KEY_COLUMNS = _remaining_rows.columns.values.tolist()[1:]  # all columns except the line number column
+        self.rows_w_field_issues = pd.DataFrame(_rows_w_field_issues)
+        self.rows_w_ignored_scenario = pd.DataFrame(_rows_w_ignored_scenario)
+        self.duplicate_rows = _remaining_rows[_remaining_rows.duplicated(subset=KEY_COLUMNS)]
+        self.accepted_rows = _remaining_rows.drop_duplicates(subset=KEY_COLUMNS)
