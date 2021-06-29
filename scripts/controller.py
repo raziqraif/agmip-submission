@@ -112,25 +112,43 @@ class Controller:
         if len(self.model.uploaded_filename) == 0:
             self.view.show_notification(Notification.INFO, Notification.PLEASE_UPLOAD)
             return
+        self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
         if self.model.last_finished_step == Step.INITIAL:
             self.model.last_finished_step = Step.FILE_UPLOAD
-            self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
             error_message = self.model.init_data_specification_states(self.model.uploaded_filename)
             self.view.update_data_specification_page()
             if error_message is not None:
                 self.view.show_notification(Notification.ERROR, error_message)
             else:
                 self.view.show_notification(Notification.INFO, Notification.FIELDS_WERE_PREPOPULATED)
-            self.view.modify_cursor(None)
         self.view.switch_page(2)
+        self.view.modify_cursor(None)
 
     def onclick_next_from_page_2(self, widget: ui.Button) -> None:
         """'Next' button on the data specification page was clicked"""
         if not self.validate_data_specification_input():
             return
-        if self.model.last_finished_step == Step.FILE_UPLOAD:
+        self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
+        if self.model.last_finished_step == Step.FILE_UPLOAD or True:  # TODO: Remove the True cond.
             self.model.last_finished_step = Step.DATA_SPECIFICATION
+            self.model.init_integrity_checking_states(
+                raw_csv=self.model.raw_csv_rows,
+                delimiter=self.model.delimiter,
+                header_is_included=self.model.header_is_included,
+                lines_to_skip=self.model.lines_to_skip,
+                scenarios_to_ignore=set(self.model.scenarios_to_ignore_str.split(",")),
+                model_name=self.model.model_name,
+                scenario_colnum=self.model._assigned_colnum_for_scenario,
+                region_colnum=self.model._assigned_colnum_for_region,
+                variable_colnum=self.model._assigned_colnum_for_variable,
+                item_colnum=self.model._assigned_colnum_for_item,
+                unit_colnum=self.model._assigned_colnum_for_unit,
+                year_colnum=self.model._assigned_colnum_for_year,
+                value_colnum=self.model._assigned_colnum_for_value,
+            )
+            self.view.update_integrity_checking_page()
         self.view.switch_page(3)
+        self.view.modify_cursor(None)
 
     def onclick_previous_from_page_2(self, widget: ui.Button) -> None:
         """'Previous' button on the data specification page was clicked"""

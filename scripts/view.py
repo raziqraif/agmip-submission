@@ -232,10 +232,10 @@ class View:
         self.output_data_preview_table: ui.GridBox = None
         self._cached_children_of_input_data_preview_table: Optional[list] = None
         # Widgets in the integrity checking page that need to be manipulated
-        self.duplicates_lbl: ui.Label = None
-        self.rows_w_missing_fields_lbl: ui.Label = None
-        self.rows_w_mismatched_nfields_lbl: ui.Label = None
-        self.rows_w_non_numerics_lbl: ui.Label = None
+        self.duplicate_rows_lbl: ui.Label = None
+        self.rows_w_field_issues_lbl: ui.Label = None
+        self.rows_w_ignored_scenario_lbl: ui.Label = None
+        self.accepted_rows_lbl: ui.Label = None
         self.bad_labels_overview_table: ui.HTML = None
         self.unknown_labels_overview_table: ui.HTML = None
         # Widgets in the plausibility checking page that need to be manipulated
@@ -503,9 +503,15 @@ class View:
         # TODO: remove this after a proper test suite has been created
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = False
 
+    def update_integrity_checking_page(self) -> None:
+        """Update the integrity checking page"""
+        self.rows_w_field_issues_lbl.value = str(self.model.rows_w_field_issues.shape[0])
+        self.rows_w_ignored_scenario_lbl.value = str(self.model.rows_w_ignored_scenario.shape[0])
+        self.duplicate_rows_lbl.value = str(self.model.duplicate_rows.shape[0])
+        self.accepted_rows_lbl.value = str(self.model.accepted_rows.shape[0])
+
     def update_plausibility_checking_page(self) -> None:
         """Update the plausibility checking page"""
-
         # Update tab bar and tab page
         # -hide all tab pages/make all tabs inactive
         self.value_trends_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
@@ -769,14 +775,14 @@ class View:
     def _build_integrity_checking_page(self) -> ui.Box:
         """Build the integrity checking page"""
         # Create the control widgets
-        download_duplicates_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
-        download_missing_fields_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
-        download_mismatched_ncols_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
-        download_non_numeric_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
-        self.duplicates_lbl = ui.Label("0")
-        self.rows_w_missing_fields_lbl = ui.Label("0")
-        self.rows_w_mismatched_nfields_lbl = ui.Label("0")
-        self.rows_w_non_numerics_lbl = ui.Label("0")
+        download_rows_field_issues_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
+        download_rows_w_ignored_scenario_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
+        download_duplicate_rows_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
+        download_accepted_rows = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
+        self.rows_w_field_issues_lbl = ui.Label("0")
+        self.rows_w_ignored_scenario_lbl = ui.Label("0")
+        self.duplicate_rows_lbl = ui.Label("0")
+        self.accepted_rows_lbl = ui.Label("0")
         request_new_protocol_checkbox = ui.Checkbox(
             indent=False, value=False, description="", layout=ui.Layout(margin="6px 0px 0px 0px")
         )
@@ -851,25 +857,25 @@ class View:
                                                             ),
                                                         )
                                                     ),
-                                                    ui.Box((self.duplicates_lbl,)),
+                                                    ui.Box((self.rows_w_field_issues_lbl,)),
                                                     ui.Box(
                                                         (ui.Label("Number of rows containing an ignored scenario"),)
                                                     ),
-                                                    ui.Box((self.rows_w_missing_fields_lbl,)),
+                                                    ui.Box((self.rows_w_ignored_scenario_lbl,)),
                                                     ui.HTML("Number of duplicate rows"),
-                                                    ui.Box((self.rows_w_mismatched_nfields_lbl,)),
+                                                    ui.Box((self.duplicate_rows_lbl,)),
                                                     ui.Box((ui.Label("Number of accepted rows"),)),
-                                                    ui.Box((self.rows_w_non_numerics_lbl,)),
+                                                    ui.Box((self.accepted_rows_lbl,)),
                                                 ),
                                             ),
                                             CSS.ROWS_OVERVIEW_TABLE,
                                         ),
                                         ui.VBox(
                                             children=[
-                                                download_duplicates_btn,
-                                                download_missing_fields_btn,
-                                                download_mismatched_ncols_btn,
-                                                download_non_numeric_btn,
+                                                download_rows_field_issues_btn,
+                                                download_rows_w_ignored_scenario_btn,
+                                                download_duplicate_rows_btn,
+                                                download_accepted_rows,
                                             ],
                                             layout=ui.Layout(margin="16px 0px 20px 0px"),
                                         ),

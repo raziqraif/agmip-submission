@@ -480,7 +480,7 @@ class Model:
         delimiter: str,
         header_is_included: bool,
         lines_to_skip: int,
-        scenarios_to_ignore: list[str],
+        scenarios_to_ignore: set[str],
         model_name: str,
         scenario_colnum: int,
         region_colnum: int,
