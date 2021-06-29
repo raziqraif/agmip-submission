@@ -804,7 +804,21 @@ class View:
                     </tr>
                 </thead>
                 <tbody>
-                    {_empty_row * 3}
+                    <tr>
+                        <td>World</td>
+                        <td>Region</td>
+                        <td>WLD</td>
+                    <tr>
+                    <tr>
+                        <td>#DIV/0</td>
+                        <td>Value</td>
+                        <td>0</td>
+                    <tr>
+                    <tr>
+                        <td>Canada</td>
+                        <td>Region</td>
+                        <td>CAN</td>
+                    <tr>
                 </tbody>
             </table>
             """
@@ -820,7 +834,21 @@ class View:
                     </tr>
                 </thead>
                 <tbody>
-                    {_empty_row * 3}
+                    <tr>
+                        <td>Mtc02e</td>
+                        <td>Unit</td>
+                        <td>MtCO2e</td>
+                    <tr>
+                    <tr>
+                        <td>1000 t prt</td>
+                        <td>Unit</td>
+                        <td>1000 t</td>
+                    <tr>
+                    <tr>
+                        <td>em t/ha</td>
+                        <td>Unit</td>
+                        <td>dm t/ha</td>
+                    <tr>
                 </tbody>
             </table>
             """
@@ -947,11 +975,11 @@ class View:
         visualization_tab.children[0].add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
         # value trends tab page
         _select_layout = ui.Layout(width="200px", height="76px")
-        scenario_select = ui.Select(layout=_select_layout, options=[""])
-        region_select = ui.Select(layout=_select_layout, options=[""])
-        variable_select = ui.Select(layout=_select_layout, options=[""])
-        item_select = ui.Select(layout=_select_layout, options=[""])
-        year_select = ui.Select(layout=_select_layout, options=[""])
+        scenario_select = ui.Select(layout=_select_layout, options=self.model.uploaded_scenarios)
+        region_select = ui.Select(layout=_select_layout, options=self.model.uploaded_regions)
+        variable_select = ui.Select(layout=_select_layout, options=self.model.uploaded_variables)
+        item_select = ui.Select(layout=_select_layout, options=self.model.uploaded_items)
+        year_select = ui.Select(layout=_select_layout, options=self.model.uploaded_years)
         self.value_trends_tab_page = ui.VBox(
             [
                 ui.GridBox(
