@@ -129,7 +129,7 @@ class Controller:
         if not self.validate_data_specification_input():
             return
         self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
-        if self.model.last_finished_step == Step.FILE_UPLOAD or True:  # TODO: Remove the True cond.
+        if self.model.last_finished_step == Step.FILE_UPLOAD:
             self.model.last_finished_step = Step.DATA_SPECIFICATION
             self.model.init_integrity_checking_states(
                 raw_csv=self.model.raw_csv_rows,

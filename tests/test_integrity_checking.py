@@ -45,6 +45,7 @@ def init_states_kwargs() -> dict:
         "value_colnum": 7,
     }
 
+
 def test_duplicate_rows(init_states_kwargs: dict):
     DUPLICATE_ROWS = [
         "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
@@ -59,6 +60,7 @@ def test_duplicate_rows(init_states_kwargs: dict):
     print(model.accepted_rows)
     assert len(model.duplicate_rows) == len(DUPLICATE_ROWS) - 1
     assert len(model.accepted_rows) == 1
+
 
 def test_rows_with_field_issues(init_states_kwargs: dict):
     ROWS = [
@@ -84,6 +86,7 @@ def test_rows_with_field_issues(init_states_kwargs: dict):
     assert len(model.rows_w_field_issues) == 5
     assert len(model.accepted_rows) == len(ROWS) - 5
 
+
 def test_rows_with_ignored_scenario(init_states_kwargs: dict):
     ROWS = [
         "ignored scenario 1,CAN,CONS,RIC,2010,1000 t dm,162.6840595",
@@ -103,3 +106,30 @@ def test_rows_with_ignored_scenario(init_states_kwargs: dict):
     model.init_integrity_checking_states(**init_states_kwargs)
     assert len(model.rows_w_ignored_scenario) == len(ignored_scenarios)
     assert len(model.accepted_rows) == len(ROWS) - len(ignored_scenarios)
+
+
+def test_uploaded_columns(init_states_kwargs: dict):
+    ROWS = [
+        "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2020,1000 t dm,183.6566783",
+        "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2030,1000 t dm,170.3285805",
+        "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2050,1000 t dm,158.6103519",
+        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,FEED,VFN|VEG,2050,1000 t fm,4661.274823",
+        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2010,1000 t fm,120.3986869",
+        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2020,1000 t fm,169.3291105",
+        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
+    ]
+    unique_scenarios = ["SSP2_NoMt_NoCC_FlexA_DEV", "SSP2_NoMt_NoCC_FlexA_WLD_2500"]
+    unique_regions = ["CAN", "MEN"]
+    unique_items = ["RIC", "VFN|VEG"]
+    unique_variables = ["CONS", "FEED", "OTHU"]
+    unique_units = ["1000 t dm"]
+    unique_years = ["2020", "2030", "2050", "2010"]
+    init_states_kwargs["raw_csv"] = ROWS
+    model = scsa_model.Model()
+    model.init_integrity_checking_states(**init_states_kwargs)
+    assert unique_scenarios.sort() == model.uploaded_scenarios.sort()
+    assert unique_regions.sort() == model.uploaded_regions.sort()
+    assert unique_items.sort() == model.uploaded_items.sort()
+    assert unique_variables.sort() == model.uploaded_variables.sort()
+    assert unique_units.sort() == model.uploaded_units.sort()
+    assert unique_years.sort() == model.uploaded_years.sort()

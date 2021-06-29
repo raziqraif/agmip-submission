@@ -70,7 +70,10 @@ class Model:
         self.uploaded_filename: str = ""  # Tracks uploaded file's name (should be empty when the file was removed)
         # States for data specification page
         self._labels_spreadsheet: dict[str, pd.DataFrame] = pd.read_excel(
-            str(self.VALID_LABELS_SPREADSHEET), engine="openpyxl", sheet_name=None
+            str(self.VALID_LABELS_SPREADSHEET),
+            engine="openpyxl",
+            sheet_name=None,
+            keep_default_na=False,
         )
         self.model_names: set[str] = set(
             self._labels_spreadsheet["Models"]["Model"]  # Get the pd dataframe, then the series
@@ -102,6 +105,12 @@ class Model:
         self.accepted_rows: pd.DataFrame = pd.DataFrame()
         # States for plausibility checking page
         self.active_visualization_tab: VisualizationTab = VisualizationTab.VALUE_TRENDS
+        self.uploaded_scenarios: list = []
+        self.uploaded_regions: list = []
+        self.uploaded_items: list = []
+        self.uploaded_variables: list = []
+        self.uploaded_units: list = []
+        self.uploaded_years: list = []
 
     def intro(self, view: View, controller: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -533,3 +542,9 @@ class Model:
         self.rows_w_ignored_scenario = pd.DataFrame(_rows_w_ignored_scenario)
         self.duplicate_rows = _remaining_rows[_remaining_rows.duplicated(subset=KEY_COLUMNS)]
         self.accepted_rows = _remaining_rows.drop_duplicates(subset=KEY_COLUMNS)
+        self.uploaded_scenarios = self.accepted_rows.iloc[:, scenario_colnum].unique().tolist()
+        self.uploaded_regions = self.accepted_rows.iloc[:, region_colnum].unique().tolist()
+        self.uploaded_items = self.accepted_rows.iloc[:, item_colnum].unique().tolist()
+        self.uploaded_variables = self.accepted_rows.iloc[:, variable_colnum].unique().tolist()
+        self.uploaded_units = self.accepted_rows.iloc[:, unit_colnum].unique().tolist()
+        self.uploaded_years = self.accepted_rows.iloc[:, year_colnum].unique().tolist()
