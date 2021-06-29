@@ -24,7 +24,7 @@
 	function _breakFileStringIntoChunks(fileString) {
 		let startIndex = 0;
 		let endIndex = fileString.length;
-		let chunkSize = 1024 * 1024; // 1MB
+		let chunkSize = 1024 * 1024 * 8; // 8MB
 		let chunks = [];
 
 		while (startIndex < endIndex) {
@@ -36,7 +36,7 @@
 		return chunks;
 	}
 
-	function _getUploadInfo(chunks, chunk_index, filename) {
+	function _getUrlAndPayload(chunks, chunk_index, filename) {
 		/* Return upload URL and payload */
 
 		// Format: <BASE_URL>/notebooks/<PATH_TO_CURRENT_NOTEBOOK> or <BASE_URL>/apps/<PATH_TO_CURRENT_NOTEBOOK>
@@ -61,6 +61,7 @@
 			path: FILE_DESTINATION_PATH,
 			format: "base64",
 			type: "file",
+			mimetype: "application/octet-stream",
 		};
 		if (chunks.length > 1) payload.chunk = chunk_number;
 		
@@ -90,72 +91,91 @@
 		 */
 
 		var file = this.files[0];
-
 		this.disabled = true;
 		document.body.classList.add("c-cursor-mod--progress")
-		// Encode file in Base64 (by reading it as a Data URL)
+		// Encode file data in Base64 (by first reading it as an Array Buffer)
 		let reader = new FileReader();
-		reader.readAsDataURL(file);
-
-		// Proceed to upload file if encoding was successful
+		reader.readAsArrayBuffer(file);
 		reader.onload = function () {
-			var base64FileString = reader.result
-				.replace("data:", "") // Replace unneeded characters in Data URL
-				.replace(/^.+,/, ""); // https://pqina.nl/blog/convert-a-file-to-a-base64-string-with-javascript/
-
-			var chunks = _breakFileStringIntoChunks(base64FileString);
-
-			// Upload files in chunks
-			for (let i = 0; i < chunks.length; i++) {
-				let { url, payload } = _getUploadInfo(chunks, i, file.name);
-				let http = new XMLHttpRequest();
-				http.open("PUT", url, true);
-
-				// This code can be removed before deployment to MyGeoHub 
-				http.setRequestHeader("Authorization", "token " + window.APP_MODEL.nbserver_auth_token);
-
-				http.send(JSON.stringify(payload));
-
-				// Manage state after sending the last payload
-				if (i == chunks.length - 1) {			
-					http.onreadystatechange = function () {
-						if (http.readyState != XMLHttpRequest.DONE) {
-							return;
-						}
-						// OK or CREATED
-						if ((http.status == 200) || (http.status == 201)) {
-							document.body.classList.remove("c-cursor-mod--progress")
-							fileUploader = document.getElementsByClassName("c-upload-area__file-uploader")[0];
-							fileUploader.disabled = false;
-							fileUploader.value = null;
-
-							// Communicate the name of uploaded file to the Python backend by manipulating the model of  
-							// a label associated with the file upload area (and change the label's value) 
-							// 
-							// https://github.com/jupyter-widgets/ipywidgets/issues/2777#issuecomment-585094635
-							// https://github.com/jupyter-widgets/ipywidgets/issues/1783#issuecomment-340365890
-							let manager = window.IPython.WidgetManager._managers[0]
-							let model_promise = manager.get_model(window.APP_MODEL.ua_file_label_model_id)
-							model_promise.then(function(model) {
-								// model.views is an object containing multiple Promise attributes 
-								// Assume model has only 1 view
-								view_promise = model.views[Object.keys(model.views)[0]]
-								view_promise.then(function(view) {
-									view.model.set('value', file.name)
-									view.touch()
-								})
+			// Encode file data in base64
+			var bytes = '';
+			var buffer = new Uint8Array(reader.result);
+			var nbytes = buffer.byteLength;
+			for (var i=0; i<nbytes; i++) {
+				bytes += String.fromCharCode(buffer[i]);
+			}
+			filedata = btoa(bytes);
+			// Break file data into chunks
+			var chunks = _breakFileStringIntoChunks(filedata);
+			// Upload file in chunks 
+			var chunk_index = 0
+			var { url, payload } = _getUrlAndPayload(chunks, chunk_index, file.name);
+			var http = null;
+			var readystatechangehandler = function () {
+				if (http.readyState != XMLHttpRequest.DONE) {
+					console.log("not done", chunk_index)
+					return;
+				}
+				// OK or CREATED
+				if ((http.status == 200) || (http.status == 201)) {
+					console.log("done", chunk_index)
+					// Send the next chunk, if any
+					if (chunk_index < chunks.length - 1) {
+						console.log("chunk index = ", chunk_index)
+						chunk_index += 1
+						payload = _getUrlAndPayload(chunks, chunk_index, file.name).payload
+						console.log({payload})
+						http = new XMLHttpRequest();
+						http.open("PUT", url, true)
+						// This header code can be removed before deployment to MyGeoHub 
+						http.setRequestHeader("Authorization", "token " + window.APP_MODEL.nbserver_auth_token)
+						http.onreadystatechange = readystatechangehandler
+						http.send(JSON.stringify(payload))
+					}
+					// Update relevant states after sending the last chunk
+					else {	
+						document.body.classList.remove("c-cursor-mod--progress")
+						fileUploader = document.getElementsByClassName("c-upload-area__file-uploader")[0];
+						fileUploader.disabled = false;
+						fileUploader.value = null;
+						// Communicate the name of uploaded file to the Python backend by manipulating the model of  
+						// a label associated with the file upload area (and change the label's value) 
+						// https://github.com/jupyter-widgets/ipywidgets/issues/2777#issuecomment-585094635
+						// https://github.com/jupyter-widgets/ipywidgets/issues/1783#issuecomment-340365890
+						let manager = window.IPython.WidgetManager._managers[0]
+						let model_promise = manager.get_model(window.APP_MODEL.ua_file_label_model_id)
+						model_promise.then(function(model) {
+							// model.views is an object containing multiple Promise attributes 
+							// Assume model has only 1 view
+							view_promise = model.views[Object.keys(model.views)[0]]
+							view_promise.then(function(view) {
+								view.model.set('value', file.name)
+								view.touch()
 							})
-						}
-						else {
-							alert("Fail to upload file. HTTP status: " + http.status);
-						}
-					};
+						})
+					}
+				}
+				else {
+					document.body.classList.remove("c-cursor-mod--progress")
+					fileUploader = document.getElementsByClassName("c-upload-area__file-uploader")[0];
+					fileUploader.disabled = false;
+					fileUploader.value = null;
+					alert("Fail to upload file. HTTP status: " + http.status);
 				}
 			}
+			http = new XMLHttpRequest();
+			http.open("PUT", url, true)
+			// This header code can be removed before deployment to MyGeoHub 
+			http.setRequestHeader("Authorization", "token " + window.APP_MODEL.nbserver_auth_token)
+			http.onreadystatechange = readystatechangehandler
+			http.send(JSON.stringify(payload))
 		};
-
 		// Display error message if encoding fails
 		reader.onerror = function () {
+			document.body.classList.remove("c-cursor-mod--progress")
+			fileUploader = document.getElementsByClassName("c-upload-area__file-uploader")[0];
+			fileUploader.disabled = false;
+			fileUploader.value = null;
 			alert("Fail to encode file in Base64");
 		};
 	};
