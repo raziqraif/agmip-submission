@@ -56,7 +56,7 @@ class TestFileUploadSuite:
         options = webdriver.ChromeOptions()
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--window-size=1440, 900")
+        options.add_argument("--window-size=1440, 1440")
         options.add_argument("--headless")
         self.driver = webdriver.Chrome(options=options)
         self.wait = WebDriverWait(self.driver, 20)  # Set explicit wait time to X seconds
