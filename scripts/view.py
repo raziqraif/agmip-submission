@@ -185,9 +185,12 @@ class CSS:
 
 
 def set_options(widget: ui.Dropdown, options: tuple[str], onchange_callback) -> None:
-    """Utility function to reassign options without triggering onchange callback"""
+    """
+    Utility function to reassign options without triggering onchange callback.
+    The options will be sorted first.
+    """
     widget.unobserve(onchange_callback, "value")
-    widget.options = options
+    widget.options = sorted(options)
     widget.value = None
     widget.observe(onchange_callback, "value")
 
@@ -335,21 +338,17 @@ class View:
     def show_notification(self, variant: str, content: str) -> None:
         """Display a notification to the user"""
         assert variant in Notification._VARIANTS
-
         # Cancel existing timer if it's still running
         self.notification_timer.cancel()
-
         # Reset the notification's DOM classes
         # This is important because we implement a clickaway listener in JS which removes a DOM class from the
         # notification view without notifying the notification model. Doing this will reset the DOM classes that both
         # the notification models in server-side & client-side are maintaining
         self.notification._dom_classes = (CSS.NOTIFICATION,)
-
         # Update notification content
         notification_text = self.notification.children[1]
         assert isinstance(notification_text, ui.Label)
         notification_text.value = content
-
         # Update notification visibility & style
         if variant == Notification.SUCCESS:
             self.notification.children = (Icon.SUCCESS, notification_text)
@@ -369,7 +368,6 @@ class View:
             notification_text._dom_classes = (CSS.COLOR_MOD__WHITE,)
         else:
             assert len("Variant does not exists") == 0
-
         # Create a timer to hide notification after X seconds
         self.notification_timer = Timer(3.5, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self.notification_timer.start()
