@@ -372,38 +372,39 @@ class View:
         self.notification_timer = Timer(3.5, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self.notification_timer.start()
 
-    def switch_page(self, requested_page_number: int, is_last_active_page: bool = False) -> None:
+    def update_app(self) -> None:
         """Show the requested page and update the page stepper accordingly"""
-        assert requested_page_number > 0 and requested_page_number <= len(self.page_container.children)
+        assert self.model.current_page > 0 and self.model.current_page <= len(self.page_container.children)
         # Hide all pages
         for page in self.page_container.children:
             assert isinstance(page, ui.Box)
             page.add_class(CSS.DISPLAY_MOD__NONE)
-        # Show the requested page
-        requested_page_number = requested_page_number - 1
-        page: ui.Box = self.page_container.children[requested_page_number]
+        # Show the current page
+        current_page_index = self.model.current_page - 1
+        page = self.page_container.children[current_page_index]
+        assert isinstance(page, ui.Box)
         page.remove_class(CSS.DISPLAY_MOD__NONE)
-        # Change widget with the "current" modifier to be "active"
+        # Change stepper element with the "current" modifier to be "active"
         for child_element in self.page_stepper.children:
             assert isinstance(child_element, ui.DOMWidget)
             if CSS.STEPPER__NUMBER__CURRENT in child_element._dom_classes:
                 child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__ACTIVE)
         # Update stepper elements belonging to the current page
-        # Format of children elements = [number el, title el, separator el, ..., number el, title el]
-        number_element = self.page_stepper.children[requested_page_number * 3 + 0]
-        title_element = self.page_stepper.children[requested_page_number * 3 + 1]
+        # - stepper's children = [number el, title el, separator el, ..., number el, title el]
+        number_element = self.page_stepper.children[current_page_index * 3 + 0]
+        title_element = self.page_stepper.children[current_page_index * 3 + 1]
         assert isinstance(number_element, ui.DOMWidget)
         assert isinstance(title_element, ui.DOMWidget)
         number_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__CURRENT)
         title_element._dom_classes = (CSS.STEPPER__TITLE__ACTIVE,)
         # Make sure that the left page separator is "active"
-        if requested_page_number > 0:
-            separator_element = self.page_stepper.children[requested_page_number * 3 - 1]
+        if current_page_index > 0:
+            separator_element = self.page_stepper.children[current_page_index * 3 - 1]
             assert isinstance(separator_element, ui.DOMWidget)
             separator_element._dom_classes = (CSS.STEPPER__SEPARATOR__ACTIVE,)
         # Make sure the stepper elements belonging to the upcoming pages are inactive (if "last active page" is specified)
-        if is_last_active_page:
-            for child_element in self.page_stepper.children[requested_page_number * 3 + 2 :]:
+        if self.model.current_page == self.model.furthest_active_page:
+            for child_element in self.page_stepper.children[current_page_index * 3 + 2 :]:
                 assert isinstance(child_element, ui.DOMWidget)
                 if CSS.STEPPER__NUMBER__ACTIVE in child_element._dom_classes:
                     child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__INACTIVE)

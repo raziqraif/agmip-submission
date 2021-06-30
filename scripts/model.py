@@ -8,8 +8,9 @@ import numpy as np
 import pandas as pd
 from pandas.core.frame import DataFrame
 
-from .view import Delimiter
+from .namespaces import Page
 from .namespaces import VisualizationTab
+from .view import Delimiter
 
 
 def get_notebook_auth_token() -> str:
@@ -40,16 +41,6 @@ class JSAppModel:
         return str(vars(self))
 
 
-class Step:
-    """Namespace for the type of steps in this app"""
-
-    INITIAL = 0
-    FILE_UPLOAD = 1
-    DATA_SPECIFICATION = 2
-    INTEGRITY_CHECKING = 3
-    PLAUSIBILITY_CHECKING = 4
-
-
 class Model:
     WORKING_DIR: Path = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
     UPLOAD_DIR: Path = WORKING_DIR / "uploads"
@@ -63,9 +54,10 @@ class Model:
         # MVC attributes
         self.view: View
         self.controller: Controller
-        # States shared between pages
+        # App states 
         self.javascript_model = JSAppModel()
-        self.last_finished_step: int = Step.INITIAL
+        self.current_page: int = Page.FILE_UPLOAD
+        self.furthest_active_page: int = Page.FILE_UPLOAD   # furthest/last active page
         # States for file upload page
         self.uploaded_filename: str = ""  # Tracks uploaded file's name (should be empty when the file was removed)
         # States for data specification page
