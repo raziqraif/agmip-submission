@@ -113,18 +113,14 @@
 			var http = null;
 			var readystatechangehandler = function () {
 				if (http.readyState != XMLHttpRequest.DONE) {
-					console.log("not done", chunk_index)
 					return;
 				}
 				// OK or CREATED
 				if ((http.status == 200) || (http.status == 201)) {
-					console.log("done", chunk_index)
 					// Send the next chunk, if any
 					if (chunk_index < chunks.length - 1) {
-						console.log("chunk index = ", chunk_index)
 						chunk_index += 1
 						payload = _getUrlAndPayload(chunks, chunk_index, file.name).payload
-						console.log({payload})
 						http = new XMLHttpRequest();
 						http.open("PUT", url, true)
 						// This header code can be removed before deployment to MyGeoHub 
