@@ -46,5 +46,6 @@ jobs:
     - name: Test
       run: |
         conda run -n agmip pytest tests/test_nbserver.py
-        # conda run -n agmip pytest tests/test_web.py
+        conda run -n agmip pytest tests/test_integrity_checking.py
+        conda run -n agmip pytest tests/test_web.py
 
