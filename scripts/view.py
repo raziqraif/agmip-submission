@@ -1,7 +1,7 @@
-from __future__ import annotations      # Delay the evaluation of undefined types
+from __future__ import annotations  # Delay the evaluation of undefined types
 
 from threading import Timer
-from typing import Callable, Optional, Union  
+from typing import Callable, Optional, Union
 
 import ipywidgets as ui
 import numpy as np
@@ -195,7 +195,8 @@ def set_options(widget: ui.Dropdown, options: tuple[str], onchange_callback) -> 
 
 
 class View:
-    DATA_SPEC_PAGE_IS_BEING_UPDATED = False  # to assert that a page update will not recursively trigger another page update  # TODO: replace this with a proper test suite
+    DATA_SPEC_PAGE_IS_BEING_UPDATED = False  # to assert that a page update will not recursively trigger another page update  
+    # TODO: replace this with a proper test suite
     # The following is to silence complaints about assigning None to a non-optional type in constructor
     # pyright: reportGeneralTypeIssues=false
     def __init__(self):
@@ -429,10 +430,10 @@ class View:
 
     def update_integrity_checking_page(self) -> None:
         """Update the integrity checking page"""
-        self.rows_w_field_issues_lbl.value = str(self.model.rows_w_field_issues.shape[0])
-        self.rows_w_ignored_scenario_lbl.value = str(self.model.rows_w_ignored_scenario.shape[0])
-        self.duplicate_rows_lbl.value = str(self.model.duplicate_rows.shape[0])
-        self.accepted_rows_lbl.value = str(self.model.accepted_rows.shape[0])
+        self.rows_w_field_issues_lbl.value = "{:,}".format(self.model.rows_w_field_issues.shape[0])
+        self.rows_w_ignored_scenario_lbl.value = "{:,}".format(self.model.rows_w_ignored_scenario.shape[0])
+        self.duplicate_rows_lbl.value = "{:,}".format(self.model.duplicate_rows.shape[0])
+        self.accepted_rows_lbl.value = "{:,}".format(self.model.accepted_rows.shape[0])
 
     def update_plausibility_checking_page(self) -> None:
         """Update the plausibility checking page"""
@@ -456,7 +457,7 @@ class View:
         else:
             self.box_plot_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.box_plot_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
-    
+
     def _build_app(self) -> ui.Box:
         """Build the application"""
         # Constants
