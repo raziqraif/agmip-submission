@@ -54,10 +54,10 @@ class Model:
         # MVC attributes
         self.view: View
         self.controller: Controller
-        # App states 
+        # App states
         self.javascript_model = JSAppModel()
         self.current_page: int = Page.FILE_UPLOAD
-        self.furthest_active_page: int = Page.FILE_UPLOAD   # furthest/last active page
+        self.furthest_active_page: int = Page.FILE_UPLOAD  # furthest/last active page
         # States for file upload page
         self.uploaded_filename: str = ""  # Tracks uploaded file's name (should be empty when the file was removed)
         # States for data specification page

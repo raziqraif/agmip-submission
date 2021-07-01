@@ -1,13 +1,14 @@
-from __future__ import annotations
-from .namespaces import VisualizationTab
+from __future__ import annotations      # Delay the evaluation of undefined types
 
-from typing import Optional, Union  # Delay the evaluation of undefined types
 from threading import Timer
+from typing import Callable, Optional, Union  
 
-import numpy as np
 import ipywidgets as ui
+import numpy as np
 from IPython.core.display import display
 from IPython.core.display import HTML
+
+from .namespaces import VisualizationTab
 
 
 DARK_BLUE = "#1E3A8A"
@@ -213,7 +214,7 @@ class View:
         self.model: Model
         self.ctrl: Controller
 
-        # Main app's widgets that need to be manipulated
+        # Base app's widgets that need to be manipulated
         self.app_container: ui.Box = None
         self.page_container: ui.Box = None
         self.page_stepper: ui.Box = None
@@ -247,12 +248,12 @@ class View:
         self.bad_labels_overview_table: ui.HTML = None
         self.unknown_labels_overview_table: ui.HTML = None
         # Widgets in the plausibility checking page that need to be manipulated
-        self.box_plot_tab_page: ui.Box = None
-        self.value_trends_tab_page: ui.Box = None
-        self.growth_trends_tab_page: ui.Box = None
         self.value_trends_tab_element: ui.Box = None
+        self.value_trends_tab_content: ui.Box = None
         self.growth_trends_tab_element: ui.Box = None
+        self.growth_trends_tab_content: ui.Box = None
         self.box_plot_tab_element: ui.Box = None
+        self.box_plot_tab_content: ui.Box = None
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -442,25 +443,27 @@ class View:
 
     def update_plausibility_checking_page(self) -> None:
         """Update the plausibility checking page"""
-        # Update tab bar and tab page
-        # -hide all tab pages/make all tabs inactive
-        self.value_trends_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-        self.value_trends_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
-        self.growth_trends_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-        self.growth_trends_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
-        self.box_plot_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-        self.box_plot_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
-        # -show current tab page/make current tab active
-        if self.model.active_visualization_tab == VisualizationTab.VALUE_TRENDS:
+        # Update tab elemetns and tab content
+        is_active: Callable[[VisualizationTab], bool] = lambda tab: self.model.active_visualization_tab == tab
+        if is_active(VisualizationTab.VALUE_TRENDS):
             self.value_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-            self.value_trends_tab_page.remove_class(CSS.DISPLAY_MOD__NONE)
-        elif self.model.active_visualization_tab == VisualizationTab.GROWTH_TRENDS:
+            self.value_trends_tab_content.remove_class(CSS.DISPLAY_MOD__NONE)
+        else:
+            self.value_trends_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.value_trends_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+        if is_active(VisualizationTab.GROWTH_TRENDS):
             self.growth_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-            self.growth_trends_tab_page.remove_class(CSS.DISPLAY_MOD__NONE)
-        elif self.model.active_visualization_tab == VisualizationTab.BOX_PLOT:
+            self.growth_trends_tab_content.remove_class(CSS.DISPLAY_MOD__NONE)
+        else:
+            self.growth_trends_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.growth_trends_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+        if is_active(VisualizationTab.BOX_PLOT):
             self.box_plot_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-            self.box_plot_tab_page.remove_class(CSS.DISPLAY_MOD__NONE)
-
+            self.box_plot_tab_content.remove_class(CSS.DISPLAY_MOD__NONE)
+        else:
+            self.box_plot_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.box_plot_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+    
     def _build_app(self) -> ui.Box:
         """Build the application"""
         # Constants
@@ -963,7 +966,7 @@ class View:
         variable_select = ui.Select(layout=_select_layout, options=self.model.uploaded_variables)
         item_select = ui.Select(layout=_select_layout, options=self.model.uploaded_items)
         year_select = ui.Select(layout=_select_layout, options=self.model.uploaded_years)
-        self.value_trends_tab_page = ui.VBox(
+        self.value_trends_tab_content = ui.VBox(
             [
                 ui.GridBox(
                     (
@@ -996,7 +999,7 @@ class View:
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
         )
         # growth trends tab page
-        self.growth_trends_tab_page = ui.VBox(
+        self.growth_trends_tab_content = ui.VBox(
             [
                 ui.GridBox(
                     (
@@ -1025,9 +1028,9 @@ class View:
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
         )
-        self.growth_trends_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
+        self.growth_trends_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
         # box plot tab page
-        self.box_plot_tab_page = ui.VBox(
+        self.box_plot_tab_content = ui.VBox(
             [
                 ui.GridBox(
                     (
@@ -1061,7 +1064,7 @@ class View:
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
         )
-        self.box_plot_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
+        self.box_plot_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
         # -page navigation widgets
         submit = ui.Button(description="Submit", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         submit.on_click(self.ctrl.onclick_submit)
@@ -1097,9 +1100,9 @@ class View:
                                         align_items="center", justify_content="space-between", width="100%"
                                     ),
                                 ),
-                                self.value_trends_tab_page,
-                                self.growth_trends_tab_page,
-                                self.box_plot_tab_page,
+                                self.value_trends_tab_content,
+                                self.growth_trends_tab_content,
+                                self.box_plot_tab_content,
                             ),
                             layout=ui.Layout(width="900px", align_items="center"),
                         ),
