@@ -234,11 +234,11 @@
         margin: 0px 0px;
     }
 
-    /* Stepper */
-    .c-stepper {
+    /* Stepper element */
+    .c-stepper-element {
         align-items: center;
     }
-    .c-stepper__number {
+    .c-stepper-element__number {
         font-size: 15px;
         color: white;
         height: 40px;
@@ -248,32 +248,36 @@
         justify-content: center;
         margin: 0px 4px;
     }
-    .c-stepper__number--current {
+    .c-stepper-element__title {
+        padding: 0px 4px;
+    }
+    .c-stepper-element__separator {
+        width: 48px;
+    }
+    /* -style element number under different element modifiers */
+    .c-stepper-element--current > .c-stepper-element__number {
         background: var(--blue);
-        color: white;
     }
-    .c-stepper__number--active {
+    .c-stepper-element--active > .c-stepper-element__number {
         background: var(--green);
-        color: white;
     }
-    .c-stepper__number--inactive {
+    .c-stepper-element--inactive > .c-stepper-element__number {
         background: var(--light-grey);
-        color: white;
     }
-    .c-stepper__title--active {
+    /* -style element title under different element modifiers */
+    .c-stepper-element--current > .c-stepper-element__title,
+    .c-stepper-element--active > .c-stepper-element__title {
         color: var(--dark-blue);
-        padding: 0px 4px;
     }
-    .c-stepper__title--inactive {
+    .c-stepper-element--inactive > .c-stepper-element__title {
         color: var(--light-grey);
-        padding: 0px 4px;
     }
-    .c-stepper__separator--active {
-        padding: 0px 4px;
+    /* -style element separator under different element modifiers */
+    .c-stepper-element--current > .c-stepper-element__separator,
+    .c-stepper-element--active > .c-stepper-element__separator {
         color: var(--blue);
     }
-    .c-stepper__separator--inactive {
-        padding: 0px 4px;
+    .c-stepper-element--inactive > .c-stepper-element__separator {
         color: var(--light-grey);
     }
 

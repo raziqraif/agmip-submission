@@ -148,8 +148,13 @@ class CSS:
     NOTIFICATION__WARNING = "c-notification--warning"
     PREVIEW_TABLE = "c-preview-table"
     ROWS_OVERVIEW_TABLE = "c-rows-overview-table"
-    STEPPER = "c-stepper"
-    STEPPER__NUMBER = "c-stepper__number"
+    STEPPER_EL = "c-stepper-element"
+    STEPPER_EL__CURRENT = "c-stepper-element--current"
+    STEPPER_EL__ACTIVE = "c-stepper-element--active"
+    STEPPER_EL__INACTIVE = "c-stepper-element--inactive"
+    STEPPER_EL__NUMBER = "c-stepper-element__number"
+    STEPPER_EL__SEPARATOR = "c-stepper-element__separator"
+    STEPPER_EL__TITLE = "c-stepper-element__title"
     STEPPER__NUMBER__ACTIVE = "c-stepper__number--active"
     STEPPER__NUMBER__CURRENT = "c-stepper__number--current"
     STEPPER__NUMBER__INACTIVE = "c-stepper__number--inactive"
@@ -258,7 +263,7 @@ class View:
         """Build and show notebook user interface"""
         from scripts.model import JSAppModel
 
-        self.app_container = self.build()
+        self.app_container = self._build_app()
         # Display the appropriate html files and our ipywidgets app
         display(HTML(filename="style.html"))
         display(self.app_container)
@@ -266,62 +271,6 @@ class View:
         javascript_model: JSAppModel = self.model.javascript_model
         display(HTML(f"<script> APP_MODEL = {javascript_model.serialize()}</script>"))
         display(HTML(filename="script.html"))
-
-    def build(self) -> ui.Box:
-        """Build the application"""
-        # Constants
-        APP_TITLE = "AgMIP Model Submission Pipeline"
-        PAGE_TITLES = ["File Upload", "Data Specification", "Integrity Checking", "Plausibility Checking"]
-        NUM_OF_PAGES = 4
-        # Create notification widget
-        notification_text = ui.Label("")
-        self.notification = ui.HBox(children=(Icon.SUCCESS, notification_text))
-        self.notification.add_class(CSS.NOTIFICATION)
-        # Create header bar
-        header_bar = ui.HTML(APP_TITLE)
-        header_bar.add_class(CSS.HEADER_BAR)
-        # Create stepper
-        stepper_children = []
-        for i in range(0, NUM_OF_PAGES):
-            page_number = ui.HTML(value=str(i + 1))
-            page_number.add_class(CSS.STEPPER__NUMBER)
-            page_number.add_class(CSS.STEPPER__NUMBER__CURRENT if i == 0 else CSS.STEPPER__NUMBER__INACTIVE)
-
-            page_title = ui.HTML(PAGE_TITLES[i])
-            page_title.add_class(CSS.STEPPER__TITLE__ACTIVE if i == 0 else CSS.STEPPER__TITLE__INACTIVE)
-            separator = ui.HTML("<hr width=48px/>")
-            separator.add_class(CSS.STEPPER__SEPARATOR__INACTIVE)
-
-            is_last_page = i == NUM_OF_PAGES - 1
-            stepper_children += [page_number, page_title] if is_last_page else [page_number, page_title, separator]
-        self.page_stepper = ui.HBox(stepper_children)
-        self.page_stepper.add_class(CSS.STEPPER)
-        # Create app pages & page container
-        self.page_container = ui.Box(
-            [
-                self._build_file_upload_page(),
-                self._build_data_specification_page(),
-                self._build_integrity_checking_page(),
-                self._build_plausibility_checking_page(),
-            ],
-            layout=ui.Layout(flex="1", width="100%"),  # page container stores the current page
-        )
-        # Hide all pages, except for the first one
-        for page in self.page_container.children[1:]:
-            page.add_class(CSS.DISPLAY_MOD__NONE)
-        return CSS.assign_class(
-            ui.VBox(  # app container
-                [
-                    self.notification,
-                    header_bar,  # -header bar
-                    ui.VBox(  # -body container
-                        children=[self.page_stepper, self.page_container],  # --page stepper, page container
-                        layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
-                    ),
-                ],
-            ),
-            CSS.APP,
-        )
 
     def modify_cursor(self, new_cursor_mod_class: Optional[str]) -> None:
         """
@@ -372,46 +321,28 @@ class View:
         self.notification_timer = Timer(3.5, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self.notification_timer.start()
 
-    def update_app(self) -> None:
-        """Show the requested page and update the page stepper accordingly"""
-        assert self.model.current_page > 0 and self.model.current_page <= len(self.page_container.children)
-        # Hide all pages
-        for page in self.page_container.children:
-            assert isinstance(page, ui.Box)
-            page.add_class(CSS.DISPLAY_MOD__NONE)
-        # Show the current page
+    def update_base_app(self) -> None:
+        """Update the base app"""
+        NUM_OF_PAGES = len(self.page_container.children)
+        assert self.model.current_page > 0 and self.model.current_page <= NUM_OF_PAGES
+        assert self.model.furthest_active_page > 0 and self.model.furthest_active_page <= NUM_OF_PAGES
         current_page_index = self.model.current_page - 1
-        page = self.page_container.children[current_page_index]
-        assert isinstance(page, ui.Box)
-        page.remove_class(CSS.DISPLAY_MOD__NONE)
-        # Change stepper element with the "current" modifier to be "active"
-        for child_element in self.page_stepper.children:
-            assert isinstance(child_element, ui.DOMWidget)
-            if CSS.STEPPER__NUMBER__CURRENT in child_element._dom_classes:
-                child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__ACTIVE)
-        # Update stepper elements belonging to the current page
-        # - stepper's children = [number el, title el, separator el, ..., number el, title el]
-        number_element = self.page_stepper.children[current_page_index * 3 + 0]
-        title_element = self.page_stepper.children[current_page_index * 3 + 1]
-        assert isinstance(number_element, ui.DOMWidget)
-        assert isinstance(title_element, ui.DOMWidget)
-        number_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__CURRENT)
-        title_element._dom_classes = (CSS.STEPPER__TITLE__ACTIVE,)
-        # Make sure that the left page separator is "active"
-        if current_page_index > 0:
-            separator_element = self.page_stepper.children[current_page_index * 3 - 1]
-            assert isinstance(separator_element, ui.DOMWidget)
-            separator_element._dom_classes = (CSS.STEPPER__SEPARATOR__ACTIVE,)
-        # Make sure the stepper elements belonging to the upcoming pages are inactive (if "last active page" is specified)
-        if self.model.current_page == self.model.furthest_active_page:
-            for child_element in self.page_stepper.children[current_page_index * 3 + 2 :]:
-                assert isinstance(child_element, ui.DOMWidget)
-                if CSS.STEPPER__NUMBER__ACTIVE in child_element._dom_classes:
-                    child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__INACTIVE)
-                elif CSS.STEPPER__TITLE__ACTIVE in child_element._dom_classes:
-                    child_element._dom_classes = (CSS.STEPPER__TITLE__INACTIVE,)
-                elif CSS.STEPPER__SEPARATOR__ACTIVE in child_element._dom_classes:
-                    child_element._dom_classes = (CSS.STEPPER__SEPARATOR__INACTIVE,)
+        # Update visibility of pages and style of page stepper elements
+        for page_index in range(0, NUM_OF_PAGES):
+            page = self.page_container.children[page_index]
+            stepper_el = self.page_stepper.children[page_index]
+            assert isinstance(page, ui.Box)
+            assert isinstance(stepper_el, ui.Box)
+            if page_index == current_page_index:
+                page.remove_class(CSS.DISPLAY_MOD__NONE)
+                stepper_el._dom_classes = (CSS.STEPPER_EL, CSS.STEPPER_EL__CURRENT)
+            else:
+                page.add_class(CSS.DISPLAY_MOD__NONE)
+                stepper_el._dom_classes = (
+                    (CSS.STEPPER_EL, CSS.STEPPER_EL__ACTIVE)
+                    if page_index < self.model.furthest_active_page
+                    else (CSS.STEPPER_EL, CSS.STEPPER_EL__INACTIVE)
+                )
 
     def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
         """
@@ -519,8 +450,6 @@ class View:
         self.growth_trends_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
         self.box_plot_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
         self.box_plot_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
-        self.value_trends_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
-        self.growth_trends_tab_page.add_class(CSS.DISPLAY_MOD__NONE)
         # -show current tab page/make current tab active
         if self.model.active_visualization_tab == VisualizationTab.VALUE_TRENDS:
             self.value_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
@@ -531,6 +460,61 @@ class View:
         elif self.model.active_visualization_tab == VisualizationTab.BOX_PLOT:
             self.box_plot_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.box_plot_tab_page.remove_class(CSS.DISPLAY_MOD__NONE)
+
+    def _build_app(self) -> ui.Box:
+        """Build the application"""
+        # Constants
+        APP_TITLE = "AgMIP Model Submission Pipeline"
+        PAGE_TITLES = ["File Upload", "Data Specification", "Integrity Checking", "Plausibility Checking"]
+        NUM_OF_PAGES = len(PAGE_TITLES)
+        # Create notification widget
+        notification_text = ui.Label("")
+        self.notification = ui.HBox(children=(Icon.SUCCESS, notification_text))
+        self.notification.add_class(CSS.NOTIFICATION)
+        # Create header bar
+        header_bar = ui.HTML(APP_TITLE)
+        header_bar.add_class(CSS.HEADER_BAR)
+        # Create stepper
+        stepper_children = []
+        for page_index in range(0, NUM_OF_PAGES):
+            _number = ui.HTML(value=str(page_index + 1))
+            _number.add_class(CSS.STEPPER_EL__NUMBER)
+            _title = ui.Label(PAGE_TITLES[page_index])
+            _title.add_class(CSS.STEPPER_EL__TITLE)
+            _separator = ui.HTML("<hr width=48px/>")
+            _separator.add_class(CSS.STEPPER_EL__SEPARATOR)
+            stepper_element = ui.Box([_number, _title]) if page_index == 0 else ui.Box([_separator, _number, _title])
+            stepper_element.add_class(CSS.STEPPER_EL)
+            stepper_element.add_class(CSS.STEPPER_EL__CURRENT if page_index == 0 else CSS.STEPPER_EL__INACTIVE)
+            stepper_children += [stepper_element]
+        self.page_stepper = ui.HBox(stepper_children)
+        # self.page_stepper.add_class(CSS.STEPPER)
+        # Create app pages & page container
+        self.page_container = ui.Box(
+            [
+                self._build_file_upload_page(),
+                self._build_data_specification_page(),
+                self._build_integrity_checking_page(),
+                self._build_plausibility_checking_page(),
+            ],
+            layout=ui.Layout(flex="1", width="100%"),  # page container stores the current page
+        )
+        # Hide all pages, except for the first one
+        for page in self.page_container.children[1:]:
+            page.add_class(CSS.DISPLAY_MOD__NONE)
+        return CSS.assign_class(
+            ui.VBox(  # app container
+                [
+                    self.notification,
+                    header_bar,  # -header bar
+                    ui.VBox(  # -body container
+                        children=[self.page_stepper, self.page_container],  # --page stepper, page container
+                        layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
+                    ),
+                ],
+            ),
+            CSS.APP,
+        )
 
     def _build_file_upload_page(self) -> ui.Box:
         """Build the file upload page"""

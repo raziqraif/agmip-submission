@@ -31,7 +31,7 @@ class Controller:
         if self.model.furthest_active_page == self.model.current_page:
             return
         self.model.furthest_active_page = self.model.current_page
-        self.view.update_app()
+        self.view.update_base_app()
 
     def validate_data_specification_input(self) -> bool:  # TODO: Should be moved to model
         """Return true if all input are entered correctly, and false if not"""
@@ -119,7 +119,7 @@ class Controller:
             else:
                 self.view.show_notification(Notification.INFO, Notification.FIELDS_WERE_PREPOPULATED)
         self.model.current_page = Page.DATA_SPECIFICATION
-        self.view.update_app()
+        self.view.update_base_app()
         self.view.modify_cursor(None)
 
     def onclick_next_from_page_2(self, widget: ui.Button) -> None:
@@ -146,13 +146,13 @@ class Controller:
             )
             self.view.update_integrity_checking_page()
         self.model.current_page = Page.INTEGRITY_CHECKING
-        self.view.update_app()
+        self.view.update_base_app()
         self.view.modify_cursor(None)
 
     def onclick_previous_from_page_2(self, widget: ui.Button) -> None:
         """'Previous' button on the data specification page was clicked"""
         self.model.current_page = Page.FILE_UPLOAD
-        self.view.update_app()
+        self.view.update_base_app()
 
     def onclick_next_from_page_3(self, widget: ui.Button) -> None:
         """'Next' button on the data specification page was clicked"""
@@ -160,12 +160,12 @@ class Controller:
             self.model.furthest_active_page = Page.PLAUSIBILITY_CHECKING
         # TODO: Perform data validation first
         self.model.current_page = Page.PLAUSIBILITY_CHECKING
-        self.view.update_app()
+        self.view.update_base_app()
 
     def onclick_previous_from_page_3(self, widget: ui.Button) -> None:
         """'Previous' button on the data specification page was clicked"""
         self.model.current_page = Page.DATA_SPECIFICATION
-        self.view.update_app()
+        self.view.update_base_app()
 
     def onchange_model_name_dropdown(self, change: dict) -> None:
         """The selection in 'model name' dropdown changed"""
@@ -304,7 +304,7 @@ class Controller:
     def onclick_previous_from_page_4(self, widget: ui.Button) -> None:
         """The 'submit' button in the last page was clicked"""
         self.model.current_page = Page.INTEGRITY_CHECKING
-        self.view.update_app()
+        self.view.update_base_app()
 
     def onclick_value_trends_tab(self, widget: ui.Button) -> None:
         """Value trends tab was clicked"""
