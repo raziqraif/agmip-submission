@@ -2,7 +2,7 @@ from __future__ import annotations  # Delay the evaluation of undefined types
 import csv
 import os
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Dict
 
 import numpy as np
 import pandas as pd
@@ -11,6 +11,7 @@ from pandas.core.frame import DataFrame
 from .namespaces import Page
 from .namespaces import VisualizationTab
 from .view import Delimiter
+from .labelgateway import LabelGateway
 
 
 def get_notebook_auth_token() -> str:
@@ -44,7 +45,7 @@ class JSAppModel:
 class Model:
     WORKING_DIR: Path = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
     UPLOAD_DIR: Path = WORKING_DIR / "uploads"
-    VALID_LABELS_SPREADSHEET: Path = WORKING_DIR / "valid_labels.xlsx"
+    VALID_LABELS_SPREADSHEET: Path = WORKING_DIR / "label_data.xlsx"
 
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
@@ -61,21 +62,6 @@ class Model:
         # States for file upload page
         self.uploaded_filename: str = ""  # Tracks uploaded file's name (should be empty when the file was removed)
         # States for data specification page
-        self._labels_spreadsheet: dict[str, pd.DataFrame] = pd.read_excel(
-            str(self.VALID_LABELS_SPREADSHEET),
-            engine="openpyxl",
-            sheet_name=None,
-            keep_default_na=False,
-        )
-        self.model_names: set[str] = set(
-            self._labels_spreadsheet["Models"]["Model"]  # Get the pd dataframe, then the series
-        )
-        self.scenarios: set[str] = set(self._labels_spreadsheet["Scenarios"]["Scenario"])
-        self.regions: set[str] = set(self._labels_spreadsheet["Regions"]["Region"])
-        self.variables: set[str] = set(self._labels_spreadsheet["Variables"]["Variable"])
-        self.items: set[str] = set(self._labels_spreadsheet["Items"]["Item"])
-        self.units: set[str] = set(self._labels_spreadsheet["Units"]["Unit"])
-        self.years: set[str] = set(self._labels_spreadsheet["Years"]["Year"])
         self.model_name: str = ""
         self._delimiter: str = ""
         self.header_is_included: bool = False
@@ -443,22 +429,22 @@ class Model:
         Return -1 if no guesses were made, or a non-negative integer if a guess was made
         Each type of successful guess is associated with a unique non-negative integer
         """
-        if cell_value in self.model_names:
+        if cell_value in LabelGateway.valid_model_names:
             self.model_name = cell_value
             return 0
-        elif cell_value in self.scenarios:
+        elif cell_value in LabelGateway.valid_scenarios:
             self._assigned_colnum_for_scenario = col_index + 1
             return 1
-        elif cell_value in self.regions:
+        elif cell_value in LabelGateway.valid_regions:
             self._assigned_colnum_for_region = col_index + 1
             return 2
-        elif cell_value in self.variables:
+        elif cell_value in LabelGateway.valid_variables:
             self._assigned_colnum_for_variable = col_index + 1
             return 3
-        elif cell_value in self.items:
+        elif cell_value in LabelGateway.valid_items:
             self._assigned_colnum_for_item = col_index + 1
             return 4
-        elif cell_value in self.units:
+        elif cell_value in LabelGateway.valid_units:
             self._assigned_colnum_for_unit = col_index + 1
             return 5
         try:
@@ -513,8 +499,9 @@ class Model:
                 _rows_w_field_issues.append(row)
                 continue
             try:
+                value = row[value_colnum]
                 int(row[year_colnum])  # no need to set to 0-index due to the previously added line number column
-                float(row[value_colnum])
+                float(value)
             except:
                 row += ["Non-numeric value in a numeric field"]
                 _rows_w_field_issues.append(row)

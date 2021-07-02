@@ -1,4 +1,5 @@
-from __future__ import annotations  # Delay the evaluation of undefined types
+from __future__ import annotations
+from scripts.labelgateway import LabelGateway  # Delay the evaluation of undefined types
 
 from threading import Timer
 from typing import Callable, Optional, Union
@@ -195,7 +196,9 @@ def set_options(widget: ui.Dropdown, options: tuple[str], onchange_callback) -> 
 
 
 class View:
-    DATA_SPEC_PAGE_IS_BEING_UPDATED = False  # to assert that a page update will not recursively trigger another page update  
+    DATA_SPEC_PAGE_IS_BEING_UPDATED = (
+        False  # to assert that a page update will not recursively trigger another page update
+    )
     # TODO: replace this with a proper test suite
     # The following is to silence complaints about assigning None to a non-optional type in constructor
     # pyright: reportGeneralTypeIssues=false
@@ -370,7 +373,9 @@ class View:
         assert self.DATA_SPEC_PAGE_IS_BEING_UPDATED != True
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = True
         # Format specification controls
-        set_options(self.model_name_dropdown, ("", *self.model.model_names), self.ctrl.onchange_model_name_dropdown)
+        set_options(
+            self.model_name_dropdown, ("", *LabelGateway.valid_model_names), self.ctrl.onchange_model_name_dropdown
+        )
         self.model_name_dropdown.value = self.model.model_name
         set_options(self.delimiter_dropdown, ("", *Delimiter.get_views()), self.ctrl.onchange_delimiter_dropdown)
         self.delimiter_dropdown.value = Delimiter.get_view(self.model._delimiter)
