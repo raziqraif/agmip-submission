@@ -4,10 +4,9 @@ from scripts import model as scsa_model
 from scripts import view as scsa_view
 from scripts import controller as scsa_controller
 
-# Create MVC objects
-model = scsa_model.Model()
-
-RAW_CSV = [
+'''
+SAMPLE RAW CSV
+[
     "Scenario,Region,Variable,Item,Year,Unit,Value",
     "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2010,1000 t dm,162.6840595",
     "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2020,1000 t dm,183.6566783",
@@ -19,16 +18,14 @@ RAW_CSV = [
     "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
 ]
 
-IGNORED_SCENARIO_ROWS = [
-    "IGNORED_SCENARIO_1,MEN,FEED,VFN|VEG,2050,1000 t fm,4661.274823",
-    "IGNORED_SCENARIO_2,MEN,FEED,VFN|VEG,2050,1000 t fm,4661.274823",
-]
-
-scenarios_to_ignore = ["IGNORED_SCENARIO_1", "IGNORED_SCENARIO_2"]
-
+'''
 
 @pytest.fixture
 def init_states_kwargs() -> dict:
+    """
+    Return arguments required to initialize integrity checking states
+    The arguments are based on SAMPLE_RAW_CSV
+    """
     return {
         "raw_csv": [],
         "delimiter": ",",
@@ -46,9 +43,11 @@ def init_states_kwargs() -> dict:
     }
 
 
+
 def test_duplicate_rows(init_states_kwargs: dict):
+    """Test if duplicate rows are pruned correctly"""
     DUPLICATE_ROWS = [
-        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
+        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",  # NOSONAR
         "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
         "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
         "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
@@ -63,14 +62,15 @@ def test_duplicate_rows(init_states_kwargs: dict):
 
 
 def test_rows_with_field_issues(init_states_kwargs: dict):
+    """Test if rows with field issues are pruned correctly"""
     ROWS = [
         "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2010,1000 t dm,162.6840595",
-        "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2020,1000 t dm,183.6566783",
-        "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2030,1000 t dm,170.3285805",
-        "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2050,1000 t dm,158.6103519",
-        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,FEED,VFN|VEG,2050,1000 t fm,4661.274823",
-        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2010,1000 t fm,120.3986869",
-        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2020,1000 t fm,169.3291105",
+        "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2020,1000 t dm,183.6566783", # NOSONAR
+        "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2030,1000 t dm,170.3285805", # NOSONAR
+        "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2050,1000 t dm,158.6103519", # NOSONAR
+        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,FEED,VFN|VEG,2050,1000 t fm,4661.274823", # NOSONAR
+        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2010,1000 t fm,120.3986869", # NOSONAR
+        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2020,1000 t fm,169.3291105", # NOSONAR
         "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
         "row with mismatched ncols,a,a,a,a,a,a,a,a,a",
         "row with mismatched ncols",
@@ -88,6 +88,7 @@ def test_rows_with_field_issues(init_states_kwargs: dict):
 
 
 def test_rows_with_ignored_scenario(init_states_kwargs: dict):
+    """Test if rows with an ignored scenario are pruned correctly"""
     ROWS = [
         "ignored scenario 1,CAN,CONS,RIC,2010,1000 t dm,162.6840595",
         "ignored scenario 2,CAN,CONS,RIC,2010,1000 t dm,162.6840595",
@@ -108,7 +109,8 @@ def test_rows_with_ignored_scenario(init_states_kwargs: dict):
     assert len(model.accepted_rows) == len(ROWS) - len(ignored_scenarios)
 
 
-def test_uploaded_columns(init_states_kwargs: dict):
+def test_uploaded_column_labels(init_states_kwargs: dict):
+    """Test if sets of uploaded column labels are built correctly"""
     ROWS = [
         "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2020,1000 t dm,183.6566783",
         "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2030,1000 t dm,170.3285805",
@@ -133,3 +135,32 @@ def test_uploaded_columns(init_states_kwargs: dict):
     assert unique_variables.sort() == model.uploaded_variables.sort()
     assert unique_units.sort() == model.uploaded_units.sort()
     assert unique_years.sort() == model.uploaded_years.sort()
+
+
+def test_bad_labels(init_states_kwargs: dict) -> None:
+    """Test if bad labels are identified correctly"""
+    ROWS = [
+        "ssp2_nomt_nocc_flexa_dev,Can,cons,ric,2020,1000 T dm,#DIV/0",
+        "SSP2_NoMt_NoCC_FlexA_DEV,World,CONS,RIC,2030,1000 t dm,NA",
+    ]
+    bad_labels = [
+        "ssp2_nomt_nocc_flexa_dev",
+        "Can",
+        "cons",
+        "ric",
+        "1000 T dm",
+        "#DIV/0",
+        "NA",
+    ]
+    bad_labels = bad_labels.sort()
+    fixed_labels= [
+        "SSP2_NoMT_NoCC_FlexA_DEV",
+        "CAN",
+        "CONS",
+        "RIC",
+        "1000 t dm",
+        "0",
+        "0"
+    ]
+    fixed_labels = fixed_labels.sort()
+    init_states_kwargs["raw_csv"] = ROWS
