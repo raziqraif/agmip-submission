@@ -48,7 +48,8 @@
 		else
 			throw "Unexpected URL"	
 
-		const FILE_DESTINATION_PATH = "workingdir/uploads/" + filename;
+		const PROJECT_DIR = "agmip-submission/" 		// Needed for because we can't control where the notebook server is running from when testing on mygeohub
+		const FILE_DESTINATION_PATH = (CURRENT_URL.includes("/" + PROJECT_DIR) ? PROJECT_DIR  : "") + "workingdir/uploads/" + filename
 		var url = BASE_URL + "/api/contents/" + FILE_DESTINATION_PATH;
 
 		// Jupyter's upload API requires chunk number to start with 1 and end with -1
