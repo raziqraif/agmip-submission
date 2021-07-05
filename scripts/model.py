@@ -517,13 +517,26 @@ class Model:
         # Initialize the integrity checking states
         _remaining_rows = pd.DataFrame(_rows_w_no_ignored_scenario)
         KEY_COLUMNS = _remaining_rows.columns.values.tolist()[1:]  # all columns except the line number column
+        # -rows
         self.rows_w_field_issues = pd.DataFrame(_rows_w_field_issues)
         self.rows_w_ignored_scenario = pd.DataFrame(_rows_w_ignored_scenario)
         self.duplicate_rows = _remaining_rows[_remaining_rows.duplicated(subset=KEY_COLUMNS)]
         self.accepted_rows = _remaining_rows.drop_duplicates(subset=KEY_COLUMNS)
+        # -uploaded labels
         self.uploaded_scenarios = self.accepted_rows.iloc[:, scenario_colnum].unique().tolist()
         self.uploaded_regions = self.accepted_rows.iloc[:, region_colnum].unique().tolist()
         self.uploaded_items = self.accepted_rows.iloc[:, item_colnum].unique().tolist()
         self.uploaded_variables = self.accepted_rows.iloc[:, variable_colnum].unique().tolist()
         self.uploaded_units = self.accepted_rows.iloc[:, unit_colnum].unique().tolist()
         self.uploaded_years = self.accepted_rows.iloc[:, year_colnum].unique().tolist()
+        # -bad labels
+        _bad_labels = []
+        for region in self.uploaded_scenarios: 
+            fixed_region = LabelGateway.query_fix_from_region_fix_table(region)
+            if fixed_region != region:
+                _bad_labels.append([region, "Region", fixed_region])
+        for region in self.uploaded_regions: 
+            fixed_region = LabelGateway.query_fix_from_region_fix_table(region)
+            if fixed_region != region:
+                _bad_labels.append([region, "Region", fixed_region])
+        self.bad_labels_overview = pd.DataFrame() 

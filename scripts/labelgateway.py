@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Set
+from typing import Dict, Set, Optional
 
 import pandas as pd
 from pandas import DataFrame
@@ -30,7 +30,7 @@ class LabelGateway:
     __item_table: DataFrame = __spreadsheet["ItemTable"]
     __unit_table: DataFrame = __spreadsheet["UnitTable"]
     __year_table: DataFrame = __spreadsheet["YearTable"]
-    # Swap table
+    # Fix table
     __region_fix_table: DataFrame = __spreadsheet["RegionFixTable"]
     __value_fix_table: DataFrame = __spreadsheet["ValueFixTable"]
     # Valid columns
@@ -43,16 +43,47 @@ class LabelGateway:
     valid_years: Set[str] = set(__year_table["Year"])
 
     @classmethod
-    def get_fixed_value(cls, value: str) -> str:
-        """
-        Checks if value can be fixed and returns the fix
-        Returns the value back if the it does not need fixing or cannot be fixed
-        """
-        dataframe = cls.__value_fix_table
+    def query_matching_scenario(cls, scenario) -> Optional[str]:
+        """Returns a matching value (ignoring case), or None"""
+        scenario = scenario.lower()
+        table = cls.__scenario_table
+        table = table[table["Scenario"].str.lower() == scenario]
+        assert table.shape[0] <= 1
+        if table.shape[0] != 0:
+            return str(table.iloc[0]["Scenario"])  # type: ignore
+        return None
+    
+    @classmethod
+    def query_matching_scenario(cls, scenario) -> Optional[str]:
+        """Returns a matching value (ignoring case), or None"""
+        scenario = scenario.lower()
+        table = cls.__scenario_table
+        table = table[table["Scenario"].str.lower() == scenario]
+        assert table.shape[0] <= 1
+        if table.shape[0] != 0:
+            return str(table.iloc[0]["Scenario"])  # type: ignore
+        return None
+
+    @classmethod
+    def query_fix_from_value_fix_table(cls, value: str) -> Optional[str]:
+        """Checks if a fix exists in the fix table and returns it. Returns None otherwise."""
+        fix_table = cls.__value_fix_table
         # Get all rows containing the fix
-        dataframe = dataframe[dataframe["Value"] == value.lower()]
-        assert dataframe.shape[0] <= 1
-        # No fixes are found
-        if dataframe.shape[0] == 0:
-            return value
-        return dataframe["Fix"].loc(0)
+        fix_table = fix_table[fix_table["Value"] == value.lower()]
+        assert fix_table.shape[0] <= 1
+        # Fix was found
+        if fix_table.shape[0] != 0:
+            return str(fix_table.iloc[0]["Fix"])
+        return None
+
+    @classmethod
+    def query_fix_from_region_fix_table(cls, region: str) -> str:
+        """Checks if a fix exists in the fix table and returns it. Returns None otherwise."""
+        fix_table = cls.__region_fix_table
+        # Get all rows containing the fix
+        fix_table = fix_table[fix_table["Region"] == region.lower()]
+        assert fix_table.shape[0] <= 1
+        # Fix was found
+        if fix_table.shape[0] != 0:
+            return str(fix_table.iloc[0]["Fix"])
+        return None
