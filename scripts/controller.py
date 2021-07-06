@@ -33,53 +33,6 @@ class Controller:
         self.model.furthest_active_page = self.model.current_page
         self.view.update_base_app()
 
-    def validate_data_specification_input(self) -> bool:  # TODO: Should be moved to model
-        """Return true if all input are entered correctly, and false if not"""
-        is_valid = False
-        try:
-            if len(self.model.model_name) == 0:
-                self.view.show_notification(Notification.WARNING, "Model name is empty")
-            elif len(self.model.delimiter) == 0:
-                self.view.show_notification(Notification.WARNING, "Delimiter is empty")
-            elif int(self.model.lines_to_skip) < 0:
-                self.view.show_notification(Notification.WARNING, "Number of lines cannot be negative")
-            elif len(self.model.assigned_scenario_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Scenario column is empty")
-            elif len(self.model.assigned_region_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Region column is empty")
-            elif len(self.model.assigned_variable_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Variable column is empty")
-            elif len(self.model.assigned_item_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Item column is empty")
-            elif len(self.model.assigned_unit_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Unit column is empty")
-            elif len(self.model.assigned_year_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Year column is empty")
-            elif len(self.model.assigned_value_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Value column is empty")
-            elif (
-                len(
-                    set(
-                        [
-                            self.model.assigned_scenario_column,
-                            self.model.assigned_region_column,
-                            self.model.assigned_variable_column,
-                            self.model.assigned_item_column,
-                            self.model.assigned_unit_column,
-                            self.model.assigned_year_column,
-                            self.model.assigned_value_column,
-                        ]
-                    )
-                )
-                < 7  # If there are no duplicate assignment, we should have a set of 7 columns
-            ):
-                self.view.show_notification(Notification.WARNING, "Output data has duplicate columns")
-            else:
-                is_valid = True
-        except ValueError:
-            self.view.show_notification(Notification.WARNING, "Invalid number of lines")
-        return is_valid
-
     def onchange_ua_file_label(self, change: dict) -> None:
         """Value of the hidden file label in upload area (ua) changed"""
         CSV = ".csv"
@@ -124,26 +77,14 @@ class Controller:
 
     def onclick_next_from_page_2(self, widget: ui.Button) -> None:
         """'Next' button on the data specification page was clicked"""
-        if not self.validate_data_specification_input():
+        warning_message = self.model.validate_data_specification_input()
+        if warning_message is not None:
+            self.view.show_notification(Notification.WARNING, warning_message)
             return
         self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
         if self.model.furthest_active_page == Page.DATA_SPECIFICATION:
             self.model.furthest_active_page = Page.INTEGRITY_CHECKING
-            self.model.init_integrity_checking_states(
-                raw_csv=self.model.raw_csv_rows,
-                delimiter=self.model.delimiter,
-                header_is_included=self.model.header_is_included,
-                lines_to_skip=self.model.lines_to_skip,
-                scenarios_to_ignore=set(self.model.scenarios_to_ignore_str.split(",")),
-                model_name=self.model.model_name,
-                scenario_colnum=self.model._assigned_colnum_for_scenario,
-                region_colnum=self.model._assigned_colnum_for_region,
-                variable_colnum=self.model._assigned_colnum_for_variable,
-                item_colnum=self.model._assigned_colnum_for_item,
-                unit_colnum=self.model._assigned_colnum_for_unit,
-                year_colnum=self.model._assigned_colnum_for_year,
-                value_colnum=self.model._assigned_colnum_for_value,
-            )
+            self.model.init_integrity_checking_states(self.model.data_specification)
             self.view.update_integrity_checking_page()
         self.model.current_page = Page.INTEGRITY_CHECKING
         self.view.update_base_app()
