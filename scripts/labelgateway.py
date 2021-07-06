@@ -43,7 +43,7 @@ class LabelGateway:
     valid_years: Set[str] = set(__year_table["Year"])
 
     @classmethod
-    def query_matching_scenario(cls, scenario) -> Optional[str]:
+    def query_matching_scenario(cls, scenario: str) -> Optional[str]:
         """Returns a matching value (ignoring case), or None"""
         scenario = scenario.lower()
         table = cls.__scenario_table
@@ -54,14 +54,47 @@ class LabelGateway:
         return None
     
     @classmethod
-    def query_matching_scenario(cls, scenario) -> Optional[str]:
+    def query_matching_region(cls, region: str) -> Optional[str]:
         """Returns a matching value (ignoring case), or None"""
-        scenario = scenario.lower()
+        region= region.lower()
         table = cls.__scenario_table
-        table = table[table["Scenario"].str.lower() == scenario]
+        table = table[table["Region"].str.lower() == region]
         assert table.shape[0] <= 1
         if table.shape[0] != 0:
-            return str(table.iloc[0]["Scenario"])  # type: ignore
+            return str(table.iloc[0]["Region"])  # type: ignore
+        return None
+    
+    @classmethod
+    def query_matching_variable(cls, variable: str) -> Optional[str]:
+        """Returns a matching value (ignoring case), or None"""
+        variable= variable.lower()
+        table = cls.__scenario_table
+        table = table[table["Variable"].str.lower() == variable]
+        assert table.shape[0] <= 1
+        if table.shape[0] != 0:
+            return str(table.iloc[0]["Variable"])  # type: ignore
+        return None
+
+    @classmethod
+    def query_matching_item(cls, item: str) -> Optional[str]:
+        """Returns a matching value (ignoring case), or None"""
+        item= item.lower()
+        table = cls.__scenario_table
+        table = table[table["Item"].str.lower() == item]
+        assert table.shape[0] <= 1
+        if table.shape[0] != 0:
+            return str(table.iloc[0]["Item"])  # type: ignore
+        return None
+
+    @classmethod
+    def query_matching_unit(cls, unit: str) -> Optional[str]:
+        """Returns a matching value (ignoring case), or None"""
+        unit= unit.lower()
+        table = cls.__scenario_table
+        table = table[table["Unit"].str.lower() == unit]
+        assert table.shape[0] <= 1
+        if table.shape[0] != 0:
+            return str(table.iloc[0]["Unit"])  # type: ignore
         return None
 
     @classmethod

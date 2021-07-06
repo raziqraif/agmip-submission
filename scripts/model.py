@@ -374,6 +374,10 @@ class Model:
         self.rows_w_ignored_scenario = pd.DataFrame(_rows_w_ignored_scenario)
         self.duplicate_rows = _remaining_rows[_remaining_rows.duplicated(subset=KEY_COLUMNS)]
         self.accepted_rows = _remaining_rows.drop_duplicates(subset=KEY_COLUMNS)
+        # print("FIELD ISSUES:\n", self.rows_w_field_issues)
+        # print("IGNORED:\n", self.rows_w_ignored_scenario)
+        # print("DUPLICATES:\n", self.duplicate_rows)
+        # print("ACCEPTED:\n", self.accepted_rows)
         # -uploaded labels
         self.uploaded_scenarios = self.accepted_rows.iloc[:, scenario_colnum].unique().tolist()
         self.uploaded_regions = self.accepted_rows.iloc[:, region_colnum].unique().tolist()
@@ -383,12 +387,37 @@ class Model:
         self.uploaded_years = self.accepted_rows.iloc[:, year_colnum].unique().tolist()
         # -bad labels
         _bad_labels = []
-        for scenario in self.uploaded_scenarios:
-            fixed_scenario = LabelGateway.query_fix_from_region_fix_table(scenario)
-            if fixed_scenario != scenario:
-                _bad_labels.append([scenario, "Scenario", fixed_scenario])
-        for region in self.uploaded_regions:
-            fixed_region = LabelGateway.query_fix_from_region_fix_table(region)
-            if fixed_region != region:
-                _bad_labels.append([region, "Region", fixed_region])
-        self.bad_labels_overview = pd.DataFrame()
+        _unknown_labels = []
+        for label in self.uploaded_scenarios:
+            if label not in LabelGateway.valid_scenarios:
+                _unknown_labels.append([label, "Scenario"])
+            # matching_label = LabelGateway.query_matching_scenario(label)
+            # if (matching_label != label) and (matching_label is not None):
+            #     _bad_labels.append([label, "Scenario", matching_label])
+            # elif (matching_label is None):
+            #     _unknown_labels.append([label, "Scenario"])
+        for label in self.uploaded_regions:
+            if label not in LabelGateway.valid_regions:
+                _unknown_labels.append([label, "Region"])
+        for label in self.uploaded_items:
+            if label not in LabelGateway.valid_items:
+                _unknown_labels.append([label, "Item"])
+        for label in self.uploaded_variables:
+            if label not in LabelGateway.valid_variables:
+                _unknown_labels.append([label, "Variable"])
+        for label in self.uploaded_units:
+            if label not in LabelGateway.valid_units:
+                _unknown_labels.append([label, "Unit"])
+            # matching_label = LabelGateway.query_matching_region(label)
+            # fixed_label = LabelGateway.query_fix_from_region_fix_table(label)
+            # if fixed_label is not None:
+            #     _bad_labels.append([label, "Region", fixed_label])
+            # elif (matching_label != label) and (matching_label is not None):
+            #     _bad_labels.append([label, "Region", matching_label])
+            # elif (matching_label is None):
+            #     _unknown_labels.append([label, "Region"])
+        self.bad_labels_overview = pd.DataFrame(_bad_labels)
+        self.unknown_labels_overview = pd.DataFrame(_unknown_labels)
+        print("Bad labels overview:\n", self.bad_labels_overview)
+        print("")
+        print("Unknown labels overview:\n", self.unknown_labels_overview)
