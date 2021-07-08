@@ -10,3 +10,8 @@ def test_fix_queries():
 
 def test_matching_queries():
     assert LabelGateway.query_matching_scenario("ssp2_nomt_nocc_FLEXA_DEV") == "SSP2_NoMt_NoCC_FlexA_DEV"
+    assert LabelGateway.query_matching_region("Wld") == "WLD"
+    # Matching queries should not return result from the fix table
+    assert LabelGateway.query_matching_region("world") != "WLD" 
+    assert LabelGateway.query_matching_variable("Cons") == "CONS"
+    assert LabelGateway.query_matching_item("Vfn|Veg") == "VFN|VEG"
