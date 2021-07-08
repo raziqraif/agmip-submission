@@ -239,7 +239,7 @@ class View:
         self._cached_children_of_input_data_preview_table: Optional[list] = None
         # Widgets in the integrity checking page that need to be manipulated
         self.duplicate_rows_lbl: ui.Label = None
-        self.rows_w_field_issues_lbl: ui.Label = None
+        self.rows_w_struct_issues_lbl: ui.Label = None
         self.rows_w_ignored_scenario_lbl: ui.Label = None
         self.accepted_rows_lbl: ui.Label = None
         self.bad_labels_overview_table: ui.HTML = None
@@ -374,7 +374,7 @@ class View:
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = True
         # Format specification controls
         set_options(
-            self.model_name_dropdown, ("", *LabelGateway.valid_model_names), self.ctrl.onchange_model_name_dropdown
+            self.model_name_dropdown, ("", *self.model.model_names), self.ctrl.onchange_model_name_dropdown
         )
         self.model_name_dropdown.value = self.model.model_name
         set_options(self.delimiter_dropdown, ("", *Delimiter.get_views()), self.ctrl.onchange_delimiter_dropdown)
@@ -435,10 +435,10 @@ class View:
 
     def update_integrity_checking_page(self) -> None:
         """Update the integrity checking page"""
-        self.rows_w_field_issues_lbl.value = "{:,}".format(self.model.rows_w_field_issues.shape[0])
-        self.rows_w_ignored_scenario_lbl.value = "{:,}".format(self.model.rows_w_ignored_scenario.shape[0])
-        self.duplicate_rows_lbl.value = "{:,}".format(self.model.duplicate_rows.shape[0])
-        self.accepted_rows_lbl.value = "{:,}".format(self.model.accepted_rows.shape[0])
+        self.rows_w_struct_issues_lbl.value = "{:,}".format(self.model.nrows_w_struct_issue)
+        self.rows_w_ignored_scenario_lbl.value = "{:,}".format(self.model.nrows_w_ignored_scenario)
+        self.duplicate_rows_lbl.value = "{:,}".format(self.model.nrows_duplicates)
+        self.accepted_rows_lbl.value = "{:,}".format(self.model.nrows_accepted)
 
     def update_plausibility_checking_page(self) -> None:
         """Update the plausibility checking page"""
@@ -764,7 +764,7 @@ class View:
         download_rows_w_ignored_scenario_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
         download_duplicate_rows_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
         download_accepted_rows = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
-        self.rows_w_field_issues_lbl = ui.Label("0")
+        self.rows_w_struct_issues_lbl = ui.Label("0")
         self.rows_w_ignored_scenario_lbl = ui.Label("0")
         self.duplicate_rows_lbl = ui.Label("0")
         self.accepted_rows_lbl = ui.Label("0")
@@ -866,11 +866,11 @@ class View:
                                                     ui.Box(
                                                         (
                                                             ui.Label(
-                                                                "Number of rows with field issues (missing fields, etc)"
+                                                                "Number of rows with structural issues (missing fields, etc)"
                                                             ),
                                                         )
                                                     ),
-                                                    ui.Box((self.rows_w_field_issues_lbl,)),
+                                                    ui.Box((self.rows_w_struct_issues_lbl,)),
                                                     ui.Box(
                                                         (ui.Label("Number of rows containing an ignored scenario"),)
                                                     ),

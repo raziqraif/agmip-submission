@@ -1,11 +1,12 @@
 from __future__ import annotations
 from copy import copy
+from copy import deepcopy
 import csv
-from io import DEFAULT_BUFFER_SIZE
+from io import TextIOWrapper
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict, Set
 
 from .labelgateway import LabelGateway
 
@@ -69,7 +70,7 @@ class DataSpecification:
         assert value >= 0
         self.__initial_lines_to_skip = value
         self.__sample_processed_input_data_memo = None
-        # Reset column assignments if all file content was skipped 
+        # Reset column assignments if all file content was skipped
         if value > self.file_nrows:
             self.scenario_colnum = 0
             self.region_colnum = 0
@@ -191,22 +192,22 @@ class DataSpecification:
         Return -1 if no guesses were made, or a non-negative integer if a guess was made
         Each type of successful guess is associated with a unique non-negative integer
         """
-        if cell_value in LabelGateway.valid_model_names:
+        if LabelGateway.query_label_in_model_names(cell_value):
             self.model_name = cell_value
             return 0
-        elif cell_value in LabelGateway.valid_scenarios:
+        elif LabelGateway.query_label_in_scenarios(cell_value):
             self.scenario_colnum = col_index + 1
             return 1
-        elif cell_value in LabelGateway.valid_regions:
+        elif LabelGateway.query_label_in_regions(cell_value):
             self.region_colnum = col_index + 1
             return 2
-        elif cell_value in LabelGateway.valid_variables:
+        elif LabelGateway.query_label_in_variables(cell_value):
             self.variable_colnum = col_index + 1
             return 3
-        elif cell_value in LabelGateway.valid_items:
+        elif LabelGateway.query_label_in_items(cell_value):
             self.item_colnum = col_index + 1
             return 4
-        elif cell_value in LabelGateway.valid_units:
+        elif LabelGateway.query_label_in_units(cell_value):
             self.unit_colnum = col_index + 1
             return 5
         try:
@@ -233,7 +234,7 @@ class DataSpecification:
         - Splitting rows based on the delimiter
         - Guessing the correct number of columns and removing rows with mismatched number of columns
 
-        NOTE: This property has many dependents, so it's value is memoized. Every time this property's 
+        NOTE: This property has many dependents, so it's value is memoized. Every time this property's
         dependencies (like delimiter) is updated, the memo must be reset.
         @date 7/6/21
         """
@@ -256,11 +257,228 @@ class DataSpecification:
         return rows
 
 
-class IntegrityCheckService:
+class DataCleaningService:
     """
-    Service class for the integrity checking page
+    Service class for cleaning data
     @date July 5, 2021
     """
 
-    def __init__(self):
-        pass
+    WORKING_DIRPATH = Path(__name__).parent.parent / "workingdir"
+
+    def __init__(self, data_specification: DataSpecification) -> None:
+        self.data_specification = data_specification
+        # Number of rows
+        self.nrows_w_struct_issue = 0
+        self.nrows_w_ignored_scenario = 0
+        self.nrows_duplicate = 0
+        self.nrows_accepted = 0
+        # Destination files' path
+        self.accepted_rows_dstpath = self.WORKING_DIRPATH / "AcceptedRecords.csv"
+        self.duplicate_rows_dstpath = self.WORKING_DIRPATH / "DuplicateRecords.csv"
+        self.rows_w_ignored_scenario_dstpath = self.WORKING_DIRPATH / "RecordsWithIgnoreScenario.csv"
+        self.rows_w_struct_issue_dstpath = self.WORKING_DIRPATH / "RowsWithStructuralIssue.csv"
+        # Label-related attributes
+        self.fixed_labels_table = pd.DataFrame()
+        self.unknown_labels_table = pd.DataFrame()
+        self._uploaded_scenarios: Set[str] = set()
+        self._uploaded_regions: Set[str] = set()
+        self._uploaded_variables: Set[str] = set()
+        self._uploaded_items: Set[str] = set()
+        self._uploaded_years: Set[str] = set()
+        self._uploaded_units: Set[str] = set()
+        # Number of columns info
+        self.__most_frequent_ncolumns = 0
+        self.__largest_ncolumns = 0
+        # Duplicate check helper
+        self.__row_occurence_dict: Dict[str, int] = {}
+        # Actions
+        self.initialize_files()
+        self._update_ncolumns_info()
+
+    def parse_data(self) -> None:
+        """Parse data and populate destination files and nrows attributes"""
+        self.__init__(self.data_specification)  # Reset all attributes
+        with open(str(self.data_specification.uploaded_filepath)) as datafile, open(
+            str(self.rows_w_struct_issue_dstpath), "w+"
+        ) as structissuefile, open(str(self.rows_w_ignored_scenario_dstpath), "w+") as ignoredscenfile, open(
+            str(self.duplicate_rows_dstpath), "w+"
+        ) as duplicatesfile, open(
+            str(self.accepted_rows_dstpath), "w+"
+        ) as acceptedfile:
+            for line_idx, line in enumerate(datafile):
+                rownum = line_idx + 1
+                row = line.split(self.data_specification.delimiter)
+                if self.parse_row_w_struct_issue(rownum, row, structissuefile):
+                    continue
+                if self.parse_row_w_ignored_scenario(rownum, row, ignoredscenfile):
+                    continue
+                if self.parse_duplicate_row(rownum, line, duplicatesfile):
+                    continue
+                acceptedfile.write(line)
+                scenario_field = row[self.data_specification.scenario_colnum - 1]
+                self._uploaded_scenarios.add(scenario_field)
+                region_field = row[self.data_specification.region_colnum - 1]
+                self._uploaded_regions.add(region_field)
+                variable_field = row[self.data_specification.variable_colnum - 1]
+                self._uploaded_variables.add(variable_field)
+                item_field = row[self.data_specification.item_colnum - 1]
+                self._uploaded_items.add(item_field)
+                unit_field = row[self.data_specification.unit_colnum - 1]
+                self._uploaded_items.add(unit_field)
+                year_field = row[self.data_specification.year_colnum - 1]
+                self._uploaded_items.add(year_field)
+                value_field = row[self.data_specification.value_colnum - 1]
+                # self.parse_value_field(value_field)
+        # for label in self._uploaded_scenarios:
+        #     self.parse_scenario_field(label)
+        # for label in self._uploaded_regions:
+        #     self.parse_region_field(label)
+        # for label in self._uploaded_variables:
+        #     self.parse_variable_field(label)
+        # for label in self._uploaded_items:
+        #     self.parse_item_field(label)
+        # for label in self._uploaded_years:
+        #     self.parse_year_field(label)
+        # for label in self._uploaded_units:
+        #     self.parse_unit_field(label)
+
+    def parse_row_w_struct_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
+        """
+        Checks if a row has a structural issue and logs it into the file if it has.
+        Returns the result of the structural check.
+
+        Definition of structural issue for rows:
+        1. A row has a structural issue if it has a wrong number of fields
+        2. A row has a structural issue if it has a field with with structural issue
+
+        Definition of structural issue for fields varies depending on the field type, and can be inferred from the
+        implementation below.
+
+        @date July 7, 2021
+        """
+        if len(row) != self.__most_frequent_ncolumns:
+            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Mismatched number of fields")
+            structissuefile.write(log_text)
+            return True
+        if row[self.data_specification.scenario_colnum - 1] == "":
+            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty scenario field")
+            structissuefile.write(log_text)
+            return True
+        if row[self.data_specification.region_colnum - 1] == "":
+            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty region field")
+            structissuefile.write(log_text)
+            return True
+        if row[self.data_specification.variable_colnum - 1] == "":
+            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty variable field")
+            structissuefile.write(log_text)
+            return True
+        if row[self.data_specification.item_colnum - 1] == "":
+            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty item field")
+            structissuefile.write(log_text)
+            return True
+        if row[self.data_specification.unit_colnum - 1] == "":
+            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty unit field")
+            structissuefile.write(log_text)
+            return True
+        year_field = row[self.data_specification.year_colnum]
+        if year_field == "":
+            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty year field")
+            structissuefile.write(log_text)
+            return True
+        try:
+            int(year_field)
+        except:
+            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Non-integer year field")
+            structissuefile.write(log_text)
+            return True
+        value_field = row[self.data_specification.value_colnum - 1]
+        try:
+            value_fix = LabelGateway.query_fix_from_value_fix_table(value_field)
+            value_fix = value_fix if value_fix is not None else value_field
+            variable_field = row[self.data_specification.variable_colnum - 1]
+            matching_variable = LabelGateway.query_matching_variable(variable_field)
+            matching_variable = matching_variable if matching_variable is not None else variable_field
+            min_value = LabelGateway.query_variable_min_value(matching_variable)
+            max_value = LabelGateway.query_variable_max_value(matching_variable)
+            if (min_value is not None) and (float(value_fix) < min_value):
+                issue_text = "Value for variable {} is too small".format(matching_variable)
+                log_text = self._format_row_w_struct_issue_for_logging(rownum, row, issue_text)
+                structissuefile.write(log_text)
+                return True
+            if (max_value is not None) and (float(value_fix) > max_value):
+                issue_text = "Value for variable {} is too large".format(matching_variable)
+                log_text = self._format_row_w_struct_issue_for_logging(rownum, row, issue_text)
+                structissuefile.write(log_text)
+                return True
+        except:
+            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Non-numeric value field")
+            structissuefile.write(log_text)
+            return True
+        return False
+
+    def parse_row_w_ignored_scenario(self, rownum, row, ignoredscenfile) -> bool:
+        """
+        Checks if a row contains an ignored scenario and logs it into the given file if it does.
+        Returns the result of the check.
+        """
+        if row[self.data_specification.scenario_colnum - 1] in self.data_specification.scenarios_to_ignore:
+            log_row = [rownum, *row]
+            log_text = ",".join(log_row) + "\n"
+            ignoredscenfile.write(log_text)
+            return True
+        return False
+
+    def parse_duplicate_row(self, rownum: int, row: str, duplicatesfile: TextIOWrapper) -> bool:
+        """
+        Checks if a row is a duplicate and logs it into the duplicates file if it is.
+        Returns the result of the check.
+        """
+        # NOTE: Finding duplicates with the help of an in-memory data structure might cause a problem if the dataset
+        # is too large. If that proves to be the case, consider using solutions like SQL
+        # @date 7/7/2021
+        self.__row_occurence_dict[row] += 1
+        occurence = self.__row_occurence_dict[row]
+        if occurence > 1:
+            log_text = "{},{},{}\n".format(rownum, row, occurence)
+            duplicatesfile.write(log_text)
+            return True
+        return False
+
+    def initialize_files(self):
+        """Create/Recreate destination files"""
+        # Deletes existing files, if any
+        if self.rows_w_struct_issue_dstpath.exists():
+            self.rows_w_struct_issue_dstpath.unlink()
+        if self.rows_w_ignored_scenario_dstpath.exists():
+            self.rows_w_ignored_scenario_dstpath.unlink()
+        if self.duplicate_rows_dstpath.exists():
+            self.duplicate_rows_dstpath.unlink()
+        if self.accepted_rows_dstpath.exists():
+            self.accepted_rows_dstpath.unlink()
+        # Create files
+        self.rows_w_struct_issue_dstpath.touch()
+        self.rows_w_ignored_scenario_dstpath.touch()
+        self.duplicate_rows_dstpath.touch()
+        self.accepted_rows_dstpath.touch()
+
+    def _format_row_w_struct_issue_for_logging(self, rownum: int, row: list[str], issue_description: str) -> str:
+        """Return the log text for the given row with structural issue"""
+        log_ncolumns = self.__largest_ncolumns + 2
+        log_row = [rownum, *row] + ["" for _ in range(log_ncolumns)]
+        log_row = log_row[:log_ncolumns]
+        log_row[-1] = issue_description
+        return ",".join(log_row) + "\n"
+
+    def _update_ncolumns_info(self) -> None:
+        """Update number of columns info"""
+        self.__most_frequent_ncolumns = 0
+        self.__largest_ncolumns = 0
+        ncolumns_count: Dict[int, int] = {}
+        with open(str(self.data_specification.uploaded_filepath)) as csvfile:
+            line = csvfile.readline()
+            ncolumns = len(line.split(self.data_specification.delimiter))
+            ncolumns_count[ncolumns] += 1
+            self.__largest_ncolumns = max(self.__largest_ncolumns, ncolumns)
+        most_frequent_ncolumns = max(ncolumns_count, key=lambda x: ncolumns_count.get(x, -1))
+        assert most_frequent_ncolumns != -1
+        self.__most_frequent_ncolumns = most_frequent_ncolumns
