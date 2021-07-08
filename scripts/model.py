@@ -12,21 +12,7 @@ from .namespaces import Page
 from .namespaces import VisualizationTab
 from .view import Delimiter
 from .labelgateway import LabelGateway
-from .business import DataSpecification
-
-
-def get_notebook_auth_token() -> str:
-    """Get auth token to interact with notebook server's API"""
-    # Terminal command to print the urls of running servers.
-    stream = os.popen("jupyter notebook list")
-    output = stream.read()
-    assert "http" in output
-    # Assume our server is at the top of the output and extract its token
-    # format of output -> "<title>\nhttp://<nbserver_baseurl>/?token=TOKEN :: ...\n"
-    output = output.split("token=")[1]
-    # Format of output is "TOKEN :: ..."
-    token = output.split(" ")[0]
-    return token
+from .business import DataSpecification, DataCleaningService
 
 
 class JSAppModel:
@@ -34,7 +20,7 @@ class JSAppModel:
 
     def __init__(self):
         # Auth token of notebook server
-        self.nbserver_auth_token: str = get_notebook_auth_token()
+        self.nbserver_auth_token: str = self._get_notebook_auth_token()
         # Model ID of the filename label in "UA" (upload area)
         self.ua_file_label_model_id: str = ""
 
@@ -42,11 +28,23 @@ class JSAppModel:
         """Serialize self into a format that can be embedded into the Javascript context"""
         return str(vars(self))
 
+    def _get_notebook_auth_token(self) -> str:
+        """Get auth token to interact with notebook server's API"""
+        # Terminal command to print the urls of running servers.
+        stream = os.popen("jupyter notebook list")
+        output = stream.read()
+        assert "http" in output
+        # Assume our server is at the top of the output and extract its token
+        # format of output -> "<title>\nhttp://<nbserver_baseurl>/?token=TOKEN :: ...\n"
+        output = output.split("token=")[1]
+        # Format of output is "TOKEN :: ..."
+        token = output.split(" ")[0]
+        return token
+
 
 class Model:
     WORKING_DIR: Path = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
     UPLOAD_DIR: Path = WORKING_DIR / "uploads"
-    VALID_LABELS_SPREADSHEET: Path = WORKING_DIR / "label_data.xlsx"
 
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
@@ -58,26 +56,30 @@ class Model:
         self.controller: Controller
         # App states
         self.javascript_model = JSAppModel()
-        self.current_page: int = Page.FILE_UPLOAD
-        self.furthest_active_page: int = Page.FILE_UPLOAD  # furthest/last active page
+        self.current_page = Page.FILE_UPLOAD
+        self.furthest_active_page = Page.FILE_UPLOAD  # furthest/last active page
         # States for file upload page
-        self.uploaded_filename: str = ""  # Tracks uploaded file's name (should be empty when the file was removed)
+        self.uploaded_filename = ""  # Tracks uploaded file's name (should be empty when the file was removed)
         # States for data specification page
+        self.model_names = LabelGateway.query_model_names()
         self.data_specification = DataSpecification()
-        self._sample_processed_input_data: Optional[list[str]] = None
         # States for integrity checking page
-        self.rows_w_field_issues: pd.DataFrame = pd.DataFrame()
-        self.rows_w_ignored_scenario: pd.DataFrame = pd.DataFrame()
-        self.duplicate_rows: pd.DataFrame = pd.DataFrame()
-        self.accepted_rows: pd.DataFrame = pd.DataFrame()
+        self.nrows_w_struct_issue = 0
+        self.nrows_w_ignored_scenario = 0
+        self.nrows_duplicates = 0
+        self.nrows_accepted = 0
+        self.struct_issue_filepath = Path()
+        self.duplicates_filepath = Path()
+        self.ignored_scenario_filepath = Path()
+        self.accepted_filepath = Path()
         # States for plausibility checking page
-        self.active_visualization_tab: VisualizationTab = VisualizationTab.VALUE_TRENDS
-        self.uploaded_scenarios: list = []
-        self.uploaded_regions: list = []
-        self.uploaded_items: list = []
-        self.uploaded_variables: list = []
-        self.uploaded_units: list = []
-        self.uploaded_years: list = []
+        self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
+        self.uploaded_scenarios = []
+        self.uploaded_regions = []
+        self.uploaded_items = []
+        self.uploaded_variables = []
+        self.uploaded_units = []
+        self.uploaded_years = []
 
     def intro(self, view: View, controller: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -318,6 +320,12 @@ class Model:
 
     def init_integrity_checking_states(self, data_specification: DataSpecification) -> None:
         # Split raw csv rows
+        integrity_check = DataCleaningService(data_specification)
+        self.nrows_w_struct_issue = integrity_check.nrows_w_struct_issue
+        self.nrows_w_ignored_scenario = integrity_check.nrows_w_ignored_scenario
+        self.nrows_accepted = integrity_check.nrows_accepted
+        self.nrows_duplicates = integrity_check.nrows_duplicate
+        """ 
         delimiter = data_specification.delimiter
         header_is_included = data_specification.header_is_included
         with open(str(data_specification.uploaded_filepath)) as csvfile:
@@ -421,3 +429,4 @@ class Model:
         print("Bad labels overview:\n", self.bad_labels_overview)
         print("")
         print("Unknown labels overview:\n", self.unknown_labels_overview)
+        """
