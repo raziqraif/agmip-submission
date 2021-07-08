@@ -23,28 +23,60 @@ class LabelGateway:
         keep_default_na=False,
     )
     # Valid labels table
-    __model_table: DataFrame = __spreadsheet["ModelTable"]
-    __scenario_table: DataFrame = __spreadsheet["ScenarioTable"]
-    __region_table: DataFrame = __spreadsheet["RegionTable"]
-    __variable_table: DataFrame = __spreadsheet["VariableTable"]
-    __item_table: DataFrame = __spreadsheet["ItemTable"]
-    __unit_table: DataFrame = __spreadsheet["UnitTable"]
-    __year_table: DataFrame = __spreadsheet["YearTable"]
+    __model_table = __spreadsheet["ModelTable"]
+    __scenario_table = __spreadsheet["ScenarioTable"]
+    __region_table = __spreadsheet["RegionTable"]
+    __variable_table = __spreadsheet["VariableTable"]
+    __item_table = __spreadsheet["ItemTable"]
+    __unit_table = __spreadsheet["UnitTable"]
+    __year_table = __spreadsheet["YearTable"]
     # Fix table
     __region_fix_table: DataFrame = __spreadsheet["RegionFixTable"]
     __value_fix_table: DataFrame = __spreadsheet["ValueFixTable"]
     # Valid columns
-    valid_model_names: Set[str] = set(__model_table["Model"])
-    valid_scenarios: Set[str] = set(__scenario_table["Scenario"])
-    valid_regions: Set[str] = set(__region_table["Region"])
-    valid_variables: Set[str] = set(__variable_table["Variable"])
-    valid_items: Set[str] = set(__item_table["Item"])
-    valid_units: Set[str] = set(__unit_table["Unit"])
-    valid_years: Set[str] = set(__year_table["Year"])
+    __model_names = set(__model_table["Model"])
+    __scenarios = set(__scenario_table["Scenario"])
+    __regions = set(__region_table["Region"])
+    __variables = set(__variable_table["Variable"])
+    __items = set(__item_table["Item"])
+    __units = set(__unit_table["Unit"])
+    __years = set(__year_table["Year"])
+
+    @classmethod
+    def query_model_names(cls) -> Set[str]:
+        return cls.__model_names
+
+    @classmethod
+    def query_label_in_model_names(cls, label: str) -> bool:
+        return label in cls.__model_names
+
+    @classmethod
+    def query_label_in_scenarios(cls, label: str) -> bool:
+        return label in cls.__scenarios
+
+    @classmethod
+    def query_label_in_regions(cls, label: str) -> bool:
+        return label in cls.__regions
+
+    @classmethod
+    def query_label_in_variables(cls, label: str) -> bool:
+        return label in cls.__variables
+    
+    @classmethod
+    def query_label_in_items(cls, label: str) -> bool:
+        return label in cls.__items
+
+    @classmethod
+    def query_label_in_units(cls, label: str) -> bool:
+        return label in cls.__units
+
+    @classmethod
+    def query_label_in_years(cls, label: str) -> bool:
+        return label in cls.__years
 
     @classmethod
     def query_matching_scenario(cls, scenario: str) -> Optional[str]:
-        """Returns a matching value (ignoring case), or None"""
+        """Returns a matching scenario (ignoring case), or None"""
         scenario = scenario.lower()
         table = cls.__scenario_table
         table = table[table["Scenario"].str.lower() == scenario]
@@ -55,9 +87,9 @@ class LabelGateway:
     
     @classmethod
     def query_matching_region(cls, region: str) -> Optional[str]:
-        """Returns a matching value (ignoring case), or None"""
+        """Returns a matching region (ignoring case), or None"""
         region= region.lower()
-        table = cls.__scenario_table
+        table = cls.__region_table
         table = table[table["Region"].str.lower() == region]
         assert table.shape[0] <= 1
         if table.shape[0] != 0:
@@ -66,9 +98,9 @@ class LabelGateway:
     
     @classmethod
     def query_matching_variable(cls, variable: str) -> Optional[str]:
-        """Returns a matching value (ignoring case), or None"""
+        """Returns a matching variable (ignoring case), or None"""
         variable= variable.lower()
-        table = cls.__scenario_table
+        table = cls.__variable_table
         table = table[table["Variable"].str.lower() == variable]
         assert table.shape[0] <= 1
         if table.shape[0] != 0:
@@ -77,9 +109,9 @@ class LabelGateway:
 
     @classmethod
     def query_matching_item(cls, item: str) -> Optional[str]:
-        """Returns a matching value (ignoring case), or None"""
+        """Returns a matching item (ignoring case), or None"""
         item= item.lower()
-        table = cls.__scenario_table
+        table = cls.__item_table
         table = table[table["Item"].str.lower() == item]
         assert table.shape[0] <= 1
         if table.shape[0] != 0:
@@ -88,9 +120,9 @@ class LabelGateway:
 
     @classmethod
     def query_matching_unit(cls, unit: str) -> Optional[str]:
-        """Returns a matching value (ignoring case), or None"""
+        """Returns a matching unit (ignoring case), or None"""
         unit= unit.lower()
-        table = cls.__scenario_table
+        table = cls.__unit_table
         table = table[table["Unit"].str.lower() == unit]
         assert table.shape[0] <= 1
         if table.shape[0] != 0:
@@ -110,7 +142,7 @@ class LabelGateway:
         return None
 
     @classmethod
-    def query_fix_from_region_fix_table(cls, region: str) -> str:
+    def query_fix_from_region_fix_table(cls, region: str) -> Optional[str]:
         """Checks if a fix exists in the fix table and returns it. Returns None otherwise."""
         fix_table = cls.__region_fix_table
         # Get all rows containing the fix
@@ -120,3 +152,11 @@ class LabelGateway:
         if fix_table.shape[0] != 0:
             return str(fix_table.iloc[0]["Fix"])
         return None
+
+    @classmethod
+    def query_variable_min_value(cls, variable: str) -> Optional[float]:
+        return 0.0
+    
+    @classmethod
+    def query_variable_max_value(cls, variable: str) -> Optional[float]:
+        return 0.0
