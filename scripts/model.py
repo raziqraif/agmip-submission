@@ -138,7 +138,9 @@ class Model:
     @scenarios_to_ignore_str.setter
     def scenarios_to_ignore_str(self, value) -> None:
         value = value.strip()
-        self.data_specification.scenarios_to_ignore = value.split(",")
+        scenarios = value.split(",") if value != "" else []
+        scenarios = [scenario.strip() for scenario in scenarios]
+        self.data_specification.scenarios_to_ignore = scenarios
 
     @property
     def column_assignment_options(self) -> list[str]:
@@ -321,6 +323,7 @@ class Model:
     def init_integrity_checking_states(self, data_specification: DataSpecification) -> None:
         # Split raw csv rows
         integrity_check = DataCleaningService(data_specification)
+        integrity_check.parse_data()
         self.nrows_w_struct_issue = integrity_check.nrows_w_struct_issue
         self.nrows_w_ignored_scenario = integrity_check.nrows_w_ignored_scenario
         self.nrows_accepted = integrity_check.nrows_accepted
