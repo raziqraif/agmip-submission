@@ -195,25 +195,26 @@ class DataSpecification:
         if LabelGateway.query_label_in_model_names(cell_value):
             self.model_name = cell_value
             return 0
-        elif LabelGateway.query_label_in_scenarios(cell_value):
+        elif (cell_value == "Scenario") or LabelGateway.query_label_in_scenarios(cell_value):
             self.scenario_colnum = col_index + 1
             return 1
-        elif LabelGateway.query_label_in_regions(cell_value):
+        elif (cell_value == "Region") or LabelGateway.query_label_in_regions(cell_value):
             self.region_colnum = col_index + 1
             return 2
-        elif LabelGateway.query_label_in_variables(cell_value):
+        elif (cell_value == "Variable") or LabelGateway.query_label_in_variables(cell_value):
             self.variable_colnum = col_index + 1
             return 3
-        elif LabelGateway.query_label_in_items(cell_value):
+        elif (cell_value == "Item") or LabelGateway.query_label_in_items(cell_value):
             self.item_colnum = col_index + 1
             return 4
-        elif LabelGateway.query_label_in_units(cell_value):
+        elif (cell_value == "Unit") or LabelGateway.query_label_in_units(cell_value):
             self.unit_colnum = col_index + 1
             return 5
         try:
-            int(cell_value)  # Reminder: int(<float value in str repr>) will raise an error
-            self.year_colnum = col_index + 1
-            return 6
+            # Reminder: int(<float value in str repr>) will raise an error
+            if (1000 < int(cell_value)) and (int(cell_value) < 9999):
+                self.year_colnum = col_index + 1
+                return 6
         except ValueError:
             pass
         try:
@@ -264,6 +265,8 @@ class DataCleaningService:
     """
 
     WORKING_DIRPATH = Path(__name__).parent.parent / "workingdir"
+    BAD_LABELS_TABLE_COLTITLES = ["Bad Label", "Associated Column", "Fix"]
+    UNKNOWN_LABELS_TABLE_COLTITLES = ["Unknown Label", "Associated Column", "Closest Match", "Fix", "Override"]
 
     def __init__(self, data_specification: DataSpecification) -> None:
         self.data_specification = data_specification
@@ -277,72 +280,84 @@ class DataCleaningService:
         self.duplicate_rows_dstpath = self.WORKING_DIRPATH / "DuplicateRecords.csv"
         self.rows_w_ignored_scenario_dstpath = self.WORKING_DIRPATH / "RecordsWithIgnoreScenario.csv"
         self.rows_w_struct_issue_dstpath = self.WORKING_DIRPATH / "RowsWithStructuralIssue.csv"
-        # Label-related attributes
-        self.fixed_labels_table = pd.DataFrame()
-        self.unknown_labels_table = pd.DataFrame()
-        self._uploaded_scenarios: Set[str] = set()
-        self._uploaded_regions: Set[str] = set()
-        self._uploaded_variables: Set[str] = set()
-        self._uploaded_items: Set[str] = set()
-        self._uploaded_years: Set[str] = set()
-        self._uploaded_units: Set[str] = set()
+        # Label tables
+        self.bad_labels_table = pd.DataFrame(columns=self.BAD_LABELS_TABLE_COLTITLES)
+        self.unknown_labels_table = pd.DataFrame(columns=self.UNKNOWN_LABELS_TABLE_COLTITLES)
+        # Util structures for labels
+        self._bad_labels_list = []
+        self._unknown_labels_list = []
+        self._unknown_years: list[str] = []  # Unknown years will be added into the rule table automatically
         # Number of columns info
-        self.__most_frequent_ncolumns = 0
-        self.__largest_ncolumns = 0
+        self._most_frequent_ncolumns = 0
+        self._largest_ncolumns = 0
         # Duplicate check helper
         self.__row_occurence_dict: Dict[str, int] = {}
         # Actions
-        self.initialize_files()
+        self._initialize_files()
         self._update_ncolumns_info()
 
     def parse_data(self) -> None:
-        """Parse data and populate destination files and nrows attributes"""
+        """Parse data and populate destination files, nrows attributes, and label tables"""
         self.__init__(self.data_specification)  # Reset all attributes
-        with open(str(self.data_specification.uploaded_filepath)) as datafile, open(
-            str(self.rows_w_struct_issue_dstpath), "w+"
-        ) as structissuefile, open(str(self.rows_w_ignored_scenario_dstpath), "w+") as ignoredscenfile, open(
-            str(self.duplicate_rows_dstpath), "w+"
-        ) as duplicatesfile, open(
-            str(self.accepted_rows_dstpath), "w+"
-        ) as acceptedfile:
+        # Initialize sets to store found labels
+        scenarios: Set[str] = set()
+        regions: Set[str] = set()
+        variables: Set[str] = set()
+        items: Set[str] = set()
+        years: Set[str] = set()
+        units: Set[str] = set()
+        # Open data file and all destination files and start parsing data
+        # fmt: off
+        with \
+            open(str(self.data_specification.uploaded_filepath)) as datafile, \
+            open(str(self.rows_w_struct_issue_dstpath), "w+") as structissuefile, \
+            open(str(self.rows_w_ignored_scenario_dstpath), "w+") as ignoredscenfile, \
+            open(str(self.duplicate_rows_dstpath), "w+") as duplicatesfile, \
+            open(str(self.accepted_rows_dstpath), "w+") as acceptedfile \
+        :
+        # fmt: on
             for line_idx, line in enumerate(datafile):
                 rownum = line_idx + 1
                 row = line.split(self.data_specification.delimiter)
-                if self.parse_row_w_struct_issue(rownum, row, structissuefile):
+                if (rownum == 1) and self.data_specification.header_is_included:
                     continue
-                if self.parse_row_w_ignored_scenario(rownum, row, ignoredscenfile):
+                # Filter rows with various issues
+                if self.filter_row_w_struct_issue(rownum, row, structissuefile):
                     continue
-                if self.parse_duplicate_row(rownum, line, duplicatesfile):
+                if self.filter_row_w_ignored_scenario(rownum, row, ignoredscenfile):
                     continue
+                if self.filter_duplicate_row(rownum, line, duplicatesfile):
+                    continue
+                # Log accepted row
+                self.nrows_accepted += 1
                 acceptedfile.write(line)
-                scenario_field = row[self.data_specification.scenario_colnum - 1]
-                self._uploaded_scenarios.add(scenario_field)
-                region_field = row[self.data_specification.region_colnum - 1]
-                self._uploaded_regions.add(region_field)
-                variable_field = row[self.data_specification.variable_colnum - 1]
-                self._uploaded_variables.add(variable_field)
-                item_field = row[self.data_specification.item_colnum - 1]
-                self._uploaded_items.add(item_field)
-                unit_field = row[self.data_specification.unit_colnum - 1]
-                self._uploaded_items.add(unit_field)
-                year_field = row[self.data_specification.year_colnum - 1]
-                self._uploaded_items.add(year_field)
-                value_field = row[self.data_specification.value_colnum - 1]
-                # self.parse_value_field(value_field)
-        # for label in self._uploaded_scenarios:
-        #     self.parse_scenario_field(label)
-        # for label in self._uploaded_regions:
-        #     self.parse_region_field(label)
-        # for label in self._uploaded_variables:
-        #     self.parse_variable_field(label)
-        # for label in self._uploaded_items:
-        #     self.parse_item_field(label)
-        # for label in self._uploaded_years:
-        #     self.parse_year_field(label)
-        # for label in self._uploaded_units:
-        #     self.parse_unit_field(label)
+                # Store found labels
+                scenarios.add(row[self.data_specification.scenario_colnum - 1])
+                regions.add(row[self.data_specification.region_colnum - 1])
+                variables.add(row[self.data_specification.variable_colnum - 1])
+                items.add(row[self.data_specification.item_colnum - 1])
+                items.add(row[self.data_specification.unit_colnum - 1])
+                items.add(row[self.data_specification.year_colnum - 1])
+                # Parse value
+                self.parse_value_field(row[self.data_specification.value_colnum - 1])
+        # Parse all found labels
+        for scenario in scenarios:
+            self.parse_scenario_field(scenario)
+        for region in regions:
+            self.parse_region_field(region)
+        for variable in variables:
+            self.parse_variable_field(variable)
+        for item in items:
+            self.parse_item_field(item)
+        for year in years:
+            self.parse_year_field(year)
+        for unit in units:
+            self.parse_unit_field(unit)
+        # Populate bad / unknown labels table
+        self.bad_labels_table = pd.DataFrame(self._bad_labels_list, columns=self.BAD_LABELS_TABLE_COLTITLES)
+        self.unknown_labels_table = pd.DataFrame(self._unknown_labels_list, columns=self.UNKNOWN_LABELS_TABLE_COLTITLES)
 
-    def parse_row_w_struct_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
+    def filter_row_w_struct_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
         """
         Checks if a row has a structural issue and logs it into the file if it has.
         Returns the result of the structural check.
@@ -356,7 +371,8 @@ class DataCleaningService:
 
         @date July 7, 2021
         """
-        if len(row) != self.__most_frequent_ncolumns:
+        self.nrows_w_struct_issue += 1  # Assume the row has a structural issue
+        if len(row) != self._most_frequent_ncolumns:
             log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Mismatched number of fields")
             structissuefile.write(log_text)
             return True
@@ -380,7 +396,7 @@ class DataCleaningService:
             log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty unit field")
             structissuefile.write(log_text)
             return True
-        year_field = row[self.data_specification.year_colnum]
+        year_field = row[self.data_specification.year_colnum - 1]
         if year_field == "":
             log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty year field")
             structissuefile.write(log_text)
@@ -414,21 +430,23 @@ class DataCleaningService:
             log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Non-numeric value field")
             structissuefile.write(log_text)
             return True
+        self.nrows_w_struct_issue -= 1  # Substract the value back if the row does not have a struc. issue
         return False
 
-    def parse_row_w_ignored_scenario(self, rownum, row, ignoredscenfile) -> bool:
+    def filter_row_w_ignored_scenario(self, rownum, row, ignoredscenfile) -> bool:
         """
         Checks if a row contains an ignored scenario and logs it into the given file if it does.
         Returns the result of the check.
         """
         if row[self.data_specification.scenario_colnum - 1] in self.data_specification.scenarios_to_ignore:
-            log_row = [rownum, *row]
+            log_row = [str(rownum), *row]
             log_text = ",".join(log_row) + "\n"
             ignoredscenfile.write(log_text)
+            self.nrows_w_ignored_scenario += 1
             return True
         return False
 
-    def parse_duplicate_row(self, rownum: int, row: str, duplicatesfile: TextIOWrapper) -> bool:
+    def filter_duplicate_row(self, rownum: int, row: str, duplicatesfile: TextIOWrapper) -> bool:
         """
         Checks if a row is a duplicate and logs it into the duplicates file if it is.
         Returns the result of the check.
@@ -436,15 +454,107 @@ class DataCleaningService:
         # NOTE: Finding duplicates with the help of an in-memory data structure might cause a problem if the dataset
         # is too large. If that proves to be the case, consider using solutions like SQL
         # @date 7/7/2021
+        self.__row_occurence_dict.setdefault(row, 0)
         self.__row_occurence_dict[row] += 1
         occurence = self.__row_occurence_dict[row]
         if occurence > 1:
             log_text = "{},{},{}\n".format(rownum, row, occurence)
             duplicatesfile.write(log_text)
+            self.nrows_duplicate += 1
             return True
         return False
 
-    def initialize_files(self):
+    def parse_value_field(self, value: str) -> None:
+        """Checks if a value exists in the fix table and logs it if it does"""
+        fixed_value = LabelGateway.query_fix_from_value_fix_table(value)
+        if fixed_value is not None:
+            float(fixed_value)  # Raise an error if it's non-numeric
+            self._log_bad_label(value, "Value", fixed_value)
+        else:
+            float(value)  # Raise an error if it's non-numeric
+
+    def parse_scenario_field(self, scenario: str) -> None:
+        """Checks if a scenario is bad / unknown and logs it if it is"""
+        scenario_w_correct_case = LabelGateway.query_matching_scenario(scenario)
+        # Correct scenario
+        if scenario_w_correct_case == scenario:
+            return
+        # Unkown scenario
+        if scenario_w_correct_case is None:
+            closest_scenario = LabelGateway.query_partially_matching_scenario(scenario)
+            self._log_unknown_label(scenario, "Scenario", closest_scenario)
+            return
+        # Known scenario but spelled wrongly
+        if scenario_w_correct_case != scenario:
+            self._log_bad_label(scenario, "Scenario", scenario_w_correct_case)
+
+    def parse_region_field(self, region: str) -> None:
+        """Check if a region is bad or unknown and logs it if it is"""
+        region_w_correct_case = LabelGateway.query_matching_region(region)
+        # Correct region
+        if region_w_correct_case == region:
+            return
+        fixed_region = LabelGateway.query_fix_from_region_fix_table(region)
+        # Unkown region
+        if (region_w_correct_case is None) and (fixed_region is None):
+            closest_region = LabelGateway.query_partially_matching_region(region)
+            self._log_unknown_label(region, "Region", closest_region)
+            return
+        # Known region but spelled wrongly
+        if (region_w_correct_case != region) and (region_w_correct_case is not None):
+            self._log_bad_label(region, "Region", region_w_correct_case)
+
+    def parse_variable_field(self, variable: str) -> None:
+        """Check if a variable is bad or unknown and logs it if it is"""
+        variable_w_correct_case = LabelGateway.query_matching_variable(variable)
+        # Correct variable
+        if variable_w_correct_case == variable:
+            return
+        # Unkown variable
+        if variable_w_correct_case is None:
+            closest_variable = LabelGateway.query_partially_matching_variable(variable)
+            self._log_unknown_label(variable, "Variable", closest_variable)
+            return
+        # Known variable but spelled wrongly
+        if variable_w_correct_case != variable:
+            self._log_bad_label(variable, "Variable", variable_w_correct_case)
+
+    def parse_item_field(self, item: str) -> None:
+        """Check if an item is bad or unknown and logs it if it is"""
+        item_w_correct_case = LabelGateway.query_matching_item(item)
+        # Correct item
+        if item_w_correct_case == item:
+            return
+        # Unkown item
+        if item_w_correct_case is None:
+            closest_item = LabelGateway.query_partially_matching_item(item)
+            self._log_unknown_label(item, "Item", closest_item)
+            return
+        # Known item but spelled wrongly
+        if item_w_correct_case != item:
+            self._log_bad_label(item, "Item", item_w_correct_case)
+
+    def parse_year_field(self, year: str) -> None:
+        """Check if a year is bad or unknown and logs it if it is"""
+        if not LabelGateway.query_label_in_years(year):
+            self._unknown_years.append(year)  # Unknown years will be automatically recognized
+
+    def parse_unit_field(self, unit: str) -> None:
+        """Check if an unit is bad or unknown and logs it if it is"""
+        unit_w_correct_case = LabelGateway.query_matching_unit(unit)
+        # Correct unit
+        if unit_w_correct_case == unit:
+            return
+        # Unkown unit
+        if unit_w_correct_case is None:
+            closest_unit = LabelGateway.query_partially_matching_unit(unit)
+            self._log_unknown_label(unit, "Unit", closest_unit)
+            return
+        # Known unit but spelled wrongly
+        if unit_w_correct_case != unit:
+            self._log_bad_label(unit, "Unit", unit_w_correct_case)
+
+    def _initialize_files(self):
         """Create/Recreate destination files"""
         # Deletes existing files, if any
         if self.rows_w_struct_issue_dstpath.exists():
@@ -463,22 +573,34 @@ class DataCleaningService:
 
     def _format_row_w_struct_issue_for_logging(self, rownum: int, row: list[str], issue_description: str) -> str:
         """Return the log text for the given row with structural issue"""
-        log_ncolumns = self.__largest_ncolumns + 2
-        log_row = [rownum, *row] + ["" for _ in range(log_ncolumns)]
+        row = row[:-1] if row[-1] == "\n" else row  # Remove new line 
+        log_ncolumns = self._largest_ncolumns + 2
+        log_row = [str(rownum), *row] + ["" for _ in range(log_ncolumns)]
         log_row = log_row[:log_ncolumns]
         log_row[-1] = issue_description
         return ",".join(log_row) + "\n"
 
     def _update_ncolumns_info(self) -> None:
         """Update number of columns info"""
-        self.__most_frequent_ncolumns = 0
-        self.__largest_ncolumns = 0
+        self._most_frequent_ncolumns = 0
+        self._largest_ncolumns = 0
         ncolumns_count: Dict[int, int] = {}
         with open(str(self.data_specification.uploaded_filepath)) as csvfile:
             line = csvfile.readline()
             ncolumns = len(line.split(self.data_specification.delimiter))
+            ncolumns_count.setdefault(ncolumns, 0)
             ncolumns_count[ncolumns] += 1
-            self.__largest_ncolumns = max(self.__largest_ncolumns, ncolumns)
+            self._largest_ncolumns = max(self._largest_ncolumns, ncolumns)
         most_frequent_ncolumns = max(ncolumns_count, key=lambda x: ncolumns_count.get(x, -1))
         assert most_frequent_ncolumns != -1
-        self.__most_frequent_ncolumns = most_frequent_ncolumns
+        self._most_frequent_ncolumns = most_frequent_ncolumns
+
+    def _log_bad_label(self, bad_label: str, associated_column: str, fix: str) -> None:
+        """Logs bad label"""
+        # Appending row 1 by 1 to a pandas dataframe is slow, so we store these rows in a list first
+        self._bad_labels_list.append([bad_label, associated_column, fix])
+
+    def _log_unknown_label(self, unknown_label: str, associated_column: str, closest_label: str) -> None:
+        """Logs unknown label"""
+        # Appending row 1 by 1 to a pandas dataframe is slow, so we store these rows in a list first
+        self._unknown_labels_list.append([unknown_label, associated_column, closest_label, "", False])
