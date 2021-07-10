@@ -34,18 +34,20 @@ class LabelGateway:
     __year_table = __spreadsheet["YearTable"]
     # Fix tables
     __region_fix_table: DataFrame = __spreadsheet["RegionFixTable"]
-    # - query for value fix table needs to be fast, so we store the table in a dictionary. The 
+    # - query for value fix table needs to be fast, so we store the table in a dictionary. The
     # - "value" field becomes a dict key and the "fix" field becomes a dict value
     # @date July 9 2021
     __value_fix_table: Dict[str, str] = dict(__spreadsheet["ValueFixTable"].iloc[:, 1:].values)
+    for key in __value_fix_table.keys():
+        __value_fix_table[key] = str(__value_fix_table[key])
     # Valid columns
-    _model_names = set(__model_table["Model"].astype('str'))
-    _scenarios = set(__scenario_table["Scenario"].astype('str'))
-    _regions = set(__region_table["Region"].astype('str'))
-    _variables = set(__variable_table["Variable"].astype('str'))
-    _items = set(__item_table["Item"].astype('str'))
-    _units = set(__unit_table["Unit"].astype('str'))
-    _years = set(__year_table["Year"].astype('str'))
+    _model_names = set(__model_table["Model"].astype("str"))
+    _scenarios = set(__scenario_table["Scenario"].astype("str"))
+    _regions = set(__region_table["Region"].astype("str"))
+    _variables = set(__variable_table["Variable"].astype("str"))
+    _items = set(__item_table["Item"].astype("str"))
+    _units = set(__unit_table["Unit"].astype("str"))
+    _years = set(__year_table["Year"].astype("str"))
 
     @classmethod
     def query_model_names(cls) -> Set[str]:
@@ -180,10 +182,6 @@ class LabelGateway:
     def query_fix_from_value_fix_table(cls, value: str) -> Optional[str]:
         """Checks if a fix exists in the fix table and returns it. Returns None otherwise."""
         fix_table = cls.__value_fix_table
-        try:
-            float(value)
-        except:
-            return None
         try:
             return fix_table[value.lower()]
         except:
