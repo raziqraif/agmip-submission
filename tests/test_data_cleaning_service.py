@@ -6,7 +6,7 @@ import pytest
 from typing import List
 
 # Modify PATH so that the following imports work
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname("scripts"))
 from scripts.model import Model
 from scripts.business import DataSpecification, DataCleaningService
 
