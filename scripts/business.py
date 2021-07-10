@@ -265,8 +265,8 @@ class DataCleaningService:
     """
 
     WORKING_DIRPATH = Path(__name__).parent.parent / "workingdir"
-    BAD_LABELS_TABLE_COLTITLES = ["Bad Label", "Associated Column", "Fix"]
-    UNKNOWN_LABELS_TABLE_COLTITLES = ["Unknown Label", "Associated Column", "Closest Match", "Fix", "Override"]
+    BAD_LABELS_TABLE_COLTITLES = ["Label", "Associated Column", "Fix"]
+    UNKNOWN_LABELS_TABLE_COLTITLES = ["Label", "Associated Column", "Closest Match", "Fix", "Override"]
 
     def __init__(self, data_specification: DataSpecification) -> None:
         self.data_specification = data_specification
@@ -296,7 +296,7 @@ class DataCleaningService:
         self._initialize_files()
         self._update_ncolumns_info()
 
-    def parse_data(self) -> None:
+    def parse_data(self) -> None:   # NOSONAR 
         """Parse data and populate destination files, nrows attributes, and label tables"""
         self.__init__(self.data_specification)  # Reset all attributes
         # Initialize sets to store found labels
@@ -317,6 +317,7 @@ class DataCleaningService:
         :
         # fmt: on
             for line_idx, line in enumerate(datafile):
+                line = line[:-1] if line[-1] == "\n" else line
                 rownum = line_idx + 1
                 row = line.split(self.data_specification.delimiter)
                 if (rownum == 1) and self.data_specification.header_is_included:
@@ -336,8 +337,8 @@ class DataCleaningService:
                 regions.add(row[self.data_specification.region_colnum - 1])
                 variables.add(row[self.data_specification.variable_colnum - 1])
                 items.add(row[self.data_specification.item_colnum - 1])
-                items.add(row[self.data_specification.unit_colnum - 1])
-                items.add(row[self.data_specification.year_colnum - 1])
+                units.add(row[self.data_specification.unit_colnum - 1])
+                years.add(row[self.data_specification.year_colnum - 1])
                 # Parse value
                 self.parse_value_field(row[self.data_specification.value_colnum - 1])
         # Parse all found labels
@@ -573,7 +574,6 @@ class DataCleaningService:
 
     def _format_row_w_struct_issue_for_logging(self, rownum: int, row: list[str], issue_description: str) -> str:
         """Return the log text for the given row with structural issue"""
-        row = row[:-1] if row[-1] == "\n" else row  # Remove new line 
         log_ncolumns = self._largest_ncolumns + 2
         log_row = [str(rownum), *row] + ["" for _ in range(log_ncolumns)]
         log_row = log_row[:log_ncolumns]
