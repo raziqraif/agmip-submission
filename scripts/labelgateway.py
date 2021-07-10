@@ -1,7 +1,7 @@
 import difflib
 from pathlib import Path
 from typing import Dict, Set, Optional
-from numpy import diff
+from numpy import diff, mat
 
 import pandas as pd
 from pandas import DataFrame
@@ -33,13 +33,8 @@ class LabelGateway:
     __unit_table = __spreadsheet["UnitTable"]
     __year_table = __spreadsheet["YearTable"]
     # Fix tables
-    __region_fix_table: DataFrame = __spreadsheet["RegionFixTable"]
-    # - query for value fix table needs to be fast, so we store the table in a dictionary. The
-    # - "value" field becomes a dict key and the "fix" field becomes a dict value
-    # @date July 9 2021
-    __value_fix_table: Dict[str, str] = dict(__spreadsheet["ValueFixTable"].iloc[:, 1:].values)
-    for key in __value_fix_table.keys():
-        __value_fix_table[key] = str(__value_fix_table[key])
+    __region_fix_table = __spreadsheet["RegionFixTable"]
+    __value_fix_table = __spreadsheet["ValueFixTable"]
     # Valid columns
     _model_names = set(__model_table["Model"].astype("str"))
     _scenarios = set(__scenario_table["Scenario"].astype("str"))
@@ -48,6 +43,11 @@ class LabelGateway:
     _items = set(__item_table["Item"].astype("str"))
     _units = set(__unit_table["Unit"].astype("str"))
     _years = set(__year_table["Year"].astype("str"))
+    # Data structure for critical queries
+    _matching_variable_memo: Dict[str, Optional[str]] = {}
+    _value_fix_memo: Dict[str, str] = dict(__spreadsheet["ValueFixTable"].iloc[:, 1:].values)
+    for key in _value_fix_memo.keys():
+        _value_fix_memo[key] = str(_value_fix_memo[key])    # store numbers as strings
 
     @classmethod
     def query_model_names(cls) -> Set[str]:
@@ -128,12 +128,19 @@ class LabelGateway:
     def query_matching_variable(cls, variable: str) -> Optional[str]:
         """Returns a variable with the exact case-insensitive spelling as the argument, or None"""
         variable = variable.lower()
-        table = cls.__variable_table
-        table = table[table["Variable"].str.lower() == variable]
-        assert table.shape[0] <= 1
-        if table.shape[0] != 0:
-            return str(table.iloc[0]["Variable"])  # type: ignore
-        return None
+        try:
+            # Note: Variable is a categorical data, so our 'cache' size shouldn't be too big
+            return cls._matching_variable_memo[variable]
+        except: 
+            table = cls.__variable_table
+            table = table[table["Variable"].str.lower() == variable]
+            assert table.shape[0] <= 1
+            if table.shape[0] != 0:
+                matching_variable = str(table.iloc[0]["Variable"])  # type: ignore
+                cls._matching_variable_memo[variable] = matching_variable
+                return matching_variable
+            cls._matching_variable_memo[variable] = None
+            return None
 
     @classmethod
     def query_partially_matching_variable(cls, variable: str) -> str:
@@ -181,7 +188,7 @@ class LabelGateway:
     @classmethod
     def query_fix_from_value_fix_table(cls, value: str) -> Optional[str]:
         """Checks if a fix exists in the fix table and returns it. Returns None otherwise."""
-        fix_table = cls.__value_fix_table
+        fix_table = cls._value_fix_memo
         try:
             return fix_table[value.lower()]
         except:
@@ -202,8 +209,8 @@ class LabelGateway:
     @classmethod
     def query_variable_min_value(cls, variable: str) -> Optional[float]:
         """Returns the min value"""
-        return 0.0
+        return -10000000.0
 
     @classmethod
     def query_variable_max_value(cls, variable: str) -> Optional[float]:
-        return 1000000.0
+        return 1000000000.0
