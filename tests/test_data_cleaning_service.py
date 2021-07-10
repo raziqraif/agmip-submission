@@ -1,9 +1,15 @@
+import sys
+import os
+import pandas as pd
+from pathlib import Path
 import pytest
+from typing import List
 
-from scripts import model as scsa_model
-from scripts import view as scsa_view
-from scripts import controller as scsa_controller
-from scripts import business
+# Modify PATH so that the following imports work
+sys.path.insert(0, os.path.dirname(__file__))
+from scripts.model import Model
+from scripts.business import DataSpecification, DataCleaningService
+
 
 """
 SAMPLE RAW CSV
@@ -21,15 +27,34 @@ SAMPLE RAW CSV
 
 """
 
+TESTFILE_PATH = Model.UPLOAD_DIR / "temp_testfile"
+
+
+def create_test_file(input_data: List[str]) -> Path:
+    """Create a test file from raw input data"""
+    filepath = TESTFILE_PATH
+    if filepath.exists():
+        filepath.unlink()
+    with open(str(filepath), "w+") as file:
+        for row in input_data:
+            file.write(row + "\n")
+    return filepath
+
+
+def print_test_file(filepath: Path) -> None:
+    """Print the content of test file"""
+    with open(str(filepath), "w+") as file:
+        print(file.readlines())
+
 
 @pytest.fixture
-def data_specification() -> business.DataSpecification:
+def data_specification() -> DataSpecification:
     """
     Return arguments required to initialize integrity checking states
     The arguments are based on SAMPLE_RAW_CSV
     """
-    spec = business.DataSpecification()
-    spec.__delimiter = ","
+    spec = DataSpecification()
+    spec.delimiter = ","
     spec.header_is_included = False
     spec.initial_lines_to_skip = 0
     spec.scenarios_to_ignore = []
@@ -44,24 +69,23 @@ def data_specification() -> business.DataSpecification:
     return spec
 
 
-def test_duplicate_rows(data_specification: business.DataSpecification):
+def test_duplicate_rows(data_specification: DataSpecification):
     """Test if duplicate rows are pruned correctly"""
-    DUPLICATE_ROWS = [
+    ROWS = [
         "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",  # NOSONAR
         "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
         "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
         "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
     ]
-    data_specification["raw_csv"] = DUPLICATE_ROWS
-    model = scsa_model.Model()
-    model.init_integrity_checking_states(data_specification)
-    print(model.duplicate_rows)
-    print(model.accepted_rows)
-    assert len(model.duplicate_rows) == len(DUPLICATE_ROWS) - 1
-    assert len(model.accepted_rows) == 1
+    filepath = create_test_file(ROWS)
+    data_specification.uploaded_filepath = filepath
+    data_cleaner = DataCleaningService(data_specification)
+    data_cleaner.parse_data()
+    assert data_cleaner.nrows_duplicate == len(ROWS) - 1
+    assert data_cleaner.nrows_accepted == 1
 
 
-def test_rows_with_field_issues(data_specification: dict):
+def test_rows_w_structural_issue(data_specification: DataSpecification):
     """Test if rows with field issues are pruned correctly"""
     ROWS = [
         "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2010,1000 t dm,162.6840595",
@@ -78,16 +102,15 @@ def test_rows_with_field_issues(data_specification: dict):
         "row with missing field 1,,,,,,",
         "row with missing field 2,,,,,,",
     ]
-    data_specification["raw_csv"] = ROWS
-    model = scsa_model.Model()
-    model.init_integrity_checking_states(**data_specification)
-    print()
-    print(model.rows_w_field_issues.to_string())
-    assert len(model.rows_w_field_issues) == 5
-    assert len(model.accepted_rows) == len(ROWS) - 5
+    filepath = create_test_file(ROWS)
+    data_specification.uploaded_filepath = filepath
+    data_cleaner = DataCleaningService(data_specification)
+    data_cleaner.parse_data()
+    assert data_cleaner.nrows_w_struct_issue == 5
+    assert data_cleaner.nrows_accepted == len(ROWS) - 5
 
 
-def test_rows_with_ignored_scenario(data_specification: dict):
+def test_rows_with_ignored_scenario(data_specification: DataSpecification):
     """Test if rows with an ignored scenario are pruned correctly"""
     ROWS = [
         "ignored scenario 1,CAN,CONS,RIC,2010,1000 t dm,162.6840595",
@@ -101,46 +124,19 @@ def test_rows_with_ignored_scenario(data_specification: dict):
         "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
     ]
     ignored_scenarios = ["ignored scenario 1", "ignored scenario 2"]
-    data_specification["raw_csv"] = ROWS
-    data_specification["scenarios_to_ignore"] = ignored_scenarios
-    model = scsa_model.Model()
-    model.init_integrity_checking_states(**data_specification)
-    assert len(model.rows_w_ignored_scenario) == len(ignored_scenarios)
-    assert len(model.accepted_rows) == len(ROWS) - len(ignored_scenarios)
+    data_specification.scenarios_to_ignore = ignored_scenarios
+    filepath = create_test_file(ROWS)
+    data_specification.uploaded_filepath = filepath
+    data_cleaner = DataCleaningService(data_specification)
+    data_cleaner.parse_data()
+    assert data_cleaner.nrows_w_ignored_scenario == len(ignored_scenarios)
+    assert data_cleaner.nrows_accepted == len(ROWS) - len(ignored_scenarios)
 
 
-def test_uploaded_column_labels(data_specification: dict):
-    """Test if sets of uploaded column labels are built correctly"""
-    ROWS = [
-        "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2020,1000 t dm,183.6566783",
-        "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2030,1000 t dm,170.3285805",
-        "SSP2_NoMt_NoCC_FlexA_DEV,CAN,CONS,RIC,2050,1000 t dm,158.6103519",
-        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,FEED,VFN|VEG,2050,1000 t fm,4661.274823",
-        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2010,1000 t fm,120.3986869",
-        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2020,1000 t fm,169.3291105",
-        "SSP2_NoMt_NoCC_FlexA_WLD_2500,MEN,OTHU,VFN|VEG,2030,1000 t fm,151.8507839",
-    ]
-    unique_scenarios = ["SSP2_NoMt_NoCC_FlexA_DEV", "SSP2_NoMt_NoCC_FlexA_WLD_2500"]
-    unique_regions = ["CAN", "MEN"]
-    unique_items = ["RIC", "VFN|VEG"]
-    unique_variables = ["CONS", "FEED", "OTHU"]
-    unique_units = ["1000 t dm"]
-    unique_years = ["2020", "2030", "2050", "2010"]
-    data_specification["raw_csv"] = ROWS
-    model = scsa_model.Model()
-    model.init_integrity_checking_states(**data_specification)
-    assert unique_scenarios.sort() == model.uploaded_scenarios.sort()
-    assert unique_regions.sort() == model.uploaded_regions.sort()
-    assert unique_items.sort() == model.uploaded_items.sort()
-    assert unique_variables.sort() == model.uploaded_variables.sort()
-    assert unique_units.sort() == model.uploaded_units.sort()
-    assert unique_years.sort() == model.uploaded_years.sort()
-
-
-def test_bad_labels(data_specification: dict) -> None:
+def test_bad_labels(data_specification: DataSpecification) -> None:
     """Test if bad labels are identified correctly"""
     ROWS = [
-        "ssp2_nomt_nocc_flexa_dev,Can,cons,ric,2020,1000 T dm,#DIV/0",
+        "ssp2_nomt_nocc_flexa_dev,Can,cons,ric,2020,1000 T dm,#DIV/0!",
         "SSP2_NoMt_NoCC_FlexA_DEV,World,CONS,RIC,2030,1000 t dm,NA",
     ]
     bad_labels = [
@@ -149,10 +145,17 @@ def test_bad_labels(data_specification: dict) -> None:
         "cons",
         "ric",
         "1000 T dm",
-        "#DIV/0",
+        "#DIV/0!",
         "NA",
     ]
-    bad_labels = bad_labels.sort()
-    fixed_labels = ["SSP2_NoMT_NoCC_FlexA_DEV", "CAN", "CONS", "RIC", "1000 t dm", "0", "0"]
-    fixed_labels = fixed_labels.sort()
-    data_specification["raw_csv"] = ROWS
+    fixed_labels = ["SSP2_NoMt_NoCC_FlexA_DEV", "CAN", "CONS", "RIC", "1000 t dm", "0", "0"]
+    data_specification.uploaded_filepath = create_test_file(ROWS)
+    data_cleaner = DataCleaningService(data_specification)
+    data_cleaner.parse_data()
+    print(data_cleaner.bad_labels_table)
+    for label in bad_labels:
+        print(label)
+        assert data_cleaner.bad_labels_table[data_cleaner.bad_labels_table["Label"] == label].shape[0] != 0
+    for label in fixed_labels:
+        print(label)
+        assert data_cleaner.bad_labels_table[data_cleaner.bad_labels_table["Fix"] == label].shape[0] != 0
