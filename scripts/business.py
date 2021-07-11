@@ -374,40 +374,40 @@ class DataCleaningService:
         """
         self.nrows_w_struct_issue += 1  # Assume the row has a structural issue
         if len(row) != self._most_frequent_ncolumns:
-            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Mismatched number of fields")
-            structissuefile.write(log_text)
+            self._log_row_w_struct_issue(rownum, row, "Mismatched number of fields", structissuefile)
             return True
         if row[self.data_specification.scenario_colnum - 1] == "":
-            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty scenario field")
-            structissuefile.write(log_text)
+            self._log_row_w_struct_issue(rownum, row, "Empty scenario field", structissuefile)
             return True
         if row[self.data_specification.region_colnum - 1] == "":
-            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty region field")
-            structissuefile.write(log_text)
+            self._log_row_w_struct_issue(rownum, row, "Empty region field", structissuefile)
             return True
         if row[self.data_specification.variable_colnum - 1] == "":
-            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty variable field")
-            structissuefile.write(log_text)
+            self._log_row_w_struct_issue(rownum, row, "Empty variable field", structissuefile)
             return True
         if row[self.data_specification.item_colnum - 1] == "":
-            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty item field")
-            structissuefile.write(log_text)
+            self._log_row_w_struct_issue(rownum, row, "Empty item field", structissuefile)
             return True
         if row[self.data_specification.unit_colnum - 1] == "":
-            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty unit field")
-            structissuefile.write(log_text)
+            self._log_row_w_struct_issue(rownum, row, "Empty unit field", structissuefile)
             return True
         year_field = row[self.data_specification.year_colnum - 1]
         if year_field == "":
-            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Empty year field")
-            structissuefile.write(log_text)
+            self._log_row_w_struct_issue(rownum, row, "Empty year field", structissuefile)
             return True
         try:
             int(year_field)
         except:
-            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Non-integer year field")
-            structissuefile.write(log_text)
+            self._log_row_w_struct_issue(rownum, row, "Non-integer year field", structissuefile)
             return True
+        if self._filter_value_w_struct_issue(rownum, row, structissuefile):
+            return True
+
+        self.nrows_w_struct_issue -= 1  # Substract the value back if the row does not have a struc. issue
+        return False
+
+    def _filter_value_w_struct_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper):
+        """Check if row has a value field with a structural issue and log it if it does"""
         value_field = row[self.data_specification.value_colnum - 1]
         try:
             value_fix = LabelGateway.query_fix_from_value_fix_table(value_field)
@@ -419,22 +419,18 @@ class DataCleaningService:
             max_value = LabelGateway.query_variable_max_value(matching_variable)
             if (min_value is not None) and (float(value_fix) < min_value):
                 issue_text = "Value for variable {} is too small".format(matching_variable)
-                log_text = self._format_row_w_struct_issue_for_logging(rownum, row, issue_text)
-                structissuefile.write(log_text)
+                self._log_row_w_struct_issue(rownum, row, issue_text, structissuefile)
                 return True
             if (max_value is not None) and (float(value_fix) > max_value):
                 issue_text = "Value for variable {} is too large".format(matching_variable)
-                log_text = self._format_row_w_struct_issue_for_logging(rownum, row, issue_text)
-                structissuefile.write(log_text)
+                self._log_row_w_struct_issue(rownum, row, issue_text, structissuefile)
                 return True
         except:
-            log_text = self._format_row_w_struct_issue_for_logging(rownum, row, "Non-numeric value field")
-            structissuefile.write(log_text)
+            self._log_row_w_struct_issue(rownum, row, "Non-numeric value field", structissuefile)
             return True
-        self.nrows_w_struct_issue -= 1  # Substract the value back if the row does not have a struc. issue
-        return False
+        pass
 
-    def filter_row_w_ignored_scenario(self, rownum, row, ignoredscenfile) -> bool:
+    def filter_row_w_ignored_scenario(self, rownum: int, row: list[str], ignoredscenfile: TextIOWrapper) -> bool:
         """
         Checks if a row contains an ignored scenario and logs it into the given file if it does.
         Returns the result of the check.
@@ -572,13 +568,14 @@ class DataCleaningService:
         self.duplicate_rows_dstpath.touch()
         self.accepted_rows_dstpath.touch()
 
-    def _format_row_w_struct_issue_for_logging(self, rownum: int, row: list[str], issue_description: str) -> str:
+    def _log_row_w_struct_issue(self, rownum: int, row: list[str], issue_description: str, structissuefile: TextIOWrapper) -> None:
         """Return the log text for the given row with structural issue"""
         log_ncolumns = self._largest_ncolumns + 2
         log_row = [str(rownum), *row] + ["" for _ in range(log_ncolumns)]
         log_row = log_row[:log_ncolumns]
         log_row[-1] = issue_description
-        return ",".join(log_row) + "\n"
+        log_text = ",".join(log_row) + "\n"
+        structissuefile.write(log_text)
 
     def _update_ncolumns_info(self) -> None:
         """Update number of columns info"""
