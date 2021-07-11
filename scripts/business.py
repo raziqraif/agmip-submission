@@ -406,7 +406,7 @@ class DataCleaningService:
         self.nrows_w_struct_issue -= 1  # Substract the value back if the row does not have a struc. issue
         return False
 
-    def _filter_value_w_struct_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper):
+    def _filter_value_w_struct_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
         """Check if row has a value field with a structural issue and log it if it does"""
         value_field = row[self.data_specification.value_colnum - 1]
         try:
@@ -428,7 +428,7 @@ class DataCleaningService:
         except:
             self._log_row_w_struct_issue(rownum, row, "Non-numeric value field", structissuefile)
             return True
-        pass
+        return False
 
     def filter_row_w_ignored_scenario(self, rownum: int, row: list[str], ignoredscenfile: TextIOWrapper) -> bool:
         """
