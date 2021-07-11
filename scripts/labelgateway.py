@@ -44,8 +44,11 @@ class LabelGateway:
     _units = set(__unit_table["Unit"].astype("str"))
     _years = set(__year_table["Year"].astype("str"))
     # Data structure for critical queries
-    _matching_variable_memo: Dict[str, Optional[str]] = {}
-    _value_fix_memo: Dict[str, str] = dict(__spreadsheet["ValueFixTable"].iloc[:, 1:].values)
+    _matching_variable_memo: Dict[str, str] = {}
+    _value_fix_memo: Dict[str, str] = dict(__value_fix_table.iloc[:, 1:].values)
+    # Populate data structures for critical queries
+    for variable in _variables:
+        _matching_variable_memo[variable.lower()] = variable
     for key in _value_fix_memo.keys():
         _value_fix_memo[key] = str(_value_fix_memo[key])    # store numbers as strings
 
@@ -129,17 +132,8 @@ class LabelGateway:
         """Returns a variable with the exact case-insensitive spelling as the argument, or None"""
         variable = variable.lower()
         try:
-            # Note: Variable is a categorical data, so our 'cache' size shouldn't be too big
             return cls._matching_variable_memo[variable]
         except: 
-            table = cls.__variable_table
-            table = table[table["Variable"].str.lower() == variable]
-            assert table.shape[0] <= 1
-            if table.shape[0] != 0:
-                matching_variable = str(table.iloc[0]["Variable"])  # type: ignore
-                cls._matching_variable_memo[variable] = matching_variable
-                return matching_variable
-            cls._matching_variable_memo[variable] = None
             return None
 
     @classmethod
