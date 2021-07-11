@@ -4,6 +4,7 @@ from copy import deepcopy
 import csv
 from io import TextIOWrapper
 import numpy as np
+import os
 import pandas as pd
 from pathlib import Path
 from typing import Optional, List, Dict, Set
@@ -298,14 +299,14 @@ class DataCleaningService:
 
     def parse_data(self) -> None:   # NOSONAR 
         """Parse data and populate destination files, nrows attributes, and label tables"""
-        self.__init__(self.data_specification)  # Reset all attributes
+        # self.__init__(self.data_specification)  # Reset all attributes
         # Initialize sets to store found labels
-        scenarios: Set[str] = set()
-        regions: Set[str] = set()
-        variables: Set[str] = set()
-        items: Set[str] = set()
-        years: Set[str] = set()
-        units: Set[str] = set()
+        # scenarios: Set[str] = set()
+        # regions: Set[str] = set()
+        # variables: Set[str] = set()
+        # items: Set[str] = set()
+        # years: Set[str] = set()
+        # units: Set[str] = set()
         # Open data file and all destination files and start parsing data
         # fmt: off
         with \
@@ -320,6 +321,7 @@ class DataCleaningService:
                 line = line[:-1] if line[-1] == "\n" else line
                 rownum = line_idx + 1
                 row = line.split(self.data_specification.delimiter)
+                continue
                 if (rownum == 1) and self.data_specification.header_is_included:
                     continue
                 # Filter rows with various issues
@@ -342,21 +344,21 @@ class DataCleaningService:
                 # Parse value
                 self.parse_value_field(row[self.data_specification.value_colnum - 1])
         # Parse all found labels
-        for scenario in scenarios:
-            self.parse_scenario_field(scenario)
-        for region in regions:
-            self.parse_region_field(region)
-        for variable in variables:
-            self.parse_variable_field(variable)
-        for item in items:
-            self.parse_item_field(item)
-        for year in years:
-            self.parse_year_field(year)
-        for unit in units:
-            self.parse_unit_field(unit)
-        # Populate bad / unknown labels table
-        self.bad_labels_table = pd.DataFrame(self._bad_labels_list, columns=self.BAD_LABELS_TABLE_COLTITLES)
-        self.unknown_labels_table = pd.DataFrame(self._unknown_labels_list, columns=self.UNKNOWN_LABELS_TABLE_COLTITLES)
+        # for scenario in scenarios:
+        #     self.parse_scenario_field(scenario)
+        # for region in regions:
+        #     self.parse_region_field(region)
+        # for variable in variables:
+        #     self.parse_variable_field(variable)
+        # for item in items:
+        #     self.parse_item_field(item)
+        # for year in years:
+        #     self.parse_year_field(year)
+        # for unit in units:
+        #     self.parse_unit_field(unit)
+        # # Populate bad / unknown labels table
+        # self.bad_labels_table = pd.DataFrame(self._bad_labels_list, columns=self.BAD_LABELS_TABLE_COLTITLES)
+        # self.unknown_labels_table = pd.DataFrame(self._unknown_labels_list, columns=self.UNKNOWN_LABELS_TABLE_COLTITLES)
 
     def filter_row_w_struct_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
         """
