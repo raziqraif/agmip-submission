@@ -299,14 +299,14 @@ class DataCleaningService:
 
     def parse_data(self) -> None:   # NOSONAR 
         """Parse data and populate destination files, nrows attributes, and label tables"""
-        # self.__init__(self.data_specification)  # Reset all attributes
+        self.__init__(self.data_specification)  # Reset all attributes
         # Initialize sets to store found labels
-        # scenarios: Set[str] = set()
-        # regions: Set[str] = set()
-        # variables: Set[str] = set()
-        # items: Set[str] = set()
-        # years: Set[str] = set()
-        # units: Set[str] = set()
+        scenarios: Set[str] = set()
+        regions: Set[str] = set()
+        variables: Set[str] = set()
+        items: Set[str] = set()
+        years: Set[str] = set()
+        units: Set[str] = set()
         # Open data file and all destination files and start parsing data
         # fmt: off
         with \
@@ -317,50 +317,62 @@ class DataCleaningService:
             open(str(self.accepted_rows_dstpath), "w+") as acceptedfile \
         :
         # fmt: on
+            delimiter = self.data_specification.delimiter
+            scenario_colidx = self.data_specification.scenario_colnum - 1
+            region_colidx = self.data_specification.region_colnum - 1
+            variable_colidx = self.data_specification.variable_colnum - 1
+            item_colidx = self.data_specification.item_colnum - 1
+            unit_colidx = self.data_specification.unit_colnum - 1
+            year_colidx = self.data_specification.year_colnum - 1
+            value_colidx = self.data_specification.value_colnum - 1
             for line_idx, line in enumerate(datafile):
                 line = line[:-1] if line[-1] == "\n" else line
                 rownum = line_idx + 1
-                row = line.split(self.data_specification.delimiter)
-                continue
+                row = line.split(delimiter)
                 if (rownum == 1) and self.data_specification.header_is_included:
                     continue
-                # Filter rows with various issues
-                if self.filter_row_w_struct_issue(rownum, row, structissuefile):
+                # Check and filter rows with various issues
+                if self.check_for_structural_issue(rownum, row, structissuefile):
                     continue
-                if self.filter_row_w_ignored_scenario(rownum, row, ignoredscenfile):
+                # 14 s
+                if self.check_for_ignored_scenario(rownum, row, ignoredscenfile):
                     continue
-                if self.filter_duplicate_row(rownum, line, duplicatesfile):
+                # 16 s
+                if self.check_if_duplicate(rownum, line, duplicatesfile):
                     continue
+                # 19.6
                 # Log accepted row
                 self.nrows_accepted += 1
                 acceptedfile.write(line)
+                # 23.5
                 # Store found labels
-                scenarios.add(row[self.data_specification.scenario_colnum - 1])
-                regions.add(row[self.data_specification.region_colnum - 1])
-                variables.add(row[self.data_specification.variable_colnum - 1])
-                items.add(row[self.data_specification.item_colnum - 1])
-                units.add(row[self.data_specification.unit_colnum - 1])
-                years.add(row[self.data_specification.year_colnum - 1])
+                scenarios.add(row[scenario_colidx])
+                regions.add(row[region_colidx])
+                variables.add(row[variable_colidx])
+                items.add(row[item_colidx])
+                units.add(row[unit_colidx])
+                years.add(row[year_colidx])
+                # 28.9
                 # Parse value
-                self.parse_value_field(row[self.data_specification.value_colnum - 1])
+                self.parse_value_field(row[value_colidx])
         # Parse all found labels
-        # for scenario in scenarios:
-        #     self.parse_scenario_field(scenario)
-        # for region in regions:
-        #     self.parse_region_field(region)
-        # for variable in variables:
-        #     self.parse_variable_field(variable)
-        # for item in items:
-        #     self.parse_item_field(item)
-        # for year in years:
-        #     self.parse_year_field(year)
-        # for unit in units:
-        #     self.parse_unit_field(unit)
-        # # Populate bad / unknown labels table
-        # self.bad_labels_table = pd.DataFrame(self._bad_labels_list, columns=self.BAD_LABELS_TABLE_COLTITLES)
-        # self.unknown_labels_table = pd.DataFrame(self._unknown_labels_list, columns=self.UNKNOWN_LABELS_TABLE_COLTITLES)
+        for scenario in scenarios:
+            self.parse_scenario_field(scenario)
+        for region in regions:
+            self.parse_region_field(region)
+        for variable in variables:
+            self.parse_variable_field(variable)
+        for item in items:
+            self.parse_item_field(item)
+        for year in years:
+            self.parse_year_field(year)
+        for unit in units:
+            self.parse_unit_field(unit)
+        # Populate bad / unknown labels table
+        self.bad_labels_table = pd.DataFrame(self._bad_labels_list, columns=self.BAD_LABELS_TABLE_COLTITLES)
+        self.unknown_labels_table = pd.DataFrame(self._unknown_labels_list, columns=self.UNKNOWN_LABELS_TABLE_COLTITLES)
 
-    def filter_row_w_struct_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
+    def check_for_structural_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
         """
         Checks if a row has a structural issue and logs it into the file if it has.
         Returns the result of the structural check.
@@ -402,13 +414,13 @@ class DataCleaningService:
         except:
             self._log_row_w_struct_issue(rownum, row, "Non-integer year field", structissuefile)
             return True
-        if self._filter_value_w_struct_issue(rownum, row, structissuefile):
+        if self._check_for_value_w_structural_issue(rownum, row, structissuefile):
             return True
 
         self.nrows_w_struct_issue -= 1  # Substract the value back if the row does not have a struc. issue
         return False
 
-    def _filter_value_w_struct_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
+    def _check_for_value_w_structural_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
         """Check if row has a value field with a structural issue and log it if it does"""
         value_field = row[self.data_specification.value_colnum - 1]
         try:
@@ -432,9 +444,9 @@ class DataCleaningService:
             return True
         return False
 
-    def filter_row_w_ignored_scenario(self, rownum: int, row: list[str], ignoredscenfile: TextIOWrapper) -> bool:
+    def check_for_ignored_scenario(self, rownum: int, row: list[str], ignoredscenfile: TextIOWrapper) -> bool:
         """
-        Checks if a row contains an ignored scenario and logs it into the given file if it does.
+        Check if a row contains an ignored scenario and logs it into the given file if it does.
         Returns the result of the check.
         """
         if row[self.data_specification.scenario_colnum - 1] in self.data_specification.scenarios_to_ignore:
@@ -445,10 +457,10 @@ class DataCleaningService:
             return True
         return False
 
-    def filter_duplicate_row(self, rownum: int, row: str, duplicatesfile: TextIOWrapper) -> bool:
+    def check_if_duplicate(self, rownum: int, row: str, duplicatesfile: TextIOWrapper) -> bool:
         """
-        Checks if a row is a duplicate and logs it into the duplicates file if it is.
-        Returns the result of the check.
+        Check if a row is a duplicate and log it into the duplicates file if it is.
+        Return the result of the check.
         """
         # NOTE: Finding duplicates with the help of an in-memory data structure might cause a problem if the dataset
         # is too large. If that proves to be the case, consider using solutions like SQL
@@ -570,15 +582,6 @@ class DataCleaningService:
         self.duplicate_rows_dstpath.touch()
         self.accepted_rows_dstpath.touch()
 
-    def _log_row_w_struct_issue(self, rownum: int, row: list[str], issue_description: str, structissuefile: TextIOWrapper) -> None:
-        """Return the log text for the given row with structural issue"""
-        log_ncolumns = self._largest_ncolumns + 2
-        log_row = [str(rownum), *row] + ["" for _ in range(log_ncolumns)]
-        log_row = log_row[:log_ncolumns]
-        log_row[-1] = issue_description
-        log_text = ",".join(log_row) + "\n"
-        structissuefile.write(log_text)
-
     def _update_ncolumns_info(self) -> None:
         """Update number of columns info"""
         self._most_frequent_ncolumns = 0
@@ -593,6 +596,15 @@ class DataCleaningService:
         most_frequent_ncolumns = max(ncolumns_count, key=lambda x: ncolumns_count.get(x, -1))
         assert most_frequent_ncolumns != -1
         self._most_frequent_ncolumns = most_frequent_ncolumns
+
+    def _log_row_w_struct_issue(self, rownum: int, row: list[str], issue_description: str, structissuefile: TextIOWrapper) -> None:
+        """Return the log text for the given row with structural issue"""
+        log_ncolumns = self._largest_ncolumns + 2
+        log_row = [str(rownum), *row] + ["" for _ in range(log_ncolumns)]
+        log_row = log_row[:log_ncolumns]
+        log_row[-1] = issue_description
+        log_text = ",".join(log_row) + "\n"
+        structissuefile.write(log_text)
 
     def _log_bad_label(self, bad_label: str, associated_column: str, fix: str) -> None:
         """Logs bad label"""
