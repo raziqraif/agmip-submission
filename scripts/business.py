@@ -588,11 +588,12 @@ class DataCleaningService:
         self._largest_ncolumns = 0
         ncolumns_count: Dict[int, int] = {}
         with open(str(self.data_specification.uploaded_filepath)) as csvfile:
-            line = csvfile.readline()
-            ncolumns = len(line.split(self.data_specification.delimiter))
-            ncolumns_count.setdefault(ncolumns, 0)
-            ncolumns_count[ncolumns] += 1
-            self._largest_ncolumns = max(self._largest_ncolumns, ncolumns)
+            for _, line in enumerate(csvfile):
+                line = csvfile.readline()
+                ncolumns = len(line.split(self.data_specification.delimiter))
+                ncolumns_count.setdefault(ncolumns, 0)
+                ncolumns_count[ncolumns] += 1
+                self._largest_ncolumns = max(self._largest_ncolumns, ncolumns)
         most_frequent_ncolumns = max(ncolumns_count, key=lambda x: ncolumns_count.get(x, -1))
         assert most_frequent_ncolumns != -1
         self._most_frequent_ncolumns = most_frequent_ncolumns
