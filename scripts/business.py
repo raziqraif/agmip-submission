@@ -289,7 +289,7 @@ class DataCleaningService:
         self._unknown_labels_list = []
         self._unknown_years: list[str] = []  # Unknown years will be added into the rule table automatically
         # Number of columns info
-        self._most_frequent_ncolumns = 0
+        self._correct_ncolumns = 0
         self._largest_ncolumns = 0
         # Duplicate check helper
         self.__row_occurence_dict: Dict[str, int] = {}
@@ -387,7 +387,7 @@ class DataCleaningService:
         @date July 7, 2021
         """
         self.nrows_w_struct_issue += 1  # Assume the row has a structural issue
-        if len(row) != self._most_frequent_ncolumns:
+        if len(row) != self._correct_ncolumns:
             self._log_row_w_struct_issue(rownum, row, "Mismatched number of fields", structissuefile)
             return True
         if row[self.data_specification.scenario_colnum - 1] == "":
@@ -584,19 +584,18 @@ class DataCleaningService:
 
     def _update_ncolumns_info(self) -> None:
         """Update number of columns info"""
-        self._most_frequent_ncolumns = 0
-        self._largest_ncolumns = 0
+        self._correct_ncolumns = 0
+        self._largest_ncolumns = self._correct_ncolumns
         ncolumns_count: Dict[int, int] = {}
         with open(str(self.data_specification.uploaded_filepath)) as csvfile:
-            for _, line in enumerate(csvfile):
-                line = csvfile.readline()
-                ncolumns = len(line.split(self.data_specification.delimiter))
-                ncolumns_count.setdefault(ncolumns, 0)
-                ncolumns_count[ncolumns] += 1
-                self._largest_ncolumns = max(self._largest_ncolumns, ncolumns)
+            line = csvfile.readline()       # TODO: Fix 
+            ncolumns = len(line.split(self.data_specification.delimiter))
+            ncolumns_count.setdefault(ncolumns, 0)
+            ncolumns_count[ncolumns] += 1
+            self._largest_ncolumns = max(self._largest_ncolumns, ncolumns)
         most_frequent_ncolumns = max(ncolumns_count, key=lambda x: ncolumns_count.get(x, -1))
         assert most_frequent_ncolumns != -1
-        self._most_frequent_ncolumns = most_frequent_ncolumns
+        self._correct_ncolumns = most_frequent_ncolumns
 
     def _log_row_w_struct_issue(self, rownum: int, row: list[str], issue_description: str, structissuefile: TextIOWrapper) -> None:
         """Return the log text for the given row with structural issue"""
@@ -616,3 +615,8 @@ class DataCleaningService:
         """Logs unknown label"""
         # Appending row 1 by 1 to a pandas dataframe is slow, so we store these rows in a list first
         self._unknown_labels_list.append([unknown_label, associated_column, closest_label, "", False])
+
+
+
+
+
