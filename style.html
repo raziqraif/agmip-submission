@@ -431,25 +431,77 @@
         background: white;
         justify-content: center;
     }
-    .c-labels-overview-table {
-        border: 1px solid var(--light-grey);
-        width: 640px;
+
+    /* Labels overview table */
+    .c-bad-labels-table {
+        display: block;
+        height: 120px;
+        width: 504px;
         margin: 16px 0px 0px 0px;
+        overflow: auto;
+    }
+    .c-bad-labels-table table {
+        border-collapse: collapse;
+        border: 1px solid var(--light-grey);
         table-layout: fixed;
     }
-    .c-labels-overview-table th {
-        border: 1px solid var(--light-grey);
-        text-align: center;
+    .c-bad-labels-table thead {
+        position: sticky;
+        top: 0;
+        z-index: 2;
     }
-    .c-labels-overview-table td {
+    .c-bad-labels-table tr {
+        border: 1px solid var(--light-grey);
+    }
+    .c-bad-labels-table th {
+        border: 1px solid var(--light-grey);
+        background: white;
+        text-align: center;
+        height: 28px;
+        width: 180px;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+    .c-bad-labels-table td {
         border: 1px solid var(--light-grey);
         text-align: center;
         color: var(--grey);
-        /* justify-content: center; */
+        height: 28px;
+        width: 180px;
+    }
+
+    /* Unknown labels table */
+    .c-unknown-labels-table {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);  /* 100% / 5 */
+        background: var(--light-grey);
+        border: 1px solid var(--light-grey);
+        margin: 16px 0px 0px 0px;
+        width: 100%;
+        grid-gap: 1px 1px;
+    }
+    .c-unknown-labels-table > * {   /* Target all wrappers for table item */
+        width: 100%;
+        height: 28px;
+        background: white;
+        justify-content: center;
+    }
+    .c-unknown-labels-table select {    /* Target all dropdowns*/
+        border: none;
+    }
+    .c-unknown-labels-table input[type="checkbox"] {    /* Target all checkbox*/
+        margin-right: 0px;
+    }
+    .c-unknown-labels-table .widget-checkbox {  /* Target all checkbox wrappers */
+        width: auto;
+    }
+    .c-unknown-labels-table > .widget-box:nth-child(-n+5) { /* Target first row */
+        font-weight: bold;
     }
 
     /* Visualization tab */
-        .c-visualization-tab {
+    .c-visualization-tab {
         grid-template-columns: 1fr 1fr 1fr;
         width: 330px;
         height: 36px;
