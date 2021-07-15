@@ -398,6 +398,7 @@
     .c-column-assignment-table select {
         border: none;
         width: inherit;
+        text-overflow: ellipsis;
     }
 
     /* Preview table */
@@ -440,7 +441,7 @@
         display: block;
         height: 117px;
         max-height: 121px;
-        width: 504px;
+        width: 510px;
         margin: 16px 0px 0px 0px;
         overflow: auto;
         border: 1px solid var(--light-grey);
@@ -461,7 +462,7 @@
         background: white;
         text-align: center;
         height: 26px;
-        width: 180px;
+        width: 166px;
         position: sticky;
         top: 0;
         z-index: 2;
@@ -471,9 +472,12 @@
     .c-bad-labels-table td {
         background: white;
         text-align: center;
-        color: var(--grey);
         height: 26px;
-        width: 180px;
+        width: 166px;
+        max-width: 166px;
+        overflow: hidden;
+        padding: 0px 8px;
+        text-overflow: ellipsis;
         border-right: 1px solid var(--light-grey);
         border-bottom: 1px solid var(--light-grey);
     }
@@ -495,6 +499,7 @@
         width: 100%;
         background: white;
         justify-content: center;
+        padding: 0px 8px
     }
     .c-unknown-labels-table .widget-dropdown {    /* Target all dropdown wrapper*/
         width: inherit;
@@ -502,6 +507,7 @@
     .c-unknown-labels-table select {    /* Target all dropdown */
         width: inherit;
         border: none;
+        text-overflow: ellipsis;
     }
     .c-unknown-labels-table .widget-checkbox {  /* Target all checkbox wrappers */
         width: auto;
