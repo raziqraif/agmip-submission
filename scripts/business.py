@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Set
 
 from .labelgateway import LabelGateway
-
+pd.read_csv 
 
 class DataSpecification:
     SAMPLE_NROWS = 1000  # rows
@@ -43,6 +43,13 @@ class DataSpecification:
     def delimiter(self, value: str) -> None:
         self.__delimiter = value
         self.__sample_processed_input_data_memo = None
+        self.scenario_colnum = 0
+        self.region_colnum = 0
+        self.variable_colnum = 0
+        self.item_colnum = 0
+        self.unit_colnum = 0
+        self.year_colnum = 0
+        self.value_colnum = 0
 
     @property
     def uploaded_filepath(self) -> Path:
@@ -87,13 +94,11 @@ class DataSpecification:
         self.__input_data_nonskipped_sample = []
         try:
             with open(str(self.uploaded_filepath)) as csvfile:
-                for line_index, line in enumerate(csvfile):
-                    if (line_index >= self.initial_lines_to_skip) and (
-                        line_index < self.SAMPLE_NROWS + self.initial_lines_to_skip
-                    ):
-                        self.__input_data_nonskipped_sample.append(line)
-                    if line_index >= self.initial_lines_to_skip + self.SAMPLE_NROWS:
-                        break
+                lines = csvfile.readlines()
+                self.__input_data_topmost_sample = lines[: self.SAMPLE_NROWS]
+                self.__input_data_nonskipped_sample = (
+                    lines[self.initial_lines_to_skip: self.initial_lines_to_skip + self.SAMPLE_NROWS]
+                )
         except:
             return
 
@@ -105,14 +110,12 @@ class DataSpecification:
         self.__input_data_nonskipped_sample = []
         try:
             with open(str(file_path)) as csvfile:
-                for line_index, line in enumerate(csvfile):
-                    if line_index <= self.SAMPLE_NROWS:
-                        self.__input_data_topmost_sample.append(line)
-                    if (line_index >= self.initial_lines_to_skip) and (
-                        line_index < self.SAMPLE_NROWS + self.initial_lines_to_skip
-                    ):
-                        self.__input_data_nonskipped_sample.append(line)
-                    self.__file_nrows += 1
+                lines = csvfile.readlines()
+                self.__input_data_topmost_sample = lines[: self.SAMPLE_NROWS]
+                self.__input_data_nonskipped_sample = (
+                    lines[self.initial_lines_to_skip: self.initial_lines_to_skip + self.SAMPLE_NROWS]
+                )
+                self.__file_nrows = len(lines)
         except:
             return "Error when opening file"
         return None
@@ -279,7 +282,7 @@ class DataCleaningService:
         # Destination files' path
         self.accepted_rows_dstpath = self.WORKING_DIRPATH / "AcceptedRecords.csv"
         self.duplicate_rows_dstpath = self.WORKING_DIRPATH / "DuplicateRecords.csv"
-        self.rows_w_ignored_scenario_dstpath = self.WORKING_DIRPATH / "RecordsWithIgnoreScenario.csv"
+        self.rows_w_ignored_scenario_dstpath = self.WORKING_DIRPATH / "RecordsWithIgnoredScenario.csv"
         self.rows_w_struct_issue_dstpath = self.WORKING_DIRPATH / "RowsWithStructuralIssue.csv"
         # Label tables
         self.bad_labels_table = pd.DataFrame(columns=self.BAD_LABELS_TABLE_COLTITLES)
@@ -297,7 +300,10 @@ class DataCleaningService:
         self._initialize_files()
         self._update_ncolumns_info()
 
-    def parse_data(self) -> None:   # NOSONAR 
+    def parse_data(self) -> None:
+        pass
+
+    def _parse_data(self) -> None:   # NOSONAR 
         """Parse data and populate destination files, nrows attributes, and label tables"""
         self.__init__(self.data_specification)  # Reset all attributes
         # Initialize sets to store found labels
