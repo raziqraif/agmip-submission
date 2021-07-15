@@ -1,12 +1,15 @@
 from __future__ import annotations
+from scripts.labelgateway import LabelGateway  # Delay the evaluation of undefined types
 
-from typing import Optional, Union  # Delay the evaluation of undefined types
 from threading import Timer
+from typing import Callable, Optional, Union
 
-import numpy as np
 import ipywidgets as ui
+import numpy as np
 from IPython.core.display import display
 from IPython.core.display import HTML
+
+from .namespaces import VisualizationTab
 
 
 DARK_BLUE = "#1E3A8A"
@@ -138,6 +141,8 @@ class CSS:
     FILENAME_SNACKBAR__TEXT = "c-filename-snackbar__text"
     HEADER_BAR = "c-header-bar"
     ICON_BUTTON = "c-icon-button"
+    BAD_LABELS_TABLE = "c-bad-labels-table"
+    UNKNOWN_LABELS_TABLE = "c-unknown-labels-table"
     NOTIFICATION = "c-notification"
     NOTIFICATION__ERROR = "c-notification--error"
     NOTIFICATION__INFO = "c-notification--info"
@@ -145,20 +150,22 @@ class CSS:
     NOTIFICATION__SUCCESS = "c-notification--success"
     NOTIFICATION__WARNING = "c-notification--warning"
     PREVIEW_TABLE = "c-preview-table"
-    STEPPER = "c-stepper"
-    STEPPER__NUMBER = "c-stepper__number"
-    STEPPER__NUMBER__ACTIVE = "c-stepper__number--active"
-    STEPPER__NUMBER__CURRENT = "c-stepper__number--current"
-    STEPPER__NUMBER__INACTIVE = "c-stepper__number--inactive"
-    STEPPER__SEPARATOR__ACTIVE = "c-stepper__separator--active"
-    STEPPER__SEPARATOR__INACTIVE = "c-stepper__separator--inactive"
-    STEPPER__TITLE__ACTIVE = "c-stepper__title--active"
-    STEPPER__TITLE__INACTIVE = "c-stepper__title--inactive"
+    ROWS_OVERVIEW_TABLE = "c-rows-overview-table"
+    STEPPER_EL = "c-stepper-element"
+    STEPPER_EL__CURRENT = "c-stepper-element--current"
+    STEPPER_EL__ACTIVE = "c-stepper-element--active"
+    STEPPER_EL__INACTIVE = "c-stepper-element--inactive"
+    STEPPER_EL__NUMBER = "c-stepper-element__number"
+    STEPPER_EL__SEPARATOR = "c-stepper-element__separator"
+    STEPPER_EL__TITLE = "c-stepper-element__title"
     UA = "c-upload-area"
     UA__BACKGROUND = "c-upload-area__background"
     UA__FILE_UPLOADER = "c-upload-area__file-uploader"
     UA__OVERLAY = "c-upload-area__overlay"
     UA__FILE_LABEL = "c-upload-area__file-label"
+    VISUALIZATION_TAB = "c-visualization-tab"
+    VISUALIZATION_TAB__ELEMENT = "c-visualization-tab__element"
+    VISUALIZATION_TAB__ELEMENT__ACTIVE = "c-visualization-tab__element--active"
 
     @classmethod
     def assign_class(cls, widget: ui.DOMWidget, class_name: str) -> ui.DOMWidget:
@@ -179,15 +186,21 @@ class CSS:
 
 
 def set_options(widget: ui.Dropdown, options: tuple[str], onchange_callback) -> None:
-    """Utility function to reassign options without triggering onchange callback"""
+    """
+    Utility function to reassign options without triggering onchange callback.
+    The options will be sorted first.
+    """
     widget.unobserve(onchange_callback, "value")
-    widget.options = options
+    widget.options = sorted(options)
     widget.value = None
     widget.observe(onchange_callback, "value")
 
 
 class View:
-    DATA_SPEC_PAGE_IS_BEING_UPDATED = False  # to assert that a page update will not recursively trigger another page update  # TODO: replace this with a proper test suite
+    DATA_SPEC_PAGE_IS_BEING_UPDATED = (
+        False  # to assert that a page update will not recursively trigger another page update
+    )
+    # TODO: replace this with a proper test suite
     # The following is to silence complaints about assigning None to a non-optional type in constructor
     # pyright: reportGeneralTypeIssues=false
     def __init__(self):
@@ -199,7 +212,7 @@ class View:
         self.model: Model
         self.ctrl: Controller
 
-        # Main app's widgets that need to be manipulated
+        # Base app's widgets that need to be manipulated
         self.app_container: ui.Box = None
         self.page_container: ui.Box = None
         self.page_stepper: ui.Box = None
@@ -224,7 +237,27 @@ class View:
         self.value_column_dropdown: ui.Dropdown = None
         self.input_data_preview_table: ui.GridBox = None
         self.output_data_preview_table: ui.GridBox = None
-        self._cached_children_of_input_data_preview_table: Optional[list] = None
+        self._input_data_table_childrenpool: Optional[list] = None
+        # Widgets in the integrity checking page that need to be manipulated
+        self.duplicate_rows_lbl: ui.Label = None
+        self.rows_w_struct_issues_lbl: ui.Label = None
+        self.rows_w_ignored_scenario_lbl: ui.Label = None
+        self.accepted_rows_lbl: ui.Label = None
+        self.bad_labels_table = ui.HTML()
+        self.unknown_labels_table = ui.GridBox()
+        self._unknown_labels_table_childrenpool: list[ui.Widget] = []
+        # Widgets in the plausibility checking page that need to be manipulated
+        self.value_trends_tab_element: ui.Box = None
+        self.value_trends_tab_content: ui.Box = None
+        self.growth_trends_tab_element: ui.Box = None
+        self.growth_trends_tab_content: ui.Box = None
+        self.box_plot_tab_element: ui.Box = None
+        self.box_plot_tab_content: ui.Box = None
+        self.scenario_select = ui.Select()
+        self.region_select = ui.Select()
+        self.variable_select = ui.Select()
+        self.item_select = ui.Select()
+        self.year_select = ui.Select()
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -235,7 +268,7 @@ class View:
         """Build and show notebook user interface"""
         from scripts.model import JSAppModel
 
-        self.app_container = self.build()
+        self.app_container = self._build_app()
         # Display the appropriate html files and our ipywidgets app
         display(HTML(filename="style.html"))
         display(self.app_container)
@@ -244,69 +277,13 @@ class View:
         display(HTML(f"<script> APP_MODEL = {javascript_model.serialize()}</script>"))
         display(HTML(filename="script.html"))
 
-    def build(self) -> ui.Box:
-        """Build the application"""
-        # Constants
-        APP_TITLE = "AgMIP Model Submission Pipeline"
-        PAGE_TITLES = ["File Upload", "Data Specification", "Integrity Checking", "Plausibility Checking"]
-        NUM_OF_PAGES = 4
-        # Create notification widget
-        notification_text = ui.Label("")
-        self.notification = ui.HBox(children=(Icon.SUCCESS, notification_text))
-        self.notification.add_class(CSS.NOTIFICATION)
-        # Create header bar
-        header_bar = ui.HTML(APP_TITLE)
-        header_bar.add_class(CSS.HEADER_BAR)
-        # Create stepper
-        stepper_children = []
-        for i in range(0, NUM_OF_PAGES):
-            page_number = ui.HTML(value=str(i + 1))
-            page_number.add_class(CSS.STEPPER__NUMBER)
-            page_number.add_class(CSS.STEPPER__NUMBER__CURRENT if i == 0 else CSS.STEPPER__NUMBER__INACTIVE)
-
-            page_title = ui.HTML(PAGE_TITLES[i])
-            page_title.add_class(CSS.STEPPER__TITLE__ACTIVE if i == 0 else CSS.STEPPER__TITLE__INACTIVE)
-            separator = ui.HTML("<hr width=48px/>")
-            separator.add_class(CSS.STEPPER__SEPARATOR__INACTIVE)
-
-            is_last_page = i == NUM_OF_PAGES - 1
-            stepper_children += [page_number, page_title] if is_last_page else [page_number, page_title, separator]
-        self.page_stepper = ui.HBox(stepper_children)
-        self.page_stepper.add_class(CSS.STEPPER)
-        # Create app pages & page container
-        self.page_container = ui.Box(
-            [
-                self._build_file_upload_page(),
-                self._build_data_specification_page(),
-                self._build_integrity_checking_page(),
-                self._build_plausibility_checking_page(),
-            ],
-            layout=ui.Layout(flex="1", width="100%"),  # page container stores the current page
-        )
-        # Hide all pages, except for the first one
-        for page in self.page_container.children[1:]:
-            page.add_class(CSS.DISPLAY_MOD__NONE)
-
-        app = ui.VBox(  # app container
-            [
-                self.notification,
-                header_bar,  # -header bar
-                ui.VBox(  # -body container
-                    children=[self.page_stepper, self.page_container],  # --page stepper, page container
-                    layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
-                ),
-            ],
-        )
-        app.add_class(CSS.APP)
-        return app
-
     def modify_cursor(self, new_cursor_mod_class: Optional[str]) -> None:
         """
         Change cursor style by assigning the passed CSS class to the app's DOM
         If None was passed, the cursor style will be reset
         """
-        cursor_mod_classes = CSS.get_cursor_mod_classes() 
-        for cursor_mod_class in cursor_mod_classes:      # Remove all other cursor mods from DOM
+        cursor_mod_classes = CSS.get_cursor_mod_classes()
+        for cursor_mod_class in cursor_mod_classes:  # Remove all other cursor mods from DOM
             self.app_container.remove_class(cursor_mod_class)
         if new_cursor_mod_class is not None:
             assert new_cursor_mod_class in cursor_mod_classes
@@ -315,21 +292,17 @@ class View:
     def show_notification(self, variant: str, content: str) -> None:
         """Display a notification to the user"""
         assert variant in Notification._VARIANTS
-
         # Cancel existing timer if it's still running
         self.notification_timer.cancel()
-
         # Reset the notification's DOM classes
         # This is important because we implement a clickaway listener in JS which removes a DOM class from the
         # notification view without notifying the notification model. Doing this will reset the DOM classes that both
         # the notification models in server-side & client-side are maintaining
         self.notification._dom_classes = (CSS.NOTIFICATION,)
-
         # Update notification content
         notification_text = self.notification.children[1]
         assert isinstance(notification_text, ui.Label)
         notification_text.value = content
-
         # Update notification visibility & style
         if variant == Notification.SUCCESS:
             self.notification.children = (Icon.SUCCESS, notification_text)
@@ -349,50 +322,32 @@ class View:
             notification_text._dom_classes = (CSS.COLOR_MOD__WHITE,)
         else:
             assert len("Variant does not exists") == 0
-
         # Create a timer to hide notification after X seconds
         self.notification_timer = Timer(3.5, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self.notification_timer.start()
 
-    def switch_page(self, requested_page_number: int, is_last_active_page: bool = False) -> None:
-        """Show the requested page and update the page stepper accordingly"""
-        assert requested_page_number > 0 and requested_page_number <= len(self.page_container.children)
-        # Hide all pages
-        for page in self.page_container.children:
+    def update_base_app(self) -> None:
+        """Update the base app"""
+        NUM_OF_PAGES = len(self.page_container.children)
+        assert self.model.current_page > 0 and self.model.current_page <= NUM_OF_PAGES
+        assert self.model.furthest_active_page > 0 and self.model.furthest_active_page <= NUM_OF_PAGES
+        current_page_index = self.model.current_page - 1
+        # Update visibility of pages and style of page stepper elements
+        for page_index in range(0, NUM_OF_PAGES):
+            page = self.page_container.children[page_index]
+            stepper_el = self.page_stepper.children[page_index]
             assert isinstance(page, ui.Box)
-            page.add_class(CSS.DISPLAY_MOD__NONE)
-        # Show the requested page
-        requested_page_number = requested_page_number - 1
-        page: ui.Box = self.page_container.children[requested_page_number]
-        page.remove_class(CSS.DISPLAY_MOD__NONE)
-        # Change widget with the "current" modifier to be "active"
-        for child_element in self.page_stepper.children:
-            assert isinstance(child_element, ui.DOMWidget)
-            if CSS.STEPPER__NUMBER__CURRENT in child_element._dom_classes:
-                child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__ACTIVE)
-        # Update stepper elements belonging to the current page
-        # Format of children elements = [number el, title el, separator el, ..., number el, title el]
-        number_element = self.page_stepper.children[requested_page_number * 3 + 0]
-        title_element = self.page_stepper.children[requested_page_number * 3 + 1]
-        assert isinstance(number_element, ui.DOMWidget)
-        assert isinstance(title_element, ui.DOMWidget)
-        number_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__CURRENT)
-        title_element._dom_classes = (CSS.STEPPER__TITLE__ACTIVE,)
-        # Make sure that the left page separator is "active"
-        if requested_page_number > 0:
-            separator_element = self.page_stepper.children[requested_page_number * 3 - 1]
-            assert isinstance(separator_element, ui.DOMWidget)
-            separator_element._dom_classes = (CSS.STEPPER__SEPARATOR__ACTIVE,)
-        # Make sure the stepper elements belonging to the upcoming pages are inactive (if "last active page" is specified)
-        if is_last_active_page:
-            for child_element in self.page_stepper.children[requested_page_number * 3 + 2 :]:
-                assert isinstance(child_element, ui.DOMWidget)
-                if CSS.STEPPER__NUMBER__ACTIVE in child_element._dom_classes:
-                    child_element._dom_classes = (CSS.STEPPER__NUMBER, CSS.STEPPER__NUMBER__INACTIVE)
-                elif CSS.STEPPER__TITLE__ACTIVE in child_element._dom_classes:
-                    child_element._dom_classes = (CSS.STEPPER__TITLE__INACTIVE,)
-                elif CSS.STEPPER__SEPARATOR__ACTIVE in child_element._dom_classes:
-                    child_element._dom_classes = (CSS.STEPPER__SEPARATOR__INACTIVE,)
+            assert isinstance(stepper_el, ui.Box)
+            if page_index == current_page_index:
+                page.remove_class(CSS.DISPLAY_MOD__NONE)
+                stepper_el._dom_classes = (CSS.STEPPER_EL, CSS.STEPPER_EL__CURRENT)
+            else:
+                page.add_class(CSS.DISPLAY_MOD__NONE)
+                stepper_el._dom_classes = (
+                    (CSS.STEPPER_EL, CSS.STEPPER_EL__ACTIVE)
+                    if page_index < self.model.furthest_active_page
+                    else (CSS.STEPPER_EL, CSS.STEPPER_EL__INACTIVE)
+                )
 
     def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
         """
@@ -428,7 +383,7 @@ class View:
         set_options(self.model_name_dropdown, ("", *self.model.model_names), self.ctrl.onchange_model_name_dropdown)
         self.model_name_dropdown.value = self.model.model_name
         set_options(self.delimiter_dropdown, ("", *Delimiter.get_views()), self.ctrl.onchange_delimiter_dropdown)
-        self.delimiter_dropdown.value = Delimiter.get_view(self.model._delimiter)
+        self.delimiter_dropdown.value = Delimiter.get_view(self.model.delimiter)
         self.header_is_included_checkbox.value = self.model.header_is_included
         self.lines_to_skip_text.value = str(self.model.lines_to_skip)
         self.scenarios_to_ignore_text.value = self.model.scenarios_to_ignore_str
@@ -453,21 +408,20 @@ class View:
         table_content = self.model.input_data_preview_content
         number_of_columns = table_content.shape[1]
         table_content = table_content.flatten()
-        # -Increase cache size if it's insufficient
-        if len(table_content) > len(self._cached_children_of_input_data_preview_table):
-            cache_addition = [ui.Box([ui.Label("")]) for _ in range(len(table_content))]
-            self._cached_children_of_input_data_preview_table += cache_addition
+        # -Increase pool size if it's insufficient
+        if len(table_content) > len(self._input_data_table_childrenpool):
+            pool_addition = [ui.Box([ui.Label("")]) for _ in range(len(table_content))]
+            self._input_data_table_childrenpool += pool_addition
         content_index = 0
+        assert self._input_data_table_childrenpool is not None
         for content in table_content:
-            content_box = self._cached_children_of_input_data_preview_table[content_index]
+            content_box = self._input_data_table_childrenpool[content_index]
             assert isinstance(content_box, ui.Box)
             content_label = content_box.children[0]
             assert isinstance(content_label, ui.Label)
             content_label.value = content
             content_index += 1
-        self.input_data_preview_table.children = self._cached_children_of_input_data_preview_table[
-            : table_content.size
-        ]
+        self.input_data_preview_table.children = self._input_data_table_childrenpool[: table_content.size]
         self.input_data_preview_table.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
         # Output data preview table
         table_content = self.model.output_data_preview_content
@@ -484,6 +438,184 @@ class View:
         # TODO: remove this after a proper test suite has been created
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = False
 
+    def update_integrity_checking_page(self) -> None:
+        """Update the integrity checking page"""
+        # Update row summaries
+        self.rows_w_struct_issues_lbl.value = "{:,}".format(self.model.nrows_w_struct_issue)
+        self.rows_w_ignored_scenario_lbl.value = "{:,}".format(self.model.nrows_w_ignored_scenario)
+        self.duplicate_rows_lbl.value = "{:,}".format(self.model.nrows_duplicates)
+        self.accepted_rows_lbl.value = "{:,}".format(self.model.nrows_accepted)
+        # Update bad labels table
+        _table_rows = ""
+        for row in self.model.bad_labels_table:
+            _table_rows += "<tr>"
+            for colidx in range(len(row)):
+                field = row[colidx]
+                if colidx == 1:  # If middle field / "Associated column" field
+                    _table_rows += f"<td>{field}</td>"
+                else:
+                    _table_rows += f'<td title="{field}">{field}</td>'
+            _table_rows += "</tr>"
+        self.bad_labels_table.value = f"""
+            <table>
+                <thead>
+                    <th>Label</th>
+                    <th>Associated column</th>
+                    <th>Fix</th>
+                </thead>
+                <tbody>
+                    {_table_rows}
+                </tbody>
+            </table>
+            """
+        # Update unknown labels table
+        # - make sure the children pool is large enough
+        nrowsneeded = len(self.model.unknown_labels_table)
+        nrowssupported = int((len(self._unknown_labels_table_childrenpool) - 5) / 5)  # -5 to account for header row
+        if nrowsneeded > nrowssupported:
+            for row_index in range(nrowssupported, nrowsneeded):
+                dropdown = ui.Dropdown()
+                # the following lambda return a callback that can be called by ipywidgets
+                _get_dropdown_callback = lambda row_index: lambda change: self.ctrl.onchange_fix_dropdown(
+                    change, row_index
+                )
+                dropdown.observe(_get_dropdown_callback(row_index), "value")
+                checkbox = ui.Checkbox(indent=False, value=False, description="")
+                # the following lambda return a callback that can be called by ipywidgets
+                _get_checkbox_callback = lambda row_index: lambda change: self.ctrl.onchange_override_checkbox(
+                    change, row_index
+                )
+                checkbox.observe(_get_checkbox_callback(row_index), "value")
+                self._unknown_labels_table_childrenpool += [
+                    ui.Box([ui.Label("-")]),
+                    ui.Box([ui.Label("-")]),
+                    ui.Box([ui.Label("-")]),
+                    ui.Box([dropdown]),
+                    ui.Box([checkbox]),
+                ]
+        # - update the table entries
+        for row_index in range(nrowsneeded):
+            row = self.model.unknown_labels_table[row_index]
+            poolstartindex = (row_index * 5) + 5  # +5 to account for header row
+            unknownlabel_w, associatedcolumn_w, closestmatch_w, fix_w, override_w = [
+                wrapper.children[0]
+                for wrapper in self._unknown_labels_table_childrenpool[poolstartindex : poolstartindex + 5]
+            ]
+            assert isinstance(unknownlabel_w, ui.Label)
+            assert isinstance(associatedcolumn_w, ui.Label)
+            assert isinstance(closestmatch_w, ui.Label)
+            assert isinstance(fix_w, ui.Dropdown)
+            assert isinstance(override_w, ui.Checkbox)
+            unknownlabel, associatedcolumn, closestmatch, fix, override = row
+            unknownlabel_w.value = unknownlabel
+            unknownlabel_w.description = unknownlabel
+            unknownlabel_w.description_tooltip = unknownlabel
+            associatedcolumn_w.value = associatedcolumn
+            closestmatch_w.value = closestmatch
+            fix_w.value = None
+            if associatedcolumn == "-":
+                fix_w.options = [""]
+            elif associatedcolumn == "Scenario":
+                fix_w.options = ["", *self.model.valid_scenarios]
+            elif associatedcolumn == "Region":
+                fix_w.options = ["", *self.model.valid_regions]
+            elif associatedcolumn == "Variable":
+                fix_w.options = ["", *self.model.valid_variables]
+            elif associatedcolumn == "Item":
+                fix_w.options = ["", *self.model.valid_items]
+            elif associatedcolumn == "Unit":
+                fix_w.options = ["", *self.model.valid_units]
+            else:
+                raise Exception("Unexpected associated column")
+            fix_w.value = fix
+            override_w.value = override
+        self.unknown_labels_table.children = self._unknown_labels_table_childrenpool[: (nrowsneeded + 1) * 5]
+
+    def update_plausibility_checking_page(self) -> None:
+        """Update the plausibility checking page"""
+        # Update tab elemetns and tab content
+        is_active: Callable[[VisualizationTab], bool] = lambda tab: self.model.active_visualization_tab == tab
+        if is_active(VisualizationTab.VALUE_TRENDS):
+            self.value_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.value_trends_tab_content.remove_class(CSS.DISPLAY_MOD__NONE)
+        else:
+            self.value_trends_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.value_trends_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+        if is_active(VisualizationTab.GROWTH_TRENDS):
+            self.growth_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.growth_trends_tab_content.remove_class(CSS.DISPLAY_MOD__NONE)
+        else:
+            self.growth_trends_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.growth_trends_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+        if is_active(VisualizationTab.BOX_PLOT):
+            self.box_plot_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.box_plot_tab_content.remove_class(CSS.DISPLAY_MOD__NONE)
+        else:
+            self.box_plot_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.box_plot_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+        # Update select options
+        # self.scenario_select.options = self.model.uploaded_scenarios
+        # self.region_select.options = self.model.uploaded_regions
+        # self.variable_select.options = self.model.uploaded_variables
+        # self.item_select.options = self.model.uploaded_items
+        # self.year_select.options = self.model.uploaded_years
+        # self.unit_select.options = self.model.uploaded_units
+
+    def _build_app(self) -> ui.Box:
+        """Build the application"""
+        # Constants
+        APP_TITLE = "AgMIP Model Submission Pipeline"
+        PAGE_TITLES = ["File Upload", "Data Specification", "Integrity Checking", "Plausibility Checking"]
+        NUM_OF_PAGES = len(PAGE_TITLES)
+        # Create notification widget
+        notification_text = ui.Label("")
+        self.notification = ui.HBox(children=(Icon.SUCCESS, notification_text))
+        self.notification.add_class(CSS.NOTIFICATION)
+        # Create header bar
+        header_bar = ui.HTML(APP_TITLE)
+        header_bar.add_class(CSS.HEADER_BAR)
+        # Create stepper
+        stepper_children = []
+        for page_index in range(0, NUM_OF_PAGES):
+            _number = ui.HTML(value=str(page_index + 1))
+            _number.add_class(CSS.STEPPER_EL__NUMBER)
+            _title = ui.Label(PAGE_TITLES[page_index])
+            _title.add_class(CSS.STEPPER_EL__TITLE)
+            _separator = ui.HTML("<hr width=48px/>")
+            _separator.add_class(CSS.STEPPER_EL__SEPARATOR)
+            stepper_element = ui.Box([_number, _title]) if page_index == 0 else ui.Box([_separator, _number, _title])
+            stepper_element.add_class(CSS.STEPPER_EL)
+            stepper_element.add_class(CSS.STEPPER_EL__CURRENT if page_index == 0 else CSS.STEPPER_EL__INACTIVE)
+            stepper_children += [stepper_element]
+        self.page_stepper = ui.HBox(stepper_children)
+        # self.page_stepper.add_class(CSS.STEPPER)
+        # Create app pages & page container
+        self.page_container = ui.Box(
+            [
+                self._build_file_upload_page(),
+                self._build_data_specification_page(),
+                self._build_integrity_checking_page(),
+                self._build_plausibility_checking_page(),
+            ],
+            layout=ui.Layout(flex="1", width="100%"),  # page container stores the current page
+        )
+        # Hide all pages, except for the first one
+        for page in self.page_container.children[1:]:
+            page.add_class(CSS.DISPLAY_MOD__NONE)
+        return CSS.assign_class(
+            ui.VBox(  # app container
+                [
+                    self.notification,
+                    header_bar,  # -header bar
+                    ui.VBox(  # -body container
+                        children=[self.page_stepper, self.page_container],  # --page stepper, page container
+                        layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
+                    ),
+                ],
+            ),
+            CSS.APP,
+        )
+
     def _build_file_upload_page(self) -> ui.Box:
         """Build the file upload page"""
         from scripts.model import JSAppModel
@@ -495,7 +627,6 @@ class View:
         )
         UPLOADED_FILE = '<div style="width: 125px; line-height: 36px;">Uploaded file</div>'
         SAMPLE_FILE = '<div style="width: 125px; line-height: 36px;">Sample file</div>'
-
         # Create file upload area / ua
         ua_background = ui.Box(
             [
@@ -521,7 +652,6 @@ class View:
             layout=ui.Layout(margin="32px 0px"),
         )
         upload_area._dom_classes = [CSS.UA]
-
         # Create uploaded filename box
         # -Create snackbar to tell the user that no file has been uploaded
         no_file_uploaded = ui.HTML(
@@ -544,7 +674,6 @@ class View:
         uploaded_file_snackbar.add_class(CSS.DISPLAY_MOD__NONE)  # By default this snackbar is hidden
         # -Create the box
         self.uploaded_file_name_box = ui.Box([no_file_uploaded, uploaded_file_snackbar])
-
         # Buttons
         download_button = ui.HTML(
             """
@@ -552,6 +681,7 @@ class View:
                     href="workingdir/SampleData.csv" 
                     download="SampleData.csv"
                     class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-danger" 
+                    style="line-height:36px;"
                     title=""
                 >
                     Download
@@ -585,6 +715,7 @@ class View:
         )
 
     def _build_data_specification_page(self) -> ui.Box:
+        """Build the data specification page"""
         # Create all control widgets in this page
         # -specification widgets
         control_layout = ui.Layout(flex="1 1", max_width="100%", display="flex")
@@ -598,7 +729,7 @@ class View:
         self.delimiter_dropdown.observe(self.ctrl.onchange_delimiter_dropdown, "value")
         self.scenarios_to_ignore_text = ui.Textarea(
             placeholder="(Optional) Enter comma-separated scenario values",
-            layout=ui.Layout(flex="1", height="66px"),
+            layout=ui.Layout(flex="1", height="72px"),
             continuous_update=False,
         )
         self.scenarios_to_ignore_text.observe(self.ctrl.onchange_scenarios_to_ignore_text, "value")
@@ -619,14 +750,12 @@ class View:
         self.value_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.value_column_dropdown.observe(self.ctrl.onchange_value_column_dropdown, "value")
         # -preview table widgets
-        self._cached_children_of_input_data_preview_table = [
+        self._input_data_table_childrenpool = [
             ui.Box([ui.Label("")]) for _ in range(33)  # Using 33 as cache size is random
         ]
         self.input_data_preview_table = CSS.assign_class(
             ui.GridBox(
-                self._cached_children_of_input_data_preview_table[
-                    :24
-                ],  # 24 because we assume the table dimension to be
+                self._input_data_table_childrenpool[:24],  # 24 because we assume the table dimension to be
                 # 3 x 8 (the row number will stay the same, but the column number may vary)
                 layout=ui.Layout(grid_template_columns="repeat(8, 1fr)"),
             ),
@@ -639,7 +768,6 @@ class View:
             ),
             CSS.PREVIEW_TABLE,
         )
-
         # -page navigation widgets
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_.on_click(self.ctrl.onclick_next_from_page_2)
@@ -675,8 +803,8 @@ class View:
             ),
             layout=ui.Layout(padding="8px 0px 16px 0px"),
         )
-
-        page = ui.VBox(  # Page
+        # Create page
+        return ui.VBox(  # Page
             (
                 ui.VBox(  # -Box to fill up the space above navigation buttons
                     (
@@ -724,10 +852,396 @@ class View:
             ),
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
         )
-        return page
 
     def _build_integrity_checking_page(self) -> ui.Box:
-        return ui.Box()
+        """Build the integrity checking page"""
+        # Create the control widgets
+        # - download buttons
+        download_rows_field_issues_btn = ui.HTML(
+            f"""
+                <a
+                    href="{str(self.model.struct_issue_filepath)}" 
+                    download="{str(self.model.struct_issue_filepath.name)}"
+                    class="{CSS.ICON_BUTTON}"
+                    style="line-height:36px;"
+                    title=""
+                >
+                    <i class="fa fa-download" style="margin-left: 4px;"></i>
+                </a>
+            """
+        )
+        download_rows_w_ignored_scenario_btn = ui.HTML(
+            f"""
+                <a
+                    href="{str(self.model.ignored_scenario_filepath)}" 
+                    download="{str(self.model.ignored_scenario_filepath.name)}"
+                    class="{CSS.ICON_BUTTON}"
+                    style="line-height:36px;"
+                    title=""
+                >
+                    <i class="fa fa-download" style="margin-left: 4px;"></i>
+                </a>
+            """
+        )
+        download_duplicate_rows_btn = ui.HTML(
+            f"""
+                <a
+                    href="{str(self.model.duplicates_filepath)}" 
+                    download="{str(self.model.duplicates_filepath.name)}"
+                    class="{CSS.ICON_BUTTON}"
+                    style="line-height:36px;"
+                    title=""
+                >
+                    <i class="fa fa-download" style="margin-left: 4px;"></i>
+                </a>
+            """
+        )
+        download_accepted_rows = ui.HTML(
+            f"""
+                <a
+                    href="{str(self.model.accepted_filepath)}" 
+                    download="{str(self.model.accepted_filepath.name)}"
+                    class="{CSS.ICON_BUTTON}"
+                    style="line-height:36px;"
+                    title=""
+                >
+                    <i class="fa fa-download" style="margin-left: 4px;"></i>
+                </a>
+            """
+        )
+        # - row summary labels
+        self.rows_w_struct_issues_lbl = ui.Label("0")
+        self.rows_w_ignored_scenario_lbl = ui.Label("0")
+        self.duplicate_rows_lbl = ui.Label("0")
+        self.accepted_rows_lbl = ui.Label("0")
+        # - bad labels table
+        _empty_row = """
+            <tr>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+            <tr>
+        """
+        self.bad_labels_table.value = f"""
+            <table>
+                <thead>
+                    <th>Label</th>
+                    <th>Associated column</th>
+                    <th>Fix</th>
+                </thead>
+                <tbody>
+                    {_empty_row * 3}
+                </tbody>
+            </table>
+            """
+        self.bad_labels_table.add_class(CSS.BAD_LABELS_TABLE)
+        # - unknown labels table
+        self._unknown_labels_table_childrenpool = [
+            ui.Box([ui.Label("Label")]),
+            ui.Box([ui.Label("Associated column")]),
+            ui.Box([ui.Label("Closest Match")]),
+            ui.Box([ui.Label("Fix")]),
+            ui.Box([ui.Label("Override")]),
+        ]
+        from copy import deepcopy
+
+        for index in range(10):
+            dropdown = ui.Dropdown()
+            # the following lambda return a callback that can be called by ipywidgets
+            _get_dropdown_callback = lambda row_index: lambda change: self.ctrl.onchange_fix_dropdown(change, row_index)
+            dropdown.observe(_get_dropdown_callback(index), "value")
+            checkbox = ui.Checkbox(indent=False, value=False, description="")
+            # the following lambda return a callback that can be called by ipywidgets
+            _get_checkbox_callback = lambda row_index: lambda change: self.ctrl.onchange_override_checkbox(
+                change, row_index
+            )
+            checkbox.observe(_get_checkbox_callback(index), "value")
+            self._unknown_labels_table_childrenpool += [
+                ui.Box([ui.Label("-")]),
+                ui.Box([ui.Label("-")]),
+                ui.Box([ui.Label("-")]),
+                ui.Box([dropdown]),
+                ui.Box([checkbox]),
+            ]
+        self.unknown_labels_table.children = self._unknown_labels_table_childrenpool[:20]
+        self.unknown_labels_table.add_class("c-unknown-labels-table")
+        # - page navigation buttons
+        next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
+        next_.on_click(self.ctrl.onclick_next_from_page_3)
+        previous = ui.Button(
+            description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
+        )
+        previous.on_click(self.ctrl.onclick_previous_from_page_3)
+        # Create page
+        return ui.VBox(  # Page
+            (
+                ui.VBox(  # -Box to fill up the space above navigation buttons
+                    (
+                        ui.VBox(  # --Box for the page's main components
+                            (
+                                ui.HTML('<b style="line-height:13px; margin-bottom:4px;">Rows overview</b>'),
+                                ui.HTML(
+                                    '<span style="line-height: 13px; color: var(--grey);">The'
+                                    " table shows an overview of the uploaded data's rows. The"
+                                    " rows can be downloaded to be analyzed.</span>"
+                                ),
+                                ui.HBox(
+                                    [
+                                        CSS.assign_class(
+                                            ui.GridBox(  # ----Bad rows overview table
+                                                (
+                                                    ui.Box(
+                                                        (
+                                                            ui.Label(
+                                                                "Number of rows with structural issues (missing fields,"
+                                                                " etc)"
+                                                            ),
+                                                        )
+                                                    ),
+                                                    ui.Box((self.rows_w_struct_issues_lbl,)),
+                                                    ui.Box(
+                                                        (ui.Label("Number of rows containing an ignored scenario"),)
+                                                    ),
+                                                    ui.Box((self.rows_w_ignored_scenario_lbl,)),
+                                                    ui.HTML("Number of duplicate rows"),
+                                                    ui.Box((self.duplicate_rows_lbl,)),
+                                                    ui.Box((ui.Label("Number of accepted rows"),)),
+                                                    ui.Box((self.accepted_rows_lbl,)),
+                                                ),
+                                            ),
+                                            CSS.ROWS_OVERVIEW_TABLE,
+                                        ),
+                                        ui.VBox(
+                                            children=[
+                                                download_rows_field_issues_btn,
+                                                download_rows_w_ignored_scenario_btn,
+                                                download_duplicate_rows_btn,
+                                                download_accepted_rows,
+                                            ],
+                                            layout=ui.Layout(margin="16px 0px 20px 0px"),
+                                        ),
+                                    ]
+                                ),
+                                ui.HTML('<b style="line-height:13px; margin-bottom:4px;">Bad labels overview</b>'),
+                                ui.HTML(
+                                    '<span style="line-height: 13px; color: var(--grey);">The table lists'
+                                    " labels that are recognized by the program but do not adhere to the correct"
+                                    " standard. They have been fixed automatically."
+                                ),
+                                self.bad_labels_table,
+                                ui.HTML(
+                                    '<b style="line-height:13px; margin: 20px 0px 4px;">Unknown labels overview</b>'
+                                ),
+                                ui.HTML(
+                                    '<span style="line-height: 13px; color: var(--grey);">The table lists labels that'
+                                    " are not recognized by the program. Please fix or override the labels,"
+                                    " otherwise records containing them will be dropped."
+                                ),
+                                self.unknown_labels_table,
+                            ),
+                            layout=ui.Layout(width="850px"),
+                        ),
+                    ),
+                    layout=ui.Layout(flex="1", width="100%", justify_content="center", align_items="center"),
+                ),
+                ui.HBox(  # -Navigation buttons box
+                    [previous, next_], layout=ui.Layout(justify_content="flex-end", width="100%")
+                ),
+            ),
+            layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
+        )
 
     def _build_plausibility_checking_page(self) -> ui.Box:
-        return ui.Box()
+        # Control widgets
+        value_tab_btn = ui.Button()
+        value_tab_btn.on_click(self.ctrl.onclick_value_trends_tab)
+        growth_tab_btn = ui.Button()
+        growth_tab_btn.on_click(self.ctrl.onclick_growth_trends_tab)
+        box_tab_btn = ui.Button()
+        box_tab_btn.on_click(self.ctrl.onclick_box_plot_tab)
+        self.value_trends_tab_element = ui.Box([ui.Label("Value trends"), value_tab_btn])
+        self.value_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT)
+        self.growth_trends_tab_element = ui.Box([ui.Label("Growth trends"), growth_tab_btn])
+        self.growth_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT)
+        self.box_plot_tab_element = ui.Box([ui.Label("Box plot"), box_tab_btn])
+        self.box_plot_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT)
+        visualization_tab = CSS.assign_class(
+            ui.GridBox(
+                [
+                    self.value_trends_tab_element,
+                    self.growth_trends_tab_element,
+                    self.box_plot_tab_element,
+                ]
+            ),
+            CSS.VISUALIZATION_TAB,
+        )
+        visualization_tab.children[0].add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+        # value trends tab page
+        _select_layout = ui.Layout(width="200px", height="76px")
+        self.scenario_select = ui.Select(layout=_select_layout, options=self.model.uploaded_scenarios)
+        self.region_select = ui.Select(layout=_select_layout, options=self.model.uploaded_regions)
+        self.variable_select = ui.Select(layout=_select_layout, options=self.model.uploaded_variables)
+        self.item_select = ui.Select(layout=_select_layout, options=self.model.uploaded_items)
+        self.year_select = ui.Select(layout=_select_layout, options=self.model.uploaded_years)
+        self.value_trends_tab_content = ui.VBox(
+            [
+                ui.GridBox(
+                    (
+                        ui.HTML("1. Scenario"),
+                        self.scenario_select,
+                        ui.HTML("2. Region"),
+                        self.region_select,
+                        ui.HTML("3. Variable"),
+                        self.variable_select,
+                        ui.HTML("4. Base year"),
+                        self.year_select,
+                    ),
+                    layout=ui.Layout(
+                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr",
+                        grid_gap="16px 16px",
+                    ),
+                ),
+                ui.Box(
+                    [ui.HTML('<img src="value_trends.png">')],
+                    layout=ui.Layout(
+                        width="600px",
+                        height="330px",
+                        border="1px solid grey",
+                        margin="24px 0px 0px",
+                        justify_content="center",
+                        align_items="center",
+                    ),
+                ),
+            ],
+            layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
+        )
+        # growth trends tab page
+        self.growth_trends_tab_content = ui.VBox(
+            [
+                ui.GridBox(
+                    (
+                        ui.HTML("1. Scenario"),
+                        self.scenario_select,
+                        ui.HTML("2. Region"),
+                        self.region_select,
+                        ui.HTML("3. Variable"),
+                        self.variable_select,
+                    ),
+                    layout=ui.Layout(
+                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", min_height="168px"
+                    ),
+                ),
+                ui.Box(
+                    [ui.HTML('<img src="growth_trends.png">')],
+                    layout=ui.Layout(
+                        width="600px",
+                        height="330px",
+                        border="1px solid grey",
+                        margin="24px 0px 0px",
+                        justify_content="center",
+                        align_items="center",
+                    ),
+                ),
+            ],
+            layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
+        )
+        self.growth_trends_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+        # box plot tab page
+        self.box_plot_tab_content = ui.VBox(
+            [
+                ui.GridBox(
+                    (
+                        ui.HTML("1. Scenario"),
+                        self.scenario_select,
+                        ui.HTML("2. Region"),
+                        self.region_select,
+                        ui.HTML("3. Variable"),
+                        self.variable_select,
+                        ui.HTML("4. Item"),
+                        self.item_select,
+                        ui.HTML("5. Year"),
+                        self.year_select,
+                    ),
+                    layout=ui.Layout(
+                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr",
+                        grid_gap="16px 16px",
+                    ),
+                ),
+                ui.Box(
+                    [ui.HTML('<img src="box_plot.png">')],
+                    layout=ui.Layout(
+                        width="600px",
+                        height="330px",
+                        border="1px solid grey",
+                        margin="24px 0px 0px",
+                        justify_content="center",
+                        align_items="center",
+                    ),
+                ),
+            ],
+            layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
+        )
+        self.box_plot_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+        # -page navigation widgets
+        # TODO: Incorporate submit
+        # submit = ui.Button(description="Submit", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
+        # submit.on_click(self.ctrl.onclick_submit)
+        download = ui.HTML(
+            f"""
+                <a
+                    href="{str(self.model.output_filepath)}" 
+                    download="{str(self.model.output_filepath.name)}"
+                    class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-info" 
+                    style="line-height:36px;"
+                    title=""
+                >
+                    Download
+                    <i class="fa fa-download" style="margin-left: 4px;"></i>
+                </a>
+            """
+        )
+        previous = ui.Button(
+            description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
+        )
+        previous.on_click(self.ctrl.onclick_previous_from_page_4)
+        # Create page
+        return ui.VBox(  # Page
+            (
+                ui.VBox(  # -Box to fill up the space above navigation buttons
+                    (
+                        ui.VBox(  # --Box for the page's main components
+                            (
+                                ui.HBox(
+                                    [
+                                        ui.VBox(
+                                            [
+                                                ui.HTML(
+                                                    '<b style="line-height:13px; margin-bottom:4px;">Plausibility'
+                                                    " checking</b>"
+                                                ),
+                                                ui.HTML(
+                                                    '<span style="line-height: 13px; color: var(--grey);">Visualize the'
+                                                    " uploaded data and verify that it looks plausible (Work-in-progress).</span>"
+                                                ),
+                                            ],
+                                            layout=ui.Layout(height="32px"),
+                                        ),
+                                        visualization_tab,
+                                    ],
+                                    layout=ui.Layout(
+                                        align_items="center", justify_content="space-between", width="100%"
+                                    ),
+                                ),
+                                self.value_trends_tab_content,
+                                self.growth_trends_tab_content,
+                                self.box_plot_tab_content,
+                            ),
+                            layout=ui.Layout(width="900px", align_items="center"),
+                        ),
+                    ),
+                    layout=ui.Layout(flex="1", width="100%", justify_content="center", align_items="center"),
+                ),
+                ui.HBox([previous, download], layout=ui.Layout(justify_content="flex-end", width="100%")),  # -buttons box
+            ),
+            layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
+        )

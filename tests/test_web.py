@@ -56,7 +56,7 @@ class TestFileUploadSuite:
         options = webdriver.ChromeOptions()
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--window-size=1440, 900")
+        options.add_argument("--window-size=1440, 1440")
         options.add_argument("--headless")
         self.driver = webdriver.Chrome(options=options)
         self.wait = WebDriverWait(self.driver, 20)  # Set explicit wait time to X seconds
@@ -159,23 +159,13 @@ class TestFileUploadSuite:
         # Check if we switched page
         self.wait.until(expected_conditions.invisibility_of_element((By.CLASS_NAME, CSS.UA__BACKGROUND)))
         # Check if stepper element changes color appropriately
-        page_1_number_locator = (
+        page_1_stepper_element = (
             By.XPATH,
             '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[1]',
         )
-        page_1_2_separator_locator = (
+        page_2_stepper_element = (
             By.XPATH,
-            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[3]',
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[2]',
         )
-        page_2_number_locator = (
-            By.XPATH,
-            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[4]',
-        )
-        page_2_title_locator = (
-            By.XPATH,
-            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[5]',
-        )
-        self.wait.until(presence_of_class_name(page_1_number_locator, CSS.STEPPER__NUMBER__ACTIVE))
-        self.wait.until(presence_of_class_name(page_1_2_separator_locator, CSS.STEPPER__SEPARATOR__ACTIVE))
-        self.wait.until(presence_of_class_name(page_2_number_locator, CSS.STEPPER__NUMBER__CURRENT))
-        self.wait.until(presence_of_class_name(page_2_title_locator, CSS.STEPPER__TITLE__ACTIVE))
+        self.wait.until(presence_of_class_name(page_1_stepper_element, CSS.STEPPER_EL__ACTIVE))
+        self.wait.until(presence_of_class_name(page_2_stepper_element, CSS.STEPPER_EL__CURRENT))

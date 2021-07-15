@@ -4,7 +4,8 @@
         --dark-blue: #1E3A8A;
         --blue: #60A5FA;
         --light-blue: #93C5FD;
-        --grey: #757575;
+        /* --grey: #757575; */
+        --grey: #4B5563;
         --green: #34D399;
         --light-grey: #D3D3D3;
         --alert-blue: #007bff;
@@ -12,6 +13,8 @@
         --alert-green: var(--green);
         /* --alert-green: #28a745; */
         --alert-yellow: #ffc107;
+    
+        --jp-widgets-input-border-color: var(--light-grey)
     }
 
     /*** Style basic HTML elements ***/
@@ -25,7 +28,7 @@
         border-color: inherit; /* It seems like there's no way to assign a CSS class to a <hr> element, since ipywidgets
                                   will always wrap it with <div>. So, we let it inherit from its parent element and style
                                   the parent instead. */
-    }
+    } 
 
     textarea{
         resize: none;
@@ -44,7 +47,6 @@
 
     /* Change button style */
     .jupyter-button {
-        line-height: 36px;
         height: 36px;
         width: 132px;
         border-radius: 4px;
@@ -52,7 +54,7 @@
         color: white;
     }
     .jupyter-button:active:enabled {
-        background: #6072fa;
+        background: #4999fa;
         color: white;
     }
     .jupyter-button:active:disabled {
@@ -150,11 +152,14 @@
     ***/
 
     /* App */
+    @import url('https://fonts.googleapis.com/css2?family=Lato&display=swap');
     .c-app-container {
+        font-family:'Lato', sans-serif;
         width: 100%;
-        height: 912px;
+        height: 840px;
         border: 1px solid var(--dark-blue);
         padding: 0px 0px;
+        margin: 0px 0px 40px;
     }
 
     /* Cursor modification */    
@@ -177,7 +182,7 @@
     .c-color-mod--black{
         color: black;
     }
-    .c-color-mode--grey {
+    .c-color-mod--grey {
         color: var(--grey);
     }
 
@@ -200,11 +205,11 @@
 
     /* Icon button */
     .c-icon-button {
-        height: 28px;
-        width: 28px;
+        height: 30px;
+        width: 30px;
         border-radius: 50%;
         background: transparent !important;
-        color: white;
+        color: var(--light-grey);
         font-size: 10px;
         line-height: 10px;
         text-align: center;
@@ -215,7 +220,7 @@
         box-shadow: none !important;
     }
     .c-icon-button:active {
-        color: var(--blue) !important;
+        color: transparent !important;
     }
 
     /* Header bar */
@@ -229,11 +234,11 @@
         margin: 0px 0px;
     }
 
-    /* Stepper */
-    .c-stepper {
+    /* Stepper element */
+    .c-stepper-element {
         align-items: center;
     }
-    .c-stepper__number {
+    .c-stepper-element__number {
         font-size: 15px;
         color: white;
         height: 40px;
@@ -243,32 +248,36 @@
         justify-content: center;
         margin: 0px 4px;
     }
-    .c-stepper__number--current {
+    .c-stepper-element__title {
+        padding: 0px 4px;
+    }
+    .c-stepper-element__separator {
+        width: 48px;
+    }
+    /* -style element number under different element modifiers */
+    .c-stepper-element--current > .c-stepper-element__number {
         background: var(--blue);
-        color: white;
     }
-    .c-stepper__number--active {
+    .c-stepper-element--active > .c-stepper-element__number {
         background: var(--green);
-        color: white;
     }
-    .c-stepper__number--inactive {
+    .c-stepper-element--inactive > .c-stepper-element__number {
         background: var(--light-grey);
-        color: white;
     }
-    .c-stepper__title--active {
+    /* -style element title under different element modifiers */
+    .c-stepper-element--current > .c-stepper-element__title,
+    .c-stepper-element--active > .c-stepper-element__title {
         color: var(--dark-blue);
-        padding: 0px 4px;
     }
-    .c-stepper__title--inactive {
+    .c-stepper-element--inactive > .c-stepper-element__title {
         color: var(--light-grey);
-        padding: 0px 4px;
     }
-    .c-stepper__separator--active {
-        padding: 0px 4px;
+    /* -style element separator under different element modifiers */
+    .c-stepper-element--current > .c-stepper-element__separator,
+    .c-stepper-element--active > .c-stepper-element__separator {
         color: var(--blue);
     }
-    .c-stepper__separator--inactive {
-        padding: 0px 4px;
+    .c-stepper-element--inactive > .c-stepper-element__separator {
         color: var(--light-grey);
     }
 
@@ -373,8 +382,8 @@
     .c-column-assignment-table {
         display: grid;
         grid-template-columns: repeat(8, 1fr);  /* 100% / 8 */
-        background: var(--jp-border-color1);
-        border: 1px solid var(--jp-border-color1);
+        background: var(--light-grey);
+        border: 1px solid var(--light-grey);
         margin: 8px 0px 16px 0px;
         grid-gap: 1px 1px;
     }
@@ -383,15 +392,19 @@
         background: white;
         justify-content: center;
     }
+    .c-column-assignment-table > *:nth-child(-n+8) {  /*Target the first row*/
+        font-weight: bold;
+    }
     .c-column-assignment-table select {
         border: none;
         width: inherit;
+        text-overflow: ellipsis;
     }
 
     /* Preview table */
     .c-preview-table {
-        background: var(--jp-border-color1);
-        border: 1px solid var(--jp-border-color1);
+        background: var(--light-grey);
+        border: 1px solid var(--light-grey);
         margin: 8px 0px 16px 0px;
         grid-gap: 1px 0px;
     }
@@ -401,4 +414,156 @@
         justify-content: flex-start;
         padding: 0px 16px;
     }
+
+    /* Rows overview table */
+    .c-rows-overview-table {
+        background: var(--light-grey);
+        border: 1px solid var(--light-grey);
+        margin: 16px 0px 20px 0px;
+        grid-template-columns: 3fr 1fr;
+        width: 484px;
+        grid-gap: 1px 1px;
+    }
+    .c-rows-overview-table > *:nth-child(2n - 1) {  /*target children in the second last column out of 2 columns*/
+        width: 100%;
+        background: white;
+        justify-content: flex-start;
+        padding: 0px 16px;
+    }
+    .c-rows-overview-table > *:nth-child(2n) {  /*target children in the last column out of 2 columns*/
+        width: 100%;
+        background: white;
+        justify-content: center;
+    }
+
+    /* Labels overview table */
+    .c-bad-labels-table {
+        display: block;
+        height: 117px;
+        max-height: 121px;
+        width: 510px;
+        margin: 16px 0px 0px 0px;
+        overflow: auto;
+        border: 1px solid var(--light-grey);
+    }
+    .c-bad-labels-table table {
+        border-collapse: separate;
+        background: var(--light-grey);
+        /* table-layout: fixed; */
+    }
+    .c-bad-labels-table thead {
+        /* border-bottom: 1px solid var(--light-grey); */
+    }
+    .c-bad-labels-table tr {
+        /* border: 1px solid var(--light-grey); */
+        height: 26px;
+    }
+    .c-bad-labels-table th {
+        background: white;
+        text-align: center;
+        height: 26px;
+        width: 166px;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        border-right: 1px solid var(--light-grey);
+        border-bottom: 1px solid var(--light-grey) !important;
+    }
+    .c-bad-labels-table td {
+        background: white;
+        text-align: center;
+        height: 26px;
+        width: 166px;
+        max-width: 166px;
+        overflow: hidden;
+        padding: 0px 8px;
+        text-overflow: ellipsis;
+        border-right: 1px solid var(--light-grey);
+        border-bottom: 1px solid var(--light-grey);
+    }
+
+    /* Unknown labels table */
+    .c-unknown-labels-table {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);  /* 100% / 5 */
+        background: var(--light-grey);
+        border: 1px solid var(--light-grey);
+        margin: 16px 0px 0px 0px;
+        /* width: 100%; */
+        grid-gap: 1px 1px;
+        height: 116px;
+        overflow-y: auto;
+    }
+    .c-unknown-labels-table > * {   /* Target all wrappers for table item */
+        height: 28px;
+        width: 100%;
+        background: white;
+        justify-content: center;
+        padding: 0px 8px
+    }
+    .c-unknown-labels-table .widget-dropdown {    /* Target all dropdown wrapper*/
+        width: inherit;
+    }
+    .c-unknown-labels-table select {    /* Target all dropdown */
+        width: inherit;
+        border: none;
+        text-overflow: ellipsis;
+    }
+    .c-unknown-labels-table .widget-checkbox {  /* Target all checkbox wrappers */
+        width: auto;
+    }
+    .c-unknown-labels-table input[type="checkbox"] {    /* Target all checkbox*/
+        margin-right: 0px;
+    }
+    .c-unknown-labels-table > .widget-box:nth-child(-n+5) { /* Target the first row */
+        font-weight: bold;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        align-self: start;
+        box-shadow: 0 1px 0 0 var(--light-grey);
+    }
+    .c-unknown-labels-table > .widget-box:nth-child(5n) { /* Target the fifth / last column */
+        border-right: 1px solid var(--light-grey);
+    }
+
+    /* Visualization tab */
+    .c-visualization-tab {
+        grid-template-columns: 1fr 1fr 1fr;
+        width: 330px;
+        height: 36px;
+        border-radius: 5px;
+        border: 1px solid #60A5FA;
+        grid-gap: 1px;
+        background: #60A5FA;
+    }
+    .c-visualization-tab__element {
+        position: relative;
+        background: white;
+        color: #60A5FA;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .c-visualization-tab__element--active {
+        background: #60A5FA;
+        color: white;
+    }
+    .c-visualization-tab__element > .widget-label {     /* .widget-label is defined by ipywidgets */
+        color: inherit;
+    }
+    .c-visualization-tab__element > button {    /* Style the hidden button that gives the tab clickable functionality */
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        background: transparent;
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+    }
+    .c-visualization-tab button:active:enabled {
+        background: transparent;
+    }
+
 </style>

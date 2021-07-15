@@ -1,9 +1,10 @@
 from __future__ import annotations  # Delay the evaluation of undefined types
 from pathlib import Path
-from scripts.model import Step
 
 import ipywidgets as ui
 
+from .namespaces import VisualizationTab
+from .namespaces import Page
 from .view import CSS, Delimiter, Notification
 
 
@@ -25,66 +26,12 @@ class Controller:
         """Load data, build UI"""
         self.view.display()
 
-    def reset_later_steps(self, last_finished_step: int) -> None:
-        """Set the last active page based on the given argument
-        Last active page number = Last finished step + 1
-        """
-        if self.model.last_finished_step == last_finished_step:
+    def _reset_later_pages(self) -> None:
+        """Set the current page as the last/furthest active page"""
+        if self.model.furthest_active_page == self.model.current_page:
             return
-        self.model.last_finished_step = last_finished_step
-        current_page_number = last_finished_step + 1
-        self.view.switch_page(current_page_number, is_last_active_page=True)
-
-    def validate_data_specification_input(self) -> bool:  # TODO: Should be moved to model
-        """Return true if all input are entered correctly, and false if not"""
-        is_valid = False
-        try:
-            if len(self.model.model_name) == 0:
-                self.view.show_notification(Notification.WARNING, "Model name is empty")
-            elif len(self.model.delimiter) == 0:
-                self.view.show_notification(Notification.WARNING, "Delimiter is empty")
-            elif int(self.model.lines_to_skip) < 0:
-                self.view.show_notification(
-                    Notification.WARNING, "Number of lines cannot be negative"
-                )
-            elif len(self.model.assigned_scenario_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Scenario column is empty")
-            elif len(self.model.assigned_region_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Region column is empty")
-            elif len(self.model.assigned_variable_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Variable column is empty")
-            elif len(self.model.assigned_item_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Item column is empty")
-            elif len(self.model.assigned_unit_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Unit column is empty")
-            elif len(self.model.assigned_year_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Year column is empty")
-            elif len(self.model.assigned_value_column) == 0:
-                self.view.show_notification(Notification.WARNING, "Value column is empty")
-            elif (
-                len(
-                    set(
-                        [
-                            self.model.assigned_scenario_column,
-                            self.model.assigned_region_column,
-                            self.model.assigned_variable_column,
-                            self.model.assigned_item_column,
-                            self.model.assigned_unit_column,
-                            self.model.assigned_year_column,
-                            self.model.assigned_value_column,
-                        ]
-                    )
-                )
-                < 7  # If there are no duplicate assignment, we should have a set of 7 columns
-            ):
-                self.view.show_notification(
-                    Notification.WARNING, "Output data has duplicate columns"
-                )
-            else:
-                is_valid = True
-        except ValueError:
-            self.view.show_notification(Notification.WARNING, "Invalid number of lines")
-        return is_valid
+        self.model.furthest_active_page = self.model.current_page
+        self.view.update_base_app()
 
     def onchange_ua_file_label(self, change: dict) -> None:
         """Value of the hidden file label in upload area (ua) changed"""
@@ -100,7 +47,7 @@ class Controller:
             self.view.show_notification(Notification.ERROR, Notification.INVALID_FILE_FORMAT)
             self.model.remove_file(file_name)
             self.model.uploaded_filename = ""
-        self.reset_later_steps(last_finished_step=Step.INITIAL)
+        self._reset_later_pages()
 
     def onclick_remove_file(self, widget: ui.Button) -> None:
         """'x' button in the file upload snackbar was clicked"""
@@ -108,36 +55,65 @@ class Controller:
         self.model.remove_file(self.model.uploaded_filename)
         self.model.uploaded_filename = ""
         self.view.update_file_upload_page(None)
-        self.reset_later_steps(last_finished_step=Step.INITIAL)
+        self._reset_later_pages()
 
     def onclick_next_from_page_1(self, widget: ui.Button) -> None:
         """'Next' button on the file upload page was clicked"""
         if len(self.model.uploaded_filename) == 0:
             self.view.show_notification(Notification.INFO, Notification.PLEASE_UPLOAD)
             return
-        if self.model.last_finished_step == Step.INITIAL:
-            self.model.last_finished_step = Step.FILE_UPLOAD
-            self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
+        self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
+        if self.model.furthest_active_page == Page.FILE_UPLOAD:
+            self.model.furthest_active_page = Page.DATA_SPECIFICATION
             error_message = self.model.init_data_specification_states(self.model.uploaded_filename)
             self.view.update_data_specification_page()
             if error_message is not None:
                 self.view.show_notification(Notification.ERROR, error_message)
             else:
                 self.view.show_notification(Notification.INFO, Notification.FIELDS_WERE_PREPOPULATED)
-            self.view.modify_cursor(None)
-        self.view.switch_page(2)
+        self.model.current_page = Page.DATA_SPECIFICATION
+        self.view.update_base_app()
+        self.view.modify_cursor(None)
 
     def onclick_next_from_page_2(self, widget: ui.Button) -> None:
         """'Next' button on the data specification page was clicked"""
-        if not self.validate_data_specification_input():
+        warning_message = self.model.validate_data_specification_input()
+        if warning_message is not None:
+            self.view.show_notification(Notification.WARNING, warning_message)
             return
-        if self.model.last_finished_step == Step.FILE_UPLOAD:
-            self.model.last_finished_step = Step.DATA_SPECIFICATION 
-        self.view.show_notification(Notification.INFO, "Integrity checking page is still under construction")
+        self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
+        if self.model.furthest_active_page == Page.DATA_SPECIFICATION:
+            self.model.furthest_active_page = Page.INTEGRITY_CHECKING
+            self.model.init_integrity_checking_states(self.model.data_specification)
+            self.view.update_integrity_checking_page()
+        self.model.current_page = Page.INTEGRITY_CHECKING
+        self.view.update_base_app()
+        self.view.modify_cursor(None)
 
     def onclick_previous_from_page_2(self, widget: ui.Button) -> None:
         """'Previous' button on the data specification page was clicked"""
-        self.view.switch_page(1)
+        self.model.current_page = Page.FILE_UPLOAD
+        self.view.update_base_app()
+
+    def onclick_next_from_page_3(self, widget: ui.Button) -> None:
+        """'Next' button on the data specification page was clicked"""
+        warning_message = self.model.validate_unknown_labels_table(self.model.unknown_labels_table)
+        if warning_message is not None:
+            self.view.show_notification(Notification.WARNING, warning_message)
+            return
+        self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
+        if self.model.furthest_active_page == Page.INTEGRITY_CHECKING:
+            self.model.furthest_active_page = Page.PLAUSIBILITY_CHECKING
+            self.model.init_plausibility_checking_states()
+        self.model.current_page = Page.PLAUSIBILITY_CHECKING
+        self.view.update_plausibility_checking_page()
+        self.view.update_base_app()
+        self.view.modify_cursor(None)
+
+    def onclick_previous_from_page_3(self, widget: ui.Button) -> None:
+        """'Previous' button on the data specification page was clicked"""
+        self.model.current_page = Page.DATA_SPECIFICATION
+        self.view.update_base_app()
 
     def onchange_model_name_dropdown(self, change: dict) -> None:
         """The selection in 'model name' dropdown changed"""
@@ -145,9 +121,11 @@ class Controller:
         # The event is triggered programmatically by page update, and not by dropdown selection
         if new_value == self.model.model_name:
             return
+        self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
         self.model.model_name = new_value
         self.view.update_data_specification_page()
-        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+        self.view.modify_cursor(None)
+        self._reset_later_pages()
 
     def onchange_header_is_included_checkbox(self, change: dict) -> None:
         """The state of 'header is included' checkbox changed"""
@@ -155,13 +133,16 @@ class Controller:
         # The event is triggered programmatically by page update, and not by checkbox selection
         if new_value == self.model.header_is_included:
             return
+        self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
         self.model.header_is_included = new_value
         self.view.update_data_specification_page()
-        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+        self.view.modify_cursor(None)
+        self._reset_later_pages()
 
     def onchange_lines_to_skip_text(self, change: dict) -> None:
         """The content of 'lines to skip' text changed"""
         new_value = change["new"]
+        self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
         try:
             new_value = int(new_value)
             # The event is triggered programmatically by page update, and not by a user action
@@ -173,9 +154,10 @@ class Controller:
             self.model.lines_to_skip = new_value
         except:
             self.view.show_notification(Notification.WARNING, "Invalid number of lines")
-            self.model.lines_to_skip = 0 
+            self.model.lines_to_skip = 0
         self.view.update_data_specification_page()
-        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+        self.view.modify_cursor(None)
+        self._reset_later_pages()
 
     def onchange_delimiter_dropdown(self, change: dict) -> None:
         """The selection in 'delimiter' dropdown changed"""
@@ -183,11 +165,11 @@ class Controller:
         # The event is triggered programmatically by page update, and not by dropdown selection
         if new_value == self.model.delimiter:
             return
-        self.model.delimiter = new_value
         self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
+        self.model.delimiter = new_value
         self.view.update_data_specification_page()
         self.view.modify_cursor(None)
-        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+        self._reset_later_pages()
 
     def onchange_scenarios_to_ignore_text(self, change: dict) -> None:
         """The content of 'scenarios to ignore' text changed"""
@@ -197,7 +179,7 @@ class Controller:
             return
         self.model.scenarios_to_ignore_str = new_value
         self.view.update_data_specification_page()
-        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+        self._reset_later_pages()
 
     def onchange_scenario_column_dropdown(self, change: dict) -> None:
         """The selection in 'scenario column' dropdown was changed"""
@@ -207,7 +189,7 @@ class Controller:
             return
         self.model.assigned_scenario_column = new_value
         self.view.update_data_specification_page()
-        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+        self._reset_later_pages()
 
     def onchange_region_column_dropdown(self, change: dict) -> None:
         """The selection in 'region column' dropdown changed"""
@@ -217,7 +199,7 @@ class Controller:
             return
         self.model.assigned_region_column = new_value
         self.view.update_data_specification_page()
-        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+        self._reset_later_pages()
 
     def onchange_variable_column_dropdown(self, change: dict) -> None:
         """The selection in 'variable column' dropdown changed"""
@@ -227,7 +209,7 @@ class Controller:
             return
         self.model.assigned_variable_column = new_value
         self.view.update_data_specification_page()
-        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+        self._reset_later_pages()
 
     def onchange_item_column_dropdown(self, change: dict) -> None:
         """The selection in 'item column' dropdown changed"""
@@ -237,7 +219,7 @@ class Controller:
             return
         self.model.assigned_item_column = new_value
         self.view.update_data_specification_page()
-        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+        self._reset_later_pages()
 
     def onchange_unit_column_dropdown(self, change: dict) -> None:
         """The selection in 'unit column' dropdown changed"""
@@ -247,7 +229,7 @@ class Controller:
             return
         self.model.assigned_unit_column = new_value
         self.view.update_data_specification_page()
-        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+        self._reset_later_pages()
 
     def onchange_year_column_dropdown(self, change: dict) -> None:
         """The selection in 'year column' dropdown changed"""
@@ -257,7 +239,7 @@ class Controller:
             return
         self.model.assigned_year_column = new_value
         self.view.update_data_specification_page()
-        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+        self._reset_later_pages()
 
     def onchange_value_column_dropdown(self, change: dict) -> None:
         """The selection in 'value column' dropdown changed"""
@@ -267,4 +249,47 @@ class Controller:
             return
         self.model.assigned_value_column = new_value
         self.view.update_data_specification_page()
-        self.reset_later_steps(last_finished_step=Step.FILE_UPLOAD)
+        self._reset_later_pages()
+
+    def onclick_submit(self, widget: ui.Button) -> None:
+        """The 'submit' button in the last page was clicked"""
+        self.view.show_notification(Notification.INFO, "Submission feature is still in progress.")
+
+    def onclick_previous_from_page_4(self, widget: ui.Button) -> None:
+        """The 'submit' button in the last page was clicked"""
+        self.model.current_page = Page.INTEGRITY_CHECKING
+        self.view.update_base_app()
+
+    def onclick_value_trends_tab(self, widget: ui.Button) -> None:
+        """Value trends tab was clicked"""
+        self.model.active_visualization_tab = VisualizationTab.VALUE_TRENDS
+        self.view.update_plausibility_checking_page()
+
+    def onclick_growth_trends_tab(self, widget: ui.Button) -> None:
+        """Growth trends tab was clicked"""
+        self.model.active_visualization_tab = VisualizationTab.GROWTH_TRENDS
+        self.view.update_plausibility_checking_page()
+
+    def onclick_box_plot_tab(self, widget: ui.Button) -> None:
+        """Box plot tab was clicked"""
+        self.model.active_visualization_tab = VisualizationTab.BOX_PLOT
+        self.view.update_plausibility_checking_page()
+
+    def onchange_fix_dropdown(self, change: dict, row_index: int) -> None:
+        """The selection for one of the fix dropdowns in unknown labels table was changed"""
+        new_value = change["new"]
+        DROPDOWN_INDEX = 3
+        if new_value == self.model.unknown_labels_table[row_index][DROPDOWN_INDEX]:
+            return
+        self.model.unknown_labels_table[row_index][DROPDOWN_INDEX] = new_value
+        self._reset_later_pages()
+
+    def onchange_override_checkbox(self, change: dict, row_index: int) -> None:
+        """The selection for one of the override checkbox in unknown labels table was changed"""
+        new_value = change["new"]
+        CHECKBOX_INDEX = 4
+        # The event is triggered programmatically by page update, instead of by a user action
+        if new_value == self.model.unknown_labels_table[row_index][CHECKBOX_INDEX]:
+            return
+        self.model.unknown_labels_table[row_index][CHECKBOX_INDEX] = new_value
+        self._reset_later_pages()

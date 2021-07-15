@@ -45,6 +45,5 @@ jobs:
         conda run -n agmip jupyter notebook &
     - name: Test
       run: |
-        conda run -n agmip pytest tests/test_nbserver.py
-        # conda run -n agmip pytest tests/test_web.py
+        conda run -n agmip pytest 
 
