@@ -1,7 +1,9 @@
 import difflib
+import math
+import numpy as np
+from numpy import diff, mat
 from pathlib import Path
 from typing import Dict, List, Set, Optional
-from numpy import diff, mat
 
 import pandas as pd
 from pandas import DataFrame
@@ -233,10 +235,10 @@ class LabelGateway:
         return None
 
     @classmethod
-    def query_variable_min_value(cls, variable: str) -> Optional[float]:
+    def query_variable_min_value(cls, variable: str) -> float:
         """Returns the min value"""
         return -10000000.0
 
     @classmethod
-    def query_variable_max_value(cls, variable: str) -> Optional[float]:
+    def query_variable_max_value(cls, variable: str) -> float:
         return 1000000000.0

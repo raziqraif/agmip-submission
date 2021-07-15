@@ -253,6 +253,11 @@ class View:
         self.growth_trends_tab_content: ui.Box = None
         self.box_plot_tab_element: ui.Box = None
         self.box_plot_tab_content: ui.Box = None
+        self.scenario_select = ui.Select()
+        self.region_select = ui.Select()
+        self.variable_select = ui.Select()
+        self.item_select = ui.Select()
+        self.year_select = ui.Select()
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -444,8 +449,12 @@ class View:
         _table_rows = ""
         for row in self.model.bad_labels_table:
             _table_rows += "<tr>"
-            for field in row:
-                _table_rows += f"<td>{field}</td>"
+            for colidx in range(len(row)):
+                field = row[colidx]
+                if colidx == 1:  # If middle field / "Associated column" field
+                    _table_rows += f"<td>{field}</td>"
+                else:
+                    _table_rows += f'<td title="{field}">{field}</td>'
             _table_rows += "</tr>"
         self.bad_labels_table.value = f"""
             <table>
@@ -488,7 +497,6 @@ class View:
         for row_index in range(nrowsneeded):
             row = self.model.unknown_labels_table[row_index]
             poolstartindex = (row_index * 5) + 5  # +5 to account for header row
-            print(poolstartindex, nrowsneeded, nrowssupported, len(self._unknown_labels_table_childrenpool))
             unknownlabel_w, associatedcolumn_w, closestmatch_w, fix_w, override_w = [
                 wrapper.children[0]
                 for wrapper in self._unknown_labels_table_childrenpool[poolstartindex : poolstartindex + 5]
@@ -500,6 +508,8 @@ class View:
             assert isinstance(override_w, ui.Checkbox)
             unknownlabel, associatedcolumn, closestmatch, fix, override = row
             unknownlabel_w.value = unknownlabel
+            unknownlabel_w.description = unknownlabel
+            unknownlabel_w.description_tooltip = unknownlabel
             associatedcolumn_w.value = associatedcolumn
             closestmatch_w.value = closestmatch
             fix_w.value = None
@@ -543,6 +553,13 @@ class View:
         else:
             self.box_plot_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.box_plot_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+        # Update select options
+        # self.scenario_select.options = self.model.uploaded_scenarios
+        # self.region_select.options = self.model.uploaded_regions
+        # self.variable_select.options = self.model.uploaded_variables
+        # self.item_select.options = self.model.uploaded_items
+        # self.year_select.options = self.model.uploaded_years
+        # self.unit_select.options = self.model.uploaded_units
 
     def _build_app(self) -> ui.Box:
         """Build the application"""
@@ -1061,23 +1078,23 @@ class View:
         visualization_tab.children[0].add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
         # value trends tab page
         _select_layout = ui.Layout(width="200px", height="76px")
-        scenario_select = ui.Select(layout=_select_layout, options=self.model.uploaded_scenarios)
-        region_select = ui.Select(layout=_select_layout, options=self.model.uploaded_regions)
-        variable_select = ui.Select(layout=_select_layout, options=self.model.uploaded_variables)
-        item_select = ui.Select(layout=_select_layout, options=self.model.uploaded_items)
-        year_select = ui.Select(layout=_select_layout, options=self.model.uploaded_years)
+        self.scenario_select = ui.Select(layout=_select_layout, options=self.model.uploaded_scenarios)
+        self.region_select = ui.Select(layout=_select_layout, options=self.model.uploaded_regions)
+        self.variable_select = ui.Select(layout=_select_layout, options=self.model.uploaded_variables)
+        self.item_select = ui.Select(layout=_select_layout, options=self.model.uploaded_items)
+        self.year_select = ui.Select(layout=_select_layout, options=self.model.uploaded_years)
         self.value_trends_tab_content = ui.VBox(
             [
                 ui.GridBox(
                     (
                         ui.HTML("1. Scenario"),
-                        scenario_select,
+                        self.scenario_select,
                         ui.HTML("2. Region"),
-                        region_select,
+                        self.region_select,
                         ui.HTML("3. Variable"),
-                        variable_select,
+                        self.variable_select,
                         ui.HTML("4. Base year"),
-                        year_select,
+                        self.year_select,
                     ),
                     layout=ui.Layout(
                         grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr",
@@ -1104,11 +1121,11 @@ class View:
                 ui.GridBox(
                     (
                         ui.HTML("1. Scenario"),
-                        scenario_select,
+                        self.scenario_select,
                         ui.HTML("2. Region"),
-                        region_select,
+                        self.region_select,
                         ui.HTML("3. Variable"),
-                        variable_select,
+                        self.variable_select,
                     ),
                     layout=ui.Layout(
                         grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", min_height="168px"
@@ -1135,15 +1152,15 @@ class View:
                 ui.GridBox(
                     (
                         ui.HTML("1. Scenario"),
-                        scenario_select,
+                        self.scenario_select,
                         ui.HTML("2. Region"),
-                        region_select,
+                        self.region_select,
                         ui.HTML("3. Variable"),
-                        variable_select,
+                        self.variable_select,
                         ui.HTML("4. Item"),
-                        item_select,
+                        self.item_select,
                         ui.HTML("5. Year"),
-                        year_select,
+                        self.year_select,
                     ),
                     layout=ui.Layout(
                         grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr",
@@ -1166,8 +1183,23 @@ class View:
         )
         self.box_plot_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
         # -page navigation widgets
-        submit = ui.Button(description="Submit", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
-        submit.on_click(self.ctrl.onclick_submit)
+        # TODO: Incorporate submit
+        # submit = ui.Button(description="Submit", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
+        # submit.on_click(self.ctrl.onclick_submit)
+        download = ui.HTML(
+            f"""
+                <a
+                    href="{str(self.model.output_filepath)}" 
+                    download="{str(self.model.output_filepath.name)}"
+                    class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-info" 
+                    style="line-height:36px;"
+                    title=""
+                >
+                    Download
+                    <i class="fa fa-download" style="margin-left: 4px;"></i>
+                </a>
+            """
+        )
         previous = ui.Button(
             description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
         )
@@ -1189,7 +1221,7 @@ class View:
                                                 ),
                                                 ui.HTML(
                                                     '<span style="line-height: 13px; color: var(--grey);">Visualize the'
-                                                    " uploaded data and verify that it looks plausible.</span>"
+                                                    " uploaded data and verify that it looks plausible (Work-in-progress).</span>"
                                                 ),
                                             ],
                                             layout=ui.Layout(height="32px"),
@@ -1209,7 +1241,7 @@ class View:
                     ),
                     layout=ui.Layout(flex="1", width="100%", justify_content="center", align_items="center"),
                 ),
-                ui.HBox([previous, submit], layout=ui.Layout(justify_content="flex-end", width="100%")),  # -buttons box
+                ui.HBox([previous, download], layout=ui.Layout(justify_content="flex-end", width="100%")),  # -buttons box
             ),
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
         )

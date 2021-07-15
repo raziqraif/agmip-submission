@@ -1,4 +1,5 @@
 from __future__ import annotations  # Delay the evaluation of undefined types
+from copy import copy
 import csv
 import os
 from pathlib import Path
@@ -64,6 +65,7 @@ class Model:
         self.model_names = LabelGateway.query_model_names()
         self.data_specification = DataSpecification()
         # States for integrity checking page
+        self.datacleaner: DataCleaningService | None = None
         self.nrows_w_struct_issue = 0
         self.nrows_w_ignored_scenario = 0
         self.nrows_duplicates = 0
@@ -72,6 +74,7 @@ class Model:
         self.duplicates_filepath = self.WORKING_DIR / "DuplicateRecords.csv"
         self.ignored_scenario_filepath = self.WORKING_DIR / "RecordsWithIgnoredScenario.csv"
         self.accepted_filepath = self.WORKING_DIR / "AcceptedRecords.csv"
+        self.output_filepath = self.WORKING_DIR / "OutputTable.csv"
         self.bad_labels_table: list[list[str]] = []
         self.unknown_labels_table: list[list[Union[str, bool]]] = []
         self.valid_scenarios = LabelGateway.query_scenarios()
@@ -330,21 +333,24 @@ class Model:
 
     def init_integrity_checking_states(self, data_specification: DataSpecification) -> None:
         # Split raw csv rows
-        integrity_check = DataCleaningService(data_specification)
-        integrity_check.parse_data()
-        self.nrows_w_struct_issue = integrity_check.nrows_w_struct_issue
-        self.nrows_w_ignored_scenario = integrity_check.nrows_w_ignored_scenario
-        self.nrows_accepted = integrity_check.nrows_accepted
-        self.nrows_duplicates = integrity_check.nrows_duplicate
-        self.bad_labels_table = [["-" for _ in range(3)] for _ in range(4)]
-        self.unknown_labels_table = [["-", "-", "-", "", False] for _ in range(4)]
-        self.unknown_labels_table = [
-            ["-", "Scenario", "-", "", False],
-            ["-", "Region", "-", "", False],
-            ["-", "Variable", "-", "", False],
-            ["-", "Item", "-", "", False],
-            ["-", "Unit", "-", "", False],
-        ]
+        self.datacleaner = DataCleaningService(data_specification)
+        self.datacleaner.parse_data()
+        self.nrows_w_struct_issue = self.datacleaner.nrows_w_struct_issue
+        self.nrows_w_ignored_scenario = self.datacleaner.nrows_w_ignored_scenario
+        self.nrows_accepted = self.datacleaner.nrows_accepted
+        self.nrows_duplicates = self.datacleaner.nrows_duplicate
+        self.bad_labels_table = copy(self.datacleaner.bad_labels_table)  # don't want to mutate the original table
+        self.unknown_labels_table = copy(
+            self.datacleaner.unknown_labels_table
+        )  # don't want to mutate the original table
+        BAD_LABELS_NROWS = 3
+        UNKNOWN_LABELS_NROWS = 3
+        if len(self.bad_labels_table) < BAD_LABELS_NROWS:
+            self.bad_labels_table += [["-", "-", "-"] for _ in range(BAD_LABELS_NROWS)]
+            self.bad_labels_table[:BAD_LABELS_NROWS]
+        if len(self.unknown_labels_table) < UNKNOWN_LABELS_NROWS:
+            self.unknown_labels_table += [["-", "-", "-", "", False] for _ in range(UNKNOWN_LABELS_NROWS)]
+            self.unknown_labels_table[:UNKNOWN_LABELS_NROWS]
         """ 
         delimiter = data_specification.delimiter
         header_is_included = data_specification.header_is_included
@@ -450,3 +456,25 @@ class Model:
         print("")
         print("Unknown labels overview:\n", self.unknown_labels_overview)
         """
+
+    def validate_unknown_labels_table(self, unknown_labels_table: list[list[str | bool]]) -> str | None:
+        """Validate unknown labels table"""
+        for row in unknown_labels_table:
+            _, _, _, fix, override = row
+            assert isinstance(fix, str)
+            if override == True and fix.strip() != "":
+                return "Unknown labels cannot be both fixed and overridden"
+
+    def init_plausibility_checking_states(self) -> None:
+        """Initialize plausibility checking states"""
+        assert isinstance(self.datacleaner, DataCleaningService)
+        # NOTE: Make sure dummy rows are pruned before passing the table to data cleaner
+        self.datacleaner.unknown_labels_table = [row for row in self.unknown_labels_table if row[0] != "-"]
+        self.datacleaner.process_bad_and_unknown_labels()
+        self.uploaded_scenarios = self.datacleaner.processed_table[self.datacleaner.scenario_colname].to_list()
+        self.uploaded_regions = self.datacleaner.processed_table[self.datacleaner.region_colname].to_list()
+        self.uploaded_variables = self.datacleaner.processed_table[self.datacleaner.variable_colname].to_list()
+        self.uploaded_items = self.datacleaner.processed_table[self.datacleaner.item_colname].to_list()
+        self.uploaded_years = self.datacleaner.processed_table[self.datacleaner.year_colname].to_list()
+        self.uploaded_units = self.datacleaner.processed_table[self.datacleaner.unit_colname].to_list()
+        self.datacleaner.processed_table.to_csv(self.output_filepath, header=False, index=False)

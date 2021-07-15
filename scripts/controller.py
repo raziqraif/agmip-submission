@@ -97,11 +97,18 @@ class Controller:
 
     def onclick_next_from_page_3(self, widget: ui.Button) -> None:
         """'Next' button on the data specification page was clicked"""
+        warning_message = self.model.validate_unknown_labels_table(self.model.unknown_labels_table)
+        if warning_message is not None:
+            self.view.show_notification(Notification.WARNING, warning_message)
+            return
+        self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
         if self.model.furthest_active_page == Page.INTEGRITY_CHECKING:
             self.model.furthest_active_page = Page.PLAUSIBILITY_CHECKING
-        # TODO: Perform data validation first
+            self.model.init_plausibility_checking_states()
         self.model.current_page = Page.PLAUSIBILITY_CHECKING
+        self.view.update_plausibility_checking_page()
         self.view.update_base_app()
+        self.view.modify_cursor(None)
 
     def onclick_previous_from_page_3(self, widget: ui.Button) -> None:
         """'Previous' button on the data specification page was clicked"""
@@ -275,7 +282,8 @@ class Controller:
         if new_value == self.model.unknown_labels_table[row_index][DROPDOWN_INDEX]:
             return
         self.model.unknown_labels_table[row_index][DROPDOWN_INDEX] = new_value
-    
+        self._reset_later_pages()
+
     def onchange_override_checkbox(self, change: dict, row_index: int) -> None:
         """The selection for one of the override checkbox in unknown labels table was changed"""
         new_value = change["new"]
@@ -284,3 +292,4 @@ class Controller:
         if new_value == self.model.unknown_labels_table[row_index][CHECKBOX_INDEX]:
             return
         self.model.unknown_labels_table[row_index][CHECKBOX_INDEX] = new_value
+        self._reset_later_pages()

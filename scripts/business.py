@@ -9,7 +9,7 @@ import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
-from typing import Optional, List, Dict, Set
+from typing import Optional, List, Dict, Set, Union
 
 from .labelgateway import LabelGateway
 pd.read_csv 
@@ -286,12 +286,12 @@ class DataCleaningService:
         self.duplicate_rows_dstpath = self.WORKING_DIRPATH / "DuplicateRecords.csv"
         self.rows_w_ignored_scenario_dstpath = self.WORKING_DIRPATH / "RecordsWithIgnoredScenario.csv"
         self.rows_w_struct_issue_dstpath = self.WORKING_DIRPATH / "RowsWithStructuralIssue.csv"
-        # Label tables
-        self.bad_labels_table = pd.DataFrame(columns=self.BAD_LABELS_TABLE_COLTITLES)
-        self.unknown_labels_table = pd.DataFrame(columns=self.UNKNOWN_LABELS_TABLE_COLTITLES)
-        # Util structures for labels
-        self._bad_labels_list = []
-        self._unknown_labels_list = []
+        # Accepted table
+        self._preprocessed_table = pd.DataFrame()
+        self.processed_table = pd.DataFrame()
+        # Labels table
+        self.bad_labels_table: list[list[str]] = []
+        self.unknown_labels_table: list[list[Union[str, bool]]] = []
         self._unknown_years: list[str] = []  # Unknown years will be added into the rule table automatically
         # Number of columns info
         self._correct_ncolumns = 0
@@ -303,7 +303,7 @@ class DataCleaningService:
         self._update_ncolumns_info()
 
     def _parse_data(self) -> None:
-        """Parse data in pandas"""
+        """Parse data in pandas (WIP)"""
         error_buffer = io.StringIO()
         with redirect_stderr(error_buffer):
             dataframe = pd.read_csv(
@@ -336,13 +336,13 @@ class DataCleaningService:
         dataframe[minval_colname] = dataframe[variable_colname].apply(lambda x: LabelGateway.query_variable_min_value(x))
         dataframe[maxval_colname] = dataframe[variable_colname].apply(lambda x: LabelGateway.query_variable_max_value(x))
         # Reassign coltypes
-        dataframe[scenario_colname] = dataframe[scenario_colname].astype("category")  
-        dataframe[region_colname] = dataframe[region_colname].astype("category")  
-        dataframe[variable_colname] = dataframe[variable_colname].astype("category")  
-        dataframe[item_colname] = dataframe[item_colname].astype("category")
-        dataframe[year_colname] = dataframe[year_colname].apply(str)  # TODO: Will this affect performance?
+        dataframe[scenario_colname] = dataframe[scenario_colname].apply(str)  
+        dataframe[region_colname] = dataframe[region_colname].apply(str)
+        dataframe[variable_colname] = dataframe[variable_colname].apply(str)
+        dataframe[item_colname] = dataframe[item_colname].apply(str)
+        dataframe[year_colname] = dataframe[year_colname].apply(str).apply(str)  # TODO: Will this affect performance?
         dataframe[value_colname] = dataframe[value_colname].apply(str)
-        dataframe[unit_colname] = dataframe[unit_colname].astype("category")
+        dataframe[unit_colname] = dataframe[unit_colname].apply(str)
         # Filter records with structural issue
         _emptyscenario_df = dataframe[dataframe[scenario_colname] == ""]
         _remaining_df = dataframe[dataframe[scenario_colname] != ""]
@@ -391,6 +391,101 @@ class DataCleaningService:
         except:
             return 0
 
+    def process_bad_and_unknown_labels(self) -> None:
+        """Process bad and unknown labels"""
+        self.processed_table = pd.DataFrame([])
+        # Label mapping dictionaries
+        scenariomapping = {}
+        regionmapping = {}
+        variablemapping = {}
+        itemmapping = {}
+        unitmapping = {}
+        yearmapping = {}
+        valuemapping = {}
+        # Dropped labels set
+        droppedscenarios = set()
+        droppedregions = set()
+        droppedvariables = set()
+        droppeditems = set()
+        droppedyears = set()
+        droppedunits = set()
+        droppedvalues = set()
+        # Fill up mapping
+        for row in self.bad_labels_table:
+            label, associatedcol, fix = row
+            assert isinstance(label, str)
+            assert isinstance(associatedcol, str)
+            assert isinstance(fix, str)
+            if associatedcol == "Scenario":
+                scenariomapping[label] = fix
+            elif associatedcol == "Region":
+                regionmapping[label] = fix
+            elif associatedcol == "Variable":
+                variablemapping[label] = fix
+            elif associatedcol == "Item":
+                itemmapping[label] = fix
+            elif associatedcol == "Unit":
+                unitmapping[label] = fix
+            elif associatedcol == "Year":
+                yearmapping[label] = fix
+            elif associatedcol == "Value":
+                valuemapping[label] = fix
+        # Fill up mapping and dropped labels
+        for row in self.unknown_labels_table:
+            label, associatedcol, _, fix, override = row
+            assert isinstance(label, str)
+            assert isinstance(associatedcol, str)
+            assert isinstance(fix, str)
+            assert isinstance(override, bool)
+            if fix != "":
+                # Remember fixes
+                if associatedcol == "Scenario":
+                    scenariomapping[label] = fix
+                elif associatedcol == "Region":
+                    regionmapping[label] = fix
+                elif associatedcol == "Variable":
+                    variablemapping[label] = fix
+                elif associatedcol == "Item":
+                    itemmapping[label] = fix
+                elif associatedcol == "Year":
+                    yearmapping[label] = fix
+                elif associatedcol == "Unit":
+                    unitmapping[label] = fix
+                elif associatedcol == "Value":
+                    valuemapping[label] = fix
+            elif not override:
+                # Remember labels to be dropped
+                if associatedcol == "Scenario":
+                    droppedscenarios.add(label)
+                elif associatedcol == "Region":
+                    droppedregions.add(label)
+                elif associatedcol == "Variable":
+                    droppedvariables.add(label)
+                elif associatedcol == "Item":
+                    droppeditems.add(label)
+                elif associatedcol == "Year":
+                    droppedyears.add(label)
+                elif associatedcol == "Unit":
+                    droppedunits.add(label)
+                elif associatedcol == "Value":
+                    droppedvalues.add(label)
+        # Create processed dataframe
+        self.processed_table[self.scenario_colname] = self._preprocessed_table[self.scenario_colname].apply(lambda x: scenariomapping[x] if x in scenariomapping.keys() else x)
+        self.processed_table[self.region_colname] = self._preprocessed_table[self.region_colname].apply(lambda x: regionmapping[x] if x in regionmapping.keys() else x)
+        self.processed_table[self.variable_colname] = self._preprocessed_table[self.variable_colname].apply(lambda x: variablemapping[x] if x in variablemapping.keys() else x)
+        self.processed_table[self.item_colname] = self._preprocessed_table[self.item_colname].apply(lambda x: itemmapping[x] if x in itemmapping.keys() else x)
+        self.processed_table[self.unit_colname] = self._preprocessed_table[self.unit_colname].apply(lambda x: unitmapping[x] if x in unitmapping.keys() else x)
+        self.processed_table[self.year_colname] = self._preprocessed_table[self.year_colname].apply(lambda x: unitmapping[x] if x in unitmapping.keys() else x)
+        self.processed_table[self.value_colname] = self._preprocessed_table[self.value_colname].apply(lambda x: valuemapping[x] if x in valuemapping.keys() else x)
+        self.processed_table.insert(0, "Model Name", self.data_specification.model_name)
+        # Drop records containing dropped labels
+        self.processed_table = self.processed_table[self.processed_table[self.scenario_colname].apply(lambda x: x not in droppedscenarios)]
+        self.processed_table = self.processed_table[self.processed_table[self.region_colname].apply(lambda x: x not in droppedregions)]
+        self.processed_table = self.processed_table[self.processed_table[self.variable_colname].apply(lambda x: x not in droppedvariables)]
+        self.processed_table = self.processed_table[self.processed_table[self.item_colname].apply(lambda x: x not in droppeditems)]
+        self.processed_table = self.processed_table[self.processed_table[self.year_colname].apply(lambda x: x not in droppedyears)]
+        self.processed_table = self.processed_table[self.processed_table[self.unit_colname].apply(lambda x: x not in droppedunits)]
+        self.processed_table = self.processed_table[self.processed_table[self.value_colname].apply(lambda x: x not in droppedvalues)]
 
     def parse_data(self) -> None:   # NOSONAR 
         """Parse data and populate destination files, nrows attributes, and label tables"""
@@ -402,6 +497,7 @@ class DataCleaningService:
         items: Set[str] = set()
         years: Set[str] = set()
         units: Set[str] = set()
+        accepted_rows: list[list[str]] = []
         # Open data file and all destination files and start parsing data
         # fmt: off
         with \
@@ -438,7 +534,8 @@ class DataCleaningService:
                 # 19.6
                 # Log accepted row
                 self.nrows_accepted += 1
-                acceptedfile.write(line)
+                acceptedfile.write(line + "\n")
+                accepted_rows.append(row)
                 # 23.5
                 # Store found labels
                 scenarios.add(row[scenario_colidx])
@@ -450,6 +547,24 @@ class DataCleaningService:
                 # 28.9
                 # Parse value
                 self.parse_value_field(row[value_colidx])
+        self._preprocessed_table = pd.DataFrame(accepted_rows) 
+        # Get colnames
+        _colnames = self._preprocessed_table.columns
+        self.scenario_colname = _colnames[self.data_specification.scenario_colnum - 1]
+        self.region_colname = _colnames[self.data_specification.region_colnum - 1]
+        self.variable_colname = _colnames[self.data_specification.variable_colnum - 1]
+        self.item_colname = _colnames[self.data_specification.item_colnum - 1]
+        self.year_colname = _colnames[self.data_specification.year_colnum - 1]
+        self.value_colname = _colnames[self.data_specification.value_colnum - 1]
+        self.unit_colname = _colnames[self.data_specification.unit_colnum - 1]
+        # Reassign category
+        self._preprocessed_table[self.scenario_colname] = self._preprocessed_table[self.scenario_colname].astype("category")  
+        self._preprocessed_table[self.region_colname] = self._preprocessed_table[self.region_colname].astype("category")  
+        self._preprocessed_table[self.variable_colname] = self._preprocessed_table[self.variable_colname].astype("category")  
+        self._preprocessed_table[self.item_colname] = self._preprocessed_table[self.item_colname].astype("category")
+        self._preprocessed_table[self.year_colname] = self._preprocessed_table[self.year_colname].apply(str)  # TODO: Will this affect performance?
+        self._preprocessed_table[self.value_colname] = self._preprocessed_table[self.value_colname].apply(str)
+        self._preprocessed_table[self.unit_colname] = self._preprocessed_table[self.unit_colname].astype("category")
         # Parse all found labels
         for scenario in scenarios:
             self.parse_scenario_field(scenario)
@@ -463,9 +578,6 @@ class DataCleaningService:
             self.parse_year_field(year)
         for unit in units:
             self.parse_unit_field(unit)
-        # Populate bad / unknown labels table
-        self.bad_labels_table = pd.DataFrame(self._bad_labels_list, columns=self.BAD_LABELS_TABLE_COLTITLES)
-        self.unknown_labels_table = pd.DataFrame(self._unknown_labels_list, columns=self.UNKNOWN_LABELS_TABLE_COLTITLES)
 
     def check_for_structural_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
         """
@@ -601,14 +713,17 @@ class DataCleaningService:
         if region_w_correct_case == region:
             return
         fixed_region = LabelGateway.query_fix_from_region_fix_table(region)
-        # Unkown region
+        # Unknown region
         if (region_w_correct_case is None) and (fixed_region is None):
             closest_region = LabelGateway.query_partially_matching_region(region)
             self._log_unknown_label(region, "Region", closest_region)
             return
         # Known region but spelled wrongly
-        if (region_w_correct_case != region) and (region_w_correct_case is not None):
+        elif (region_w_correct_case != region) and (region_w_correct_case is not None):
             self._log_bad_label(region, "Region", region_w_correct_case)
+        # Known bad region 
+        elif fixed_region is not None:
+            self._log_bad_label(region, "Region", fixed_region)
 
     def parse_variable_field(self, variable: str) -> None:
         """Check if a variable is bad or unknown and logs it if it is"""
@@ -704,12 +819,12 @@ class DataCleaningService:
     def _log_bad_label(self, bad_label: str, associated_column: str, fix: str) -> None:
         """Logs bad label"""
         # Appending row 1 by 1 to a pandas dataframe is slow, so we store these rows in a list first
-        self._bad_labels_list.append([bad_label, associated_column, fix])
+        self.bad_labels_table.append([bad_label, associated_column, fix])
 
     def _log_unknown_label(self, unknown_label: str, associated_column: str, closest_label: str) -> None:
         """Logs unknown label"""
         # Appending row 1 by 1 to a pandas dataframe is slow, so we store these rows in a list first
-        self._unknown_labels_list.append([unknown_label, associated_column, closest_label, "", False])
+        self.unknown_labels_table.append([unknown_label, associated_column, closest_label, "", False])
 
 
 
