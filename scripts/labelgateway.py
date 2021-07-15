@@ -1,6 +1,6 @@
 import difflib
 from pathlib import Path
-from typing import Dict, Set, Optional
+from typing import Dict, List, Set, Optional
 from numpy import diff, mat
 
 import pandas as pd
@@ -50,11 +50,43 @@ class LabelGateway:
     for variable in _variables:
         _matching_variable_memo[variable.lower()] = variable
     for key in _value_fix_memo.keys():
-        _value_fix_memo[key] = str(_value_fix_memo[key])    # store numbers as strings
+        _value_fix_memo[key] = str(_value_fix_memo[key])  # store numbers as strings
 
     @classmethod
-    def query_model_names(cls) -> Set[str]:
-        return cls._model_names
+    def query_model_names(cls) -> List[str]:
+        result = list(cls._model_names)
+        result.sort()
+        return result
+
+    @classmethod
+    def query_scenarios(cls) -> List[str]:
+        result = list(cls._scenarios)
+        result.sort()
+        return result
+
+    @classmethod
+    def query_regions(cls) -> List[str]:
+        result = list(cls._regions)
+        result.sort()
+        return result
+
+    @classmethod
+    def query_variables(cls) -> List[str]:
+        result = list(cls._variables)
+        result.sort()
+        return result
+
+    @classmethod
+    def query_items(cls) -> List[str]:
+        result = list(cls._items)
+        result.sort()
+        return result
+
+    @classmethod
+    def query_units(cls) -> List[str]:
+        result = list(cls._units)
+        result.sort()
+        return result
 
     @classmethod
     def query_label_in_model_names(cls, label: str) -> bool:
@@ -133,7 +165,7 @@ class LabelGateway:
         variable = variable.lower()
         try:
             return cls._matching_variable_memo[variable]
-        except: 
+        except:
             return None
 
     @classmethod

@@ -141,7 +141,8 @@ class CSS:
     FILENAME_SNACKBAR__TEXT = "c-filename-snackbar__text"
     HEADER_BAR = "c-header-bar"
     ICON_BUTTON = "c-icon-button"
-    LABELS_OVERVIEW_TABLE = "c-labels-overview-table"
+    BAD_LABELS_TABLE = "c-bad-labels-table"
+    UNKNOWN_LABELS_TABLE = "c-unknown-labels-table"
     NOTIFICATION = "c-notification"
     NOTIFICATION__ERROR = "c-notification--error"
     NOTIFICATION__INFO = "c-notification--info"
@@ -236,14 +237,15 @@ class View:
         self.value_column_dropdown: ui.Dropdown = None
         self.input_data_preview_table: ui.GridBox = None
         self.output_data_preview_table: ui.GridBox = None
-        self._cached_children_of_input_data_preview_table: Optional[list] = None
+        self._input_data_table_childrenpool: Optional[list] = None
         # Widgets in the integrity checking page that need to be manipulated
         self.duplicate_rows_lbl: ui.Label = None
         self.rows_w_struct_issues_lbl: ui.Label = None
         self.rows_w_ignored_scenario_lbl: ui.Label = None
         self.accepted_rows_lbl: ui.Label = None
-        self.bad_labels_overview_table: ui.HTML = None
-        self.unknown_labels_overview_table: ui.HTML = None
+        self.bad_labels_table = ui.HTML()
+        self.unknown_labels_table = ui.GridBox()
+        self._unknown_labels_table_childrenpool: list[ui.Widget] = []
         # Widgets in the plausibility checking page that need to be manipulated
         self.value_trends_tab_element: ui.Box = None
         self.value_trends_tab_content: ui.Box = None
@@ -373,9 +375,7 @@ class View:
         assert self.DATA_SPEC_PAGE_IS_BEING_UPDATED != True
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = True
         # Format specification controls
-        set_options(
-            self.model_name_dropdown, ("", *self.model.model_names), self.ctrl.onchange_model_name_dropdown
-        )
+        set_options(self.model_name_dropdown, ("", *self.model.model_names), self.ctrl.onchange_model_name_dropdown)
         self.model_name_dropdown.value = self.model.model_name
         set_options(self.delimiter_dropdown, ("", *Delimiter.get_views()), self.ctrl.onchange_delimiter_dropdown)
         self.delimiter_dropdown.value = Delimiter.get_view(self.model.delimiter)
@@ -403,20 +403,20 @@ class View:
         table_content = self.model.input_data_preview_content
         number_of_columns = table_content.shape[1]
         table_content = table_content.flatten()
-        # -Increase cache size if it's insufficient
-        if len(table_content) > len(self._cached_children_of_input_data_preview_table):
-            cache_addition = [ui.Box([ui.Label("")]) for _ in range(len(table_content))]
-            self._cached_children_of_input_data_preview_table += cache_addition
+        # -Increase pool size if it's insufficient
+        if len(table_content) > len(self._input_data_table_childrenpool):
+            pool_addition = [ui.Box([ui.Label("")]) for _ in range(len(table_content))]
+            self._input_data_table_childrenpool += pool_addition
         content_index = 0
-        assert self._cached_children_of_input_data_preview_table is not None
+        assert self._input_data_table_childrenpool is not None
         for content in table_content:
-            content_box = self._cached_children_of_input_data_preview_table[content_index]
+            content_box = self._input_data_table_childrenpool[content_index]
             assert isinstance(content_box, ui.Box)
             content_label = content_box.children[0]
             assert isinstance(content_label, ui.Label)
             content_label.value = content
             content_index += 1
-        self.input_data_preview_table.children = self._cached_children_of_input_data_preview_table[: table_content.size]
+        self.input_data_preview_table.children = self._input_data_table_childrenpool[: table_content.size]
         self.input_data_preview_table.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
         # Output data preview table
         table_content = self.model.output_data_preview_content
@@ -435,10 +435,91 @@ class View:
 
     def update_integrity_checking_page(self) -> None:
         """Update the integrity checking page"""
+        # Update row summaries
         self.rows_w_struct_issues_lbl.value = "{:,}".format(self.model.nrows_w_struct_issue)
         self.rows_w_ignored_scenario_lbl.value = "{:,}".format(self.model.nrows_w_ignored_scenario)
         self.duplicate_rows_lbl.value = "{:,}".format(self.model.nrows_duplicates)
         self.accepted_rows_lbl.value = "{:,}".format(self.model.nrows_accepted)
+        # Update bad labels table
+        _table_rows = ""
+        for row in self.model.bad_labels_table:
+            _table_rows += "<tr>"
+            for field in row:
+                _table_rows += f"<td>{field}</td>"
+            _table_rows += "</tr>"
+        self.bad_labels_table.value = f"""
+            <table>
+                <thead>
+                    <th>Label</th>
+                    <th>Associated column</th>
+                    <th>Fix</th>
+                </thead>
+                <tbody>
+                    {_table_rows}
+                </tbody>
+            </table>
+            """
+        # Update unknown labels table
+        # - make sure the children pool is large enough
+        nrowsneeded = len(self.model.unknown_labels_table)
+        nrowssupported = int((len(self._unknown_labels_table_childrenpool) - 5) / 5)  # -5 to account for header row
+        if nrowsneeded > nrowssupported:
+            for row_index in range(nrowssupported, nrowsneeded):
+                dropdown = ui.Dropdown()
+                # the following lambda return a callback that can be called by ipywidgets
+                _get_dropdown_callback = lambda row_index: lambda change: self.ctrl.onchange_fix_dropdown(
+                    change, row_index
+                )
+                dropdown.observe(_get_dropdown_callback(row_index), "value")
+                checkbox = ui.Checkbox(indent=False, value=False, description="")
+                # the following lambda return a callback that can be called by ipywidgets
+                _get_checkbox_callback = lambda row_index: lambda change: self.ctrl.onchange_override_checkbox(
+                    change, row_index
+                )
+                checkbox.observe(_get_checkbox_callback(row_index), "value")
+                self._unknown_labels_table_childrenpool += [
+                    ui.Box([ui.Label("-")]),
+                    ui.Box([ui.Label("-")]),
+                    ui.Box([ui.Label("-")]),
+                    ui.Box([dropdown]),
+                    ui.Box([checkbox]),
+                ]
+        # - update the table entries
+        for row_index in range(nrowsneeded):
+            row = self.model.unknown_labels_table[row_index]
+            poolstartindex = (row_index * 5) + 5  # +5 to account for header row
+            print(poolstartindex, nrowsneeded, nrowssupported, len(self._unknown_labels_table_childrenpool))
+            unknownlabel_w, associatedcolumn_w, closestmatch_w, fix_w, override_w = [
+                wrapper.children[0]
+                for wrapper in self._unknown_labels_table_childrenpool[poolstartindex : poolstartindex + 5]
+            ]
+            assert isinstance(unknownlabel_w, ui.Label)
+            assert isinstance(associatedcolumn_w, ui.Label)
+            assert isinstance(closestmatch_w, ui.Label)
+            assert isinstance(fix_w, ui.Dropdown)
+            assert isinstance(override_w, ui.Checkbox)
+            unknownlabel, associatedcolumn, closestmatch, fix, override = row
+            unknownlabel_w.value = unknownlabel
+            associatedcolumn_w.value = associatedcolumn
+            closestmatch_w.value = closestmatch
+            fix_w.value = None
+            if associatedcolumn == "-":
+                fix_w.options = [""]
+            elif associatedcolumn == "Scenario":
+                fix_w.options = ["", *self.model.valid_scenarios]
+            elif associatedcolumn == "Region":
+                fix_w.options = ["", *self.model.valid_regions]
+            elif associatedcolumn == "Variable":
+                fix_w.options = ["", *self.model.valid_variables]
+            elif associatedcolumn == "Item":
+                fix_w.options = ["", *self.model.valid_items]
+            elif associatedcolumn == "Unit":
+                fix_w.options = ["", *self.model.valid_units]
+            else:
+                raise Exception("Unexpected associated column")
+            fix_w.value = fix
+            override_w.value = override
+        self.unknown_labels_table.children = self._unknown_labels_table_childrenpool[: (nrowsneeded + 1) * 5]
 
     def update_plausibility_checking_page(self) -> None:
         """Update the plausibility checking page"""
@@ -652,14 +733,12 @@ class View:
         self.value_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.value_column_dropdown.observe(self.ctrl.onchange_value_column_dropdown, "value")
         # -preview table widgets
-        self._cached_children_of_input_data_preview_table = [
+        self._input_data_table_childrenpool = [
             ui.Box([ui.Label("")]) for _ in range(33)  # Using 33 as cache size is random
         ]
         self.input_data_preview_table = CSS.assign_class(
             ui.GridBox(
-                self._cached_children_of_input_data_preview_table[
-                    :24
-                ],  # 24 because we assume the table dimension to be
+                self._input_data_table_childrenpool[:24],  # 24 because we assume the table dimension to be
                 # 3 x 8 (the row number will stay the same, but the column number may vary)
                 layout=ui.Layout(grid_template_columns="repeat(8, 1fr)"),
             ),
@@ -760,17 +839,65 @@ class View:
     def _build_integrity_checking_page(self) -> ui.Box:
         """Build the integrity checking page"""
         # Create the control widgets
-        download_rows_field_issues_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
-        download_rows_w_ignored_scenario_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
-        download_duplicate_rows_btn = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
-        download_accepted_rows = CSS.assign_class(ui.Button(icon="download"), CSS.ICON_BUTTON)
+        # - download buttons
+        download_rows_field_issues_btn = ui.HTML(
+            f"""
+                <a
+                    href="{str(self.model.struct_issue_filepath)}" 
+                    download="{str(self.model.struct_issue_filepath.name)}"
+                    class="{CSS.ICON_BUTTON}"
+                    style="line-height:36px;"
+                    title=""
+                >
+                    <i class="fa fa-download" style="margin-left: 4px;"></i>
+                </a>
+            """
+        )
+        download_rows_w_ignored_scenario_btn = ui.HTML(
+            f"""
+                <a
+                    href="{str(self.model.ignored_scenario_filepath)}" 
+                    download="{str(self.model.ignored_scenario_filepath.name)}"
+                    class="{CSS.ICON_BUTTON}"
+                    style="line-height:36px;"
+                    title=""
+                >
+                    <i class="fa fa-download" style="margin-left: 4px;"></i>
+                </a>
+            """
+        )
+        download_duplicate_rows_btn = ui.HTML(
+            f"""
+                <a
+                    href="{str(self.model.duplicates_filepath)}" 
+                    download="{str(self.model.duplicates_filepath.name)}"
+                    class="{CSS.ICON_BUTTON}"
+                    style="line-height:36px;"
+                    title=""
+                >
+                    <i class="fa fa-download" style="margin-left: 4px;"></i>
+                </a>
+            """
+        )
+        download_accepted_rows = ui.HTML(
+            f"""
+                <a
+                    href="{str(self.model.accepted_filepath)}" 
+                    download="{str(self.model.accepted_filepath.name)}"
+                    class="{CSS.ICON_BUTTON}"
+                    style="line-height:36px;"
+                    title=""
+                >
+                    <i class="fa fa-download" style="margin-left: 4px;"></i>
+                </a>
+            """
+        )
+        # - row summary labels
         self.rows_w_struct_issues_lbl = ui.Label("0")
         self.rows_w_ignored_scenario_lbl = ui.Label("0")
         self.duplicate_rows_lbl = ui.Label("0")
         self.accepted_rows_lbl = ui.Label("0")
-        request_new_protocol_checkbox = ui.Checkbox(
-            indent=False, value=False, description="", layout=ui.Layout(margin="6px 0px 0px 0px")
-        )
+        # - bad labels table
         _empty_row = """
             <tr>
                 <td>-</td>
@@ -778,67 +905,50 @@ class View:
                 <td>-</td>
             <tr>
         """
-        self.bad_labels_overview_table = ui.HTML(
-            f"""
-            <table class={CSS.LABELS_OVERVIEW_TABLE}>
+        self.bad_labels_table.value = f"""
+            <table>
                 <thead>
-                    <tr>
-                        <th>Label</th>
-                        <th>Associated column</th>
-                        <th>Fix</th>
-                    </tr>
+                    <th>Label</th>
+                    <th>Associated column</th>
+                    <th>Fix</th>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>World</td>
-                        <td>Region</td>
-                        <td>WLD</td>
-                    <tr>
-                    <tr>
-                        <td>#DIV/0</td>
-                        <td>Value</td>
-                        <td>0</td>
-                    <tr>
-                    <tr>
-                        <td>Canada</td>
-                        <td>Region</td>
-                        <td>CAN</td>
-                    <tr>
+                    {_empty_row * 3}
                 </tbody>
             </table>
             """
-        )
-        self.unknown_labels_overview_table = ui.HTML(
-            f"""
-            <table class={CSS.LABELS_OVERVIEW_TABLE}>
-                <thead>
-                    <tr>
-                        <th>Label</th>
-                        <th>Associated column</th>
-                        <th>Closest match</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Mtc02e</td>
-                        <td>Unit</td>
-                        <td>MtCO2e</td>
-                    <tr>
-                    <tr>
-                        <td>1000 t prt</td>
-                        <td>Unit</td>
-                        <td>1000 t</td>
-                    <tr>
-                    <tr>
-                        <td>em t/ha</td>
-                        <td>Unit</td>
-                        <td>dm t/ha</td>
-                    <tr>
-                </tbody>
-            </table>
-            """
-        )
-        # -page navigation widgets
+        self.bad_labels_table.add_class(CSS.BAD_LABELS_TABLE)
+        # - unknown labels table
+        self._unknown_labels_table_childrenpool = [
+            ui.Box([ui.Label("Label")]),
+            ui.Box([ui.Label("Associated column")]),
+            ui.Box([ui.Label("Closest Match")]),
+            ui.Box([ui.Label("Fix")]),
+            ui.Box([ui.Label("Override")]),
+        ]
+        from copy import deepcopy
+
+        for index in range(10):
+            dropdown = ui.Dropdown()
+            # the following lambda return a callback that can be called by ipywidgets
+            _get_dropdown_callback = lambda row_index: lambda change: self.ctrl.onchange_fix_dropdown(change, row_index)
+            dropdown.observe(_get_dropdown_callback(index), "value")
+            checkbox = ui.Checkbox(indent=False, value=False, description="")
+            # the following lambda return a callback that can be called by ipywidgets
+            _get_checkbox_callback = lambda row_index: lambda change: self.ctrl.onchange_override_checkbox(
+                change, row_index
+            )
+            checkbox.observe(_get_checkbox_callback(index), "value")
+            self._unknown_labels_table_childrenpool += [
+                ui.Box([ui.Label("-")]),
+                ui.Box([ui.Label("-")]),
+                ui.Box([ui.Label("-")]),
+                ui.Box([dropdown]),
+                ui.Box([checkbox]),
+            ]
+        self.unknown_labels_table.children = self._unknown_labels_table_childrenpool[:20]
+        self.unknown_labels_table.add_class("c-unknown-labels-table")
+        # - page navigation buttons
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_.on_click(self.ctrl.onclick_next_from_page_3)
         previous = ui.Button(
@@ -866,7 +976,8 @@ class View:
                                                     ui.Box(
                                                         (
                                                             ui.Label(
-                                                                "Number of rows with structural issues (missing fields, etc)"
+                                                                "Number of rows with structural issues (missing fields,"
+                                                                " etc)"
                                                             ),
                                                         )
                                                     ),
@@ -900,26 +1011,16 @@ class View:
                                     " labels that are recognized by the program but do not adhere to the correct"
                                     " standard. They have been fixed automatically."
                                 ),
-                                self.bad_labels_overview_table,
+                                self.bad_labels_table,
                                 ui.HTML(
                                     '<b style="line-height:13px; margin: 20px 0px 4px;">Unknown labels overview</b>'
                                 ),
                                 ui.HTML(
-                                    '<span style="line-height: 13px; color: var(--grey);">The table lists'
-                                    " labels that are not recognized by the program. Please fix them and reupload your"
-                                    " file, or request to add them into the protocol."
+                                    '<span style="line-height: 13px; color: var(--grey);">The table lists labels that'
+                                    " are not recognized by the program. Please fix or override the labels,"
+                                    " otherwise records containing them will be dropped."
                                 ),
-                                self.unknown_labels_overview_table,
-                                ui.HBox(
-                                    [
-                                        ui.HTML(
-                                            '<span style="line-height: 13px; margin-right: 8px;">Request to add these'
-                                            " labels into the dataset protocol:</span>"
-                                        ),
-                                        request_new_protocol_checkbox,
-                                    ],
-                                    layout=ui.Layout(align_items="center", margin="4px 0px 0px 0px"),
-                                ),
+                                self.unknown_labels_table,
                             ),
                             layout=ui.Layout(width="850px"),
                         ),

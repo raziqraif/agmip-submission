@@ -114,8 +114,10 @@ class Controller:
         # The event is triggered programmatically by page update, and not by dropdown selection
         if new_value == self.model.model_name:
             return
+        self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
         self.model.model_name = new_value
         self.view.update_data_specification_page()
+        self.view.modify_cursor(None)
         self._reset_later_pages()
 
     def onchange_header_is_included_checkbox(self, change: dict) -> None:
@@ -124,13 +126,16 @@ class Controller:
         # The event is triggered programmatically by page update, and not by checkbox selection
         if new_value == self.model.header_is_included:
             return
+        self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
         self.model.header_is_included = new_value
         self.view.update_data_specification_page()
+        self.view.modify_cursor(None)
         self._reset_later_pages()
 
     def onchange_lines_to_skip_text(self, change: dict) -> None:
         """The content of 'lines to skip' text changed"""
         new_value = change["new"]
+        self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
         try:
             new_value = int(new_value)
             # The event is triggered programmatically by page update, and not by a user action
@@ -144,6 +149,7 @@ class Controller:
             self.view.show_notification(Notification.WARNING, "Invalid number of lines")
             self.model.lines_to_skip = 0
         self.view.update_data_specification_page()
+        self.view.modify_cursor(None)
         self._reset_later_pages()
 
     def onchange_delimiter_dropdown(self, change: dict) -> None:
@@ -152,8 +158,8 @@ class Controller:
         # The event is triggered programmatically by page update, and not by dropdown selection
         if new_value == self.model.delimiter:
             return
-        self.model.delimiter = new_value
         self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
+        self.model.delimiter = new_value
         self.view.update_data_specification_page()
         self.view.modify_cursor(None)
         self._reset_later_pages()
@@ -261,3 +267,20 @@ class Controller:
         """Box plot tab was clicked"""
         self.model.active_visualization_tab = VisualizationTab.BOX_PLOT
         self.view.update_plausibility_checking_page()
+
+    def onchange_fix_dropdown(self, change: dict, row_index: int) -> None:
+        """The selection for one of the fix dropdowns in unknown labels table was changed"""
+        new_value = change["new"]
+        DROPDOWN_INDEX = 3
+        if new_value == self.model.unknown_labels_table[row_index][DROPDOWN_INDEX]:
+            return
+        self.model.unknown_labels_table[row_index][DROPDOWN_INDEX] = new_value
+    
+    def onchange_override_checkbox(self, change: dict, row_index: int) -> None:
+        """The selection for one of the override checkbox in unknown labels table was changed"""
+        new_value = change["new"]
+        CHECKBOX_INDEX = 4
+        # The event is triggered programmatically by page update, instead of by a user action
+        if new_value == self.model.unknown_labels_table[row_index][CHECKBOX_INDEX]:
+            return
+        self.model.unknown_labels_table[row_index][CHECKBOX_INDEX] = new_value

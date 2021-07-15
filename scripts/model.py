@@ -2,7 +2,7 @@ from __future__ import annotations  # Delay the evaluation of undefined types
 import csv
 import os
 from pathlib import Path
-from typing import Any, Callable, Optional, Dict
+from typing import Any, Callable, Optional, Dict, Union
 
 import numpy as np
 import pandas as pd
@@ -68,10 +68,17 @@ class Model:
         self.nrows_w_ignored_scenario = 0
         self.nrows_duplicates = 0
         self.nrows_accepted = 0
-        self.struct_issue_filepath = Path()
-        self.duplicates_filepath = Path()
-        self.ignored_scenario_filepath = Path()
-        self.accepted_filepath = Path()
+        self.struct_issue_filepath = self.WORKING_DIR / "RowsWithStructuralIssue.csv"
+        self.duplicates_filepath = self.WORKING_DIR / "DuplicateRecords.csv"
+        self.ignored_scenario_filepath = self.WORKING_DIR / "RecordsWithIgnoredScenario.csv"
+        self.accepted_filepath = self.WORKING_DIR / "AcceptedRecords.csv"
+        self.bad_labels_table: list[list[str]] = []
+        self.unknown_labels_table: list[list[Union[str, bool]]] = []
+        self.valid_scenarios = LabelGateway.query_scenarios()
+        self.valid_regions = LabelGateway.query_regions()
+        self.valid_variables = LabelGateway.query_variables()
+        self.valid_items = LabelGateway.query_items()
+        self.valid_units = LabelGateway.query_units()
         # States for plausibility checking page
         self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
         self.uploaded_scenarios = []
@@ -117,6 +124,7 @@ class Model:
     def delimiter(self, value: str) -> None:
         assert value in Delimiter.get_models() or value == ""
         self.data_specification.delimiter = value
+        self.data_specification.guess_model_name_n_column_assignments()
 
     @property
     def lines_to_skip(self) -> int:
@@ -328,6 +336,15 @@ class Model:
         self.nrows_w_ignored_scenario = integrity_check.nrows_w_ignored_scenario
         self.nrows_accepted = integrity_check.nrows_accepted
         self.nrows_duplicates = integrity_check.nrows_duplicate
+        self.bad_labels_table = [["-" for _ in range(3)] for _ in range(4)]
+        self.unknown_labels_table = [["-", "-", "-", "", False] for _ in range(4)]
+        self.unknown_labels_table = [
+            ["-", "Scenario", "-", "", False],
+            ["-", "Region", "-", "", False],
+            ["-", "Variable", "-", "", False],
+            ["-", "Item", "-", "", False],
+            ["-", "Unit", "-", "", False],
+        ]
         """ 
         delimiter = data_specification.delimiter
         header_is_included = data_specification.header_is_included
