@@ -392,6 +392,9 @@
         background: white;
         justify-content: center;
     }
+    .c-column-assignment-table > *:nth-child(-n+8) {  /*Target the first row*/
+        font-weight: bold;
+    }
     .c-column-assignment-table select {
         border: none;
         width: inherit;
@@ -417,7 +420,7 @@
         border: 1px solid var(--light-grey);
         margin: 16px 0px 20px 0px;
         grid-template-columns: 3fr 1fr;
-        width: 480px;
+        width: 484px;
         grid-gap: 1px 1px;
     }
     .c-rows-overview-table > *:nth-child(2n - 1) {  /*target children in the second last column out of 2 columns*/
@@ -435,40 +438,44 @@
     /* Labels overview table */
     .c-bad-labels-table {
         display: block;
-        height: 120px;
+        height: 117px;
+        max-height: 121px;
         width: 504px;
         margin: 16px 0px 0px 0px;
         overflow: auto;
+        border: 1px solid var(--light-grey);
     }
     .c-bad-labels-table table {
-        border-collapse: collapse;
-        border: 1px solid var(--light-grey);
-        table-layout: fixed;
+        border-collapse: separate;
+        background: var(--light-grey);
+        /* table-layout: fixed; */
     }
     .c-bad-labels-table thead {
-        position: sticky;
-        top: 0;
-        z-index: 2;
+        /* border-bottom: 1px solid var(--light-grey); */
     }
     .c-bad-labels-table tr {
-        border: 1px solid var(--light-grey);
+        /* border: 1px solid var(--light-grey); */
+        height: 26px;
     }
     .c-bad-labels-table th {
-        border: 1px solid var(--light-grey);
         background: white;
         text-align: center;
-        height: 28px;
+        height: 26px;
         width: 180px;
         position: sticky;
         top: 0;
         z-index: 2;
+        border-right: 1px solid var(--light-grey);
+        border-bottom: 1px solid var(--light-grey) !important;
     }
     .c-bad-labels-table td {
-        border: 1px solid var(--light-grey);
+        background: white;
         text-align: center;
         color: var(--grey);
-        height: 28px;
+        height: 26px;
         width: 180px;
+        border-right: 1px solid var(--light-grey);
+        border-bottom: 1px solid var(--light-grey);
     }
 
     /* Unknown labels table */
@@ -478,26 +485,40 @@
         background: var(--light-grey);
         border: 1px solid var(--light-grey);
         margin: 16px 0px 0px 0px;
-        width: 100%;
+        /* width: 100%; */
         grid-gap: 1px 1px;
+        height: 116px;
+        overflow-y: auto;
     }
     .c-unknown-labels-table > * {   /* Target all wrappers for table item */
-        width: 100%;
         height: 28px;
+        width: 100%;
         background: white;
         justify-content: center;
     }
-    .c-unknown-labels-table select {    /* Target all dropdowns*/
-        border: none;
+    .c-unknown-labels-table .widget-dropdown {    /* Target all dropdown wrapper*/
+        width: inherit;
     }
-    .c-unknown-labels-table input[type="checkbox"] {    /* Target all checkbox*/
-        margin-right: 0px;
+    .c-unknown-labels-table select {    /* Target all dropdown */
+        width: inherit;
+        border: none;
     }
     .c-unknown-labels-table .widget-checkbox {  /* Target all checkbox wrappers */
         width: auto;
     }
-    .c-unknown-labels-table > .widget-box:nth-child(-n+5) { /* Target first row */
+    .c-unknown-labels-table input[type="checkbox"] {    /* Target all checkbox*/
+        margin-right: 0px;
+    }
+    .c-unknown-labels-table > .widget-box:nth-child(-n+5) { /* Target the first row */
         font-weight: bold;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        align-self: start;
+        box-shadow: 0 1px 0 0 var(--light-grey);
+    }
+    .c-unknown-labels-table > .widget-box:nth-child(5n) { /* Target the fifth / last column */
+        border-right: 1px solid var(--light-grey);
     }
 
     /* Visualization tab */
