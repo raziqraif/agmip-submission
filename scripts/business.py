@@ -1,7 +1,9 @@
 from __future__ import annotations
+from contextlib import redirect_stderr
 from copy import copy
 from copy import deepcopy
 import csv
+import io
 from io import TextIOWrapper
 import numpy as np
 import os
@@ -300,10 +302,97 @@ class DataCleaningService:
         self._initialize_files()
         self._update_ncolumns_info()
 
-    def parse_data(self) -> None:
-        pass
+    def _parse_data(self) -> None:
+        """Parse data in pandas"""
+        error_buffer = io.StringIO()
+        with redirect_stderr(error_buffer):
+            dataframe = pd.read_csv(
+                self.data_specification.uploaded_filepath, 
+                skiprows=self.data_specification.initial_lines_to_skip, 
+                header=0 if self.data_specification.header_is_included else None,   # type: ignore
+                error_bad_lines=False, 
+                warn_bad_lines=True, 
+                na_filter=False
+            )
+        assert isinstance(dataframe, pd.DataFrame)
+        # Get important column names
+        _colnames = dataframe.columns
+        rownum_colname = "Row Number"
+        dataframe[rownum_colname] = dataframe.index
+        scenario_colname = _colnames[self.data_specification.scenario_colnum - 1]
+        region_colname = _colnames[self.data_specification.region_colnum - 1]
+        variable_colname = _colnames[self.data_specification.variable_colnum - 1]
+        item_colname = _colnames[self.data_specification.item_colnum - 1]
+        year_colname = _colnames[self.data_specification.year_colnum - 1]
+        value_colname = _colnames[self.data_specification.value_colnum - 1]
+        unit_colname = _colnames[self.data_specification.unit_colnum - 1]
+        # Add new utility columns to help with filtering
+        matchingvar_colname = "Matching Variable"
+        fixedval_colname = "Fixed Value"
+        minval_colname = "Minimum Value"
+        maxval_colname = "Maximum Value"
+        dataframe[matchingvar_colname] = dataframe[variable_colname].apply(lambda x: LabelGateway.query_matching_variable(x) if LabelGateway.query_matching_variable(x) is not None else x)
+        dataframe[fixedval_colname] = dataframe[value_colname].apply(lambda x: self._get_fixed_value_or_dummy_value(x))
+        dataframe[minval_colname] = dataframe[variable_colname].apply(lambda x: LabelGateway.query_variable_min_value(x))
+        dataframe[maxval_colname] = dataframe[variable_colname].apply(lambda x: LabelGateway.query_variable_max_value(x))
+        # Reassign coltypes
+        dataframe[scenario_colname] = dataframe[scenario_colname].astype("category")  
+        dataframe[region_colname] = dataframe[region_colname].astype("category")  
+        dataframe[variable_colname] = dataframe[variable_colname].astype("category")  
+        dataframe[item_colname] = dataframe[item_colname].astype("category")
+        dataframe[year_colname] = dataframe[year_colname].apply(str)  # TODO: Will this affect performance?
+        dataframe[value_colname] = dataframe[value_colname].apply(str)
+        dataframe[unit_colname] = dataframe[unit_colname].astype("category")
+        # Filter records with structural issue
+        _emptyscenario_df = dataframe[dataframe[scenario_colname] == ""]
+        _remaining_df = dataframe[dataframe[scenario_colname] != ""]
+        rows_w_structissues = _emptyscenario_df
+        _emptyregion_df = _remaining_df[_remaining_df[region_colname] == ""]
+        _remaining_df = _remaining_df[_remaining_df[region_colname] != ""]
+        rows_w_structissues = rows_w_structissues.merge(_emptyregion_df)
+        _emptyvariable_df = _remaining_df[_remaining_df[variable_colname] == ""]
+        _remaining_df = _remaining_df[_remaining_df[variable_colname] != ""]
+        rows_w_structissues = rows_w_structissues.merge(_emptyvariable_df)
+        _emptyitem_df = _remaining_df[_remaining_df[item_colname] == ""]
+        _remaining_df = _remaining_df[_remaining_df[item_colname] != ""]
+        rows_w_structissues = rows_w_structissues.merge(_emptyitem_df)
+        _emptyunit_df = _remaining_df[_remaining_df[unit_colname] == ""]
+        _remaining_df = _remaining_df[_remaining_df[unit_colname] != ""]
+        rows_w_structissues = rows_w_structissues.merge(_emptyunit_df)
+        _emptyyear_df = _remaining_df[_remaining_df[year_colname] == ""]
+        _remaining_df = _remaining_df[_remaining_df[year_colname] != ""]
+        rows_w_structissues = rows_w_structissues.merge(_emptyyear_df)
+        _nonintegeryear_df = _remaining_df[~_remaining_df[year_colname].apply(lambda x: x.isdecimal())]
+        _remaining_df = _remaining_df[_remaining_df[year_colname].apply(lambda x: x.isdecimal())]
+        rows_w_structissues = rows_w_structissues.merge(_nonintegeryear_df)
+        _valuetoosmall_df = _remaining_df.apply(lambda x: x[fixedval_colname] < x[minval_colname], axis=1)
+        _remaining_df = _remaining_df.apply(lambda x: x[fixedval_colname] > x[minval_colname], axis=1)
+        rows_w_structissues = rows_w_structissues.merge(_valuetoosmall_df)
+        _valuetoolarge_df = _remaining_df.apply(lambda x: x[fixedval_colname] > x[maxval_colname], axis=1)
+        _remaining_df = _remaining_df.apply(lambda x: x[fixedval_colname] < x[maxval_colname], axis=1)
+        rows_w_structissues = rows_w_structissues.merge(_valuetoolarge_df)
+        rows_w_structissues.drop_duplicates()
+        self.nrows_w_struct_issue = rows_w_structissues.shape[0]
+        print(_remaining_df)
+        # Get duplicate records
+        duplicates_df = _remaining_df[_remaining_df.duplicated()]  
+        # TODO: Make each df disjoint
+        duplicates_df.to_csv(self.duplicate_rows_dstpath)
+        # self.rows_w_field_issues = pd.DataFrame(_rows_w_field_issues)
+        # self.rows_w_ignored_scenario = pd.DataFrame(_rows_w_ignored_scenario)
+        # self.duplicate_rows = _remaining_rows[_remaining_rows.duplicated(subset=KEY_COLUMNS)]
+        # self.accepted_rows = _remaining_rows.drop_duplicates(subset=KEY_COLUMNS)
 
-    def _parse_data(self) -> None:   # NOSONAR 
+    def _get_fixed_value_or_dummy_value(self, value: str) -> float:
+        fix = LabelGateway.query_fix_from_value_fix_table(value)
+        fix = fix if fix is not None else value 
+        try: 
+            return float(fix)
+        except:
+            return 0
+
+
+    def parse_data(self) -> None:   # NOSONAR 
         """Parse data and populate destination files, nrows attributes, and label tables"""
         self.__init__(self.data_specification)  # Reset all attributes
         # Initialize sets to store found labels
@@ -437,11 +526,11 @@ class DataCleaningService:
             matching_variable = matching_variable if matching_variable is not None else variable_field
             min_value = LabelGateway.query_variable_min_value(matching_variable)
             max_value = LabelGateway.query_variable_max_value(matching_variable)
-            if (min_value is not None) and (float(value_fix) < min_value):
+            if float(value_fix) < min_value:
                 issue_text = "Value for variable {} is too small".format(matching_variable)
                 self._log_row_w_struct_issue(rownum, row, issue_text, structissuefile)
                 return True
-            if (max_value is not None) and (float(value_fix) > max_value):
+            if float(value_fix) > max_value:
                 issue_text = "Value for variable {} is too large".format(matching_variable)
                 self._log_row_w_struct_issue(rownum, row, issue_text, structissuefile)
                 return True
