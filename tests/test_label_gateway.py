@@ -15,6 +15,7 @@ def test_matching_queries():
     # Matching queries should not return result from the fix table
     assert LabelGateway.query_matching_region("world") != "WLD"
     assert LabelGateway.query_matching_variable("Cons") == "CONS"
+    assert LabelGateway.query_matching_variable("oTHU") == "OTHU"
     assert LabelGateway.query_matching_item("Vfn|Veg") == "VFN|VEG"
     assert LabelGateway.query_matching_unit("1000 T dm") == "1000 t dm"
 
