@@ -63,6 +63,7 @@ class Controller:
             self.view.show_notification(Notification.INFO, Notification.PLEASE_UPLOAD)
             return
         self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
+        self.model.current_page = Page.DATA_SPECIFICATION
         if self.model.furthest_active_page == Page.FILE_UPLOAD:
             self.model.furthest_active_page = Page.DATA_SPECIFICATION
             error_message = self.model.init_data_specification_states(self.model.uploaded_filename)
@@ -71,7 +72,6 @@ class Controller:
                 self.view.show_notification(Notification.ERROR, error_message)
             else:
                 self.view.show_notification(Notification.INFO, Notification.FIELDS_WERE_PREPOPULATED)
-        self.model.current_page = Page.DATA_SPECIFICATION
         self.view.update_base_app()
         self.view.modify_cursor(None)
 
@@ -82,11 +82,11 @@ class Controller:
             self.view.show_notification(Notification.WARNING, warning_message)
             return
         self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
+        self.model.current_page = Page.INTEGRITY_CHECKING
         if self.model.furthest_active_page == Page.DATA_SPECIFICATION:
             self.model.furthest_active_page = Page.INTEGRITY_CHECKING
             self.model.init_integrity_checking_states(self.model.data_specification)
             self.view.update_integrity_checking_page()
-        self.model.current_page = Page.INTEGRITY_CHECKING
         self.view.update_base_app()
         self.view.modify_cursor(None)
 
@@ -102,10 +102,10 @@ class Controller:
             self.view.show_notification(Notification.WARNING, warning_message)
             return
         self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
+        self.model.current_page = Page.PLAUSIBILITY_CHECKING
         if self.model.furthest_active_page == Page.INTEGRITY_CHECKING:
             self.model.furthest_active_page = Page.PLAUSIBILITY_CHECKING
             self.model.init_plausibility_checking_states()
-        self.model.current_page = Page.PLAUSIBILITY_CHECKING
         self.view.update_plausibility_checking_page()
         self.view.update_base_app()
         self.view.modify_cursor(None)
