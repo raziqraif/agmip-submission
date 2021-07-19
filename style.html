@@ -34,15 +34,20 @@
         resize: none;
     }
     
-    /*** Extend CSS classes used by native ipywidgets components
+    /*** Extend CSS classes used by native ipywidgets / jupyter notebook components
 
         Note: Make sure this section appear first before the section that contains classes for custom CSS components.
         Else, the styling defined in this section might override the styling defined in the custom section
     ***/
     
-    /*Change color*/
+    /* Change color variable */
     :root {
         --jp-error-color1: #F87171;
+    }
+
+    /* Make sure the jupyter notebook is large enough */ 
+    #notebook-container{
+        min-width: 1200px !important;
     }
 
     /* Change button style */
@@ -81,7 +86,7 @@
         padding: 0px 0px;
     }
 
-    /* Position the component being displayed at the center of the output area */
+    /* Position the whole app (or displayed component) at the center of the output area */
     div.output_area {
         justify-content: center !important;
     }
@@ -93,57 +98,6 @@
         flex-grow: unset !important;
         display: flex !important;
     }
-
-    /*The following modification were made by the scsa project, which this project is based on*/
-
-    .widget-select > select {
-        font-family: monospace !important;
-    }
-    /* Cause plotly to display "modebar" */
-    .container {
-        min-width: 1200px !important;
-    }
-
-    .jupyter-widgets.widget-tab > .p-TabBar .p-TabBar-tab {
-        flex: 0 1 300px
-    }
-    .p-Collapse-header {
-        color: white !important;
-        background-color: steelblue !important;
-        padding-top: 3px;
-        padding-bottom: 3px;
-    }
-    .p-TabBar-tabLabel {
-        font-weight: bold !important;
-        color: steelblue !important;
-        margin-top: 1em !important;
-        margin-bottom: 1em !important;
-    }
-    .widget-label {
-        text-align: left !important;
-    }
-    p {
-        line-height: 1.2em;
-        margin-bottom: 1em;
-    }
-    /* Avoid output scrollbars (sub-windowing) */
-    .output_wrapper, .output {
-        height: auto !important;
-        max-height: 99999px;
-    }
-    .output_scroll {
-        box-shadow: none !important;
-    }
-    #site {
-        height: 100% !important;
-    }
-    .prompt {
-        min-width: 1px !important; /* Collapse left margin */
-    }
-    pre {
-        user-select: all;
-    }
-
 
     /*** CSS classes for custom components.
 
@@ -159,7 +113,7 @@
         height: 840px;
         border: 1px solid var(--dark-blue);
         padding: 0px 0px;
-        margin: 0px 0px 40px;
+        margin: 0px auto 40px auto;
     }
 
     /* Cursor modification */    
