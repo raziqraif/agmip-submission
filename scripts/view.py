@@ -554,12 +554,11 @@ class View:
             self.box_plot_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.box_plot_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
         # Update select options
-        # self.scenario_select.options = self.model.uploaded_scenarios
-        # self.region_select.options = self.model.uploaded_regions
-        # self.variable_select.options = self.model.uploaded_variables
-        # self.item_select.options = self.model.uploaded_items
-        # self.year_select.options = self.model.uploaded_years
-        # self.unit_select.options = self.model.uploaded_units
+        self.scenario_select.options = self.model.uploaded_scenarios
+        self.region_select.options = self.model.uploaded_regions
+        self.variable_select.options = self.model.uploaded_variables
+        self.item_select.options = self.model.uploaded_items
+        self.year_select.options = self.model.uploaded_years
 
     def _build_app(self) -> ui.Box:
         """Build the application"""
@@ -1077,12 +1076,12 @@ class View:
         )
         visualization_tab.children[0].add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
         # value trends tab page
-        _select_layout = ui.Layout(width="200px", height="76px")
-        self.scenario_select = ui.Select(layout=_select_layout, options=self.model.uploaded_scenarios)
-        self.region_select = ui.Select(layout=_select_layout, options=self.model.uploaded_regions)
-        self.variable_select = ui.Select(layout=_select_layout, options=self.model.uploaded_variables)
-        self.item_select = ui.Select(layout=_select_layout, options=self.model.uploaded_items)
-        self.year_select = ui.Select(layout=_select_layout, options=self.model.uploaded_years)
+        _select_layout = ui.Layout(width="200px")
+        self.scenario_select = ui.Dropdown(layout=_select_layout, options=self.model.uploaded_scenarios)
+        self.region_select = ui.Dropdown(layout=_select_layout, options=self.model.uploaded_regions)
+        self.variable_select = ui.Dropdown(layout=_select_layout, options=self.model.uploaded_variables)
+        self.item_select = ui.Dropdown(layout=_select_layout, options=self.model.uploaded_items)
+        self.year_select = ui.Dropdown(layout=_select_layout, options=self.model.uploaded_years)
         self.value_trends_tab_content = ui.VBox(
             [
                 ui.GridBox(
@@ -1128,7 +1127,7 @@ class View:
                         self.variable_select,
                     ),
                     layout=ui.Layout(
-                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", min_height="168px"
+                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px"
                     ),
                 ),
                 ui.Box(

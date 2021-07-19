@@ -471,10 +471,21 @@ class Model:
         # NOTE: Make sure dummy rows are pruned before passing the table to data cleaner
         self.datacleaner.unknown_labels_table = [row for row in self.unknown_labels_table if row[0] != "-"]
         self.datacleaner.process_bad_and_unknown_labels()
-        self.uploaded_scenarios = self.datacleaner.processed_table[self.datacleaner.scenario_colname].to_list()
-        self.uploaded_regions = self.datacleaner.processed_table[self.datacleaner.region_colname].to_list()
-        self.uploaded_variables = self.datacleaner.processed_table[self.datacleaner.variable_colname].to_list()
-        self.uploaded_items = self.datacleaner.processed_table[self.datacleaner.item_colname].to_list()
-        self.uploaded_years = self.datacleaner.processed_table[self.datacleaner.year_colname].to_list()
-        self.uploaded_units = self.datacleaner.processed_table[self.datacleaner.unit_colname].to_list()
+        # Get a list of unique uploaded labels
+        self.uploaded_scenarios = np.asarray(
+            self.datacleaner.processed_table[self.datacleaner.scenario_colname].unique()
+        )
+        self.uploaded_scenarios.sort()
+        self.uploaded_regions = np.asarray(self.datacleaner.processed_table[self.datacleaner.region_colname].unique())
+        self.uploaded_regions.sort()
+        self.uploaded_variables = np.asarray(
+            self.datacleaner.processed_table[self.datacleaner.variable_colname].unique()
+        )
+        self.uploaded_variables.sort()
+        self.uploaded_items = np.asarray(self.datacleaner.processed_table[self.datacleaner.item_colname].unique())
+        self.uploaded_items.sort()
+        self.uploaded_years = np.asarray(self.datacleaner.processed_table[self.datacleaner.year_colname].unique())
+        self.uploaded_years.sort()
+        self.uploaded_units = np.asarray(self.datacleaner.processed_table[self.datacleaner.unit_colname].unique())
+        self.uploaded_units.sort()
         self.datacleaner.processed_table.to_csv(self.output_filepath, header=False, index=False)
