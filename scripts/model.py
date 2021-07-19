@@ -468,10 +468,14 @@ class Model:
     def init_plausibility_checking_states(self) -> None:
         """Initialize plausibility checking states"""
         assert isinstance(self.datacleaner, DataCleaningService)
-        # NOTE: Make sure dummy rows are pruned before passing the table to data cleaner
+        # Pass unknown label tables back to data cleaner
+        # The table now contains the (fix or override) actions selected by the user
+        # Note that we also make sure dummy rows are pruned before passing the table 
         self.datacleaner.unknown_labels_table = [row for row in self.unknown_labels_table if row[0] != "-"]
         self.datacleaner.process_bad_and_unknown_labels()
         # Get a list of unique uploaded labels
+        # Note that some of the columns in processed table may contain categorical data, which can't be sorted straight 
+        # away
         self.uploaded_scenarios = np.asarray(
             self.datacleaner.processed_table[self.datacleaner.scenario_colname].unique()
         )
@@ -488,4 +492,5 @@ class Model:
         self.uploaded_years.sort()
         self.uploaded_units = np.asarray(self.datacleaner.processed_table[self.datacleaner.unit_colname].unique())
         self.uploaded_units.sort()
+        # Store processed table in a downloadable file 
         self.datacleaner.processed_table.to_csv(self.output_filepath, header=False, index=False)
