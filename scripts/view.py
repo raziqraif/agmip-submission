@@ -717,7 +717,7 @@ class View:
         """Build the data specification page"""
         # Create all control widgets in this page
         # -specification widgets
-        control_layout = ui.Layout(flex="1 1", max_width="100%", display="flex")
+        control_layout = ui.Layout(flex="1 1", max_width="100%")
         self.model_name_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
         self.model_name_dropdown.observe(self.ctrl.onchange_model_name_dropdown, "value")
         self.header_is_included_checkbox = ui.Checkbox(indent=False, value=False, description="", layout=control_layout)
@@ -777,20 +777,29 @@ class View:
         # Create specifications section
         # this section is separated from the page build below to avoid too many indentations
         label_layout = ui.Layout(width="205px")
+        wrapper_layout = ui.Layout(overflow_y="hidden")  # prevent scrollbar from appearing on safari
         specifications_area = ui.VBox(  # Specification box
             (
                 ui.GridBox(  # -Grid box for all specifications except for "Scenarios to ignore"
                     (
-                        ui.HBox((ui.Label("Model name *", layout=label_layout), self.model_name_dropdown)),
-                        ui.HBox((ui.Label("Delimiter *", layout=label_layout), self.delimiter_dropdown)),
                         ui.HBox(
-                            (ui.Label("Header is included *", layout=label_layout), self.header_is_included_checkbox)
+                            (ui.Label("Model name *", layout=label_layout), self.model_name_dropdown),
+                            layout=wrapper_layout,
+                        ),
+                        ui.HBox(
+                            (ui.Label("Delimiter *", layout=label_layout), self.delimiter_dropdown),
+                            layout=wrapper_layout,
+                        ),
+                        ui.HBox(
+                            (ui.Label("Header is included *", layout=label_layout), self.header_is_included_checkbox),
+                            layout=wrapper_layout,
                         ),
                         ui.HBox(
                             (
                                 ui.Label("Number of initial lines to skip *", layout=label_layout),
                                 self.lines_to_skip_text,
-                            )
+                            ),
+                            layout=wrapper_layout,
                         ),
                     ),
                     layout=ui.Layout(width="100%", grid_template_columns="auto auto", grid_gap="4px 56px"),
@@ -1096,8 +1105,7 @@ class View:
                         self.year_select,
                     ),
                     layout=ui.Layout(
-                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr",
-                        grid_gap="16px 16px",
+                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", overflow_y="hidden"
                     ),
                 ),
                 ui.Box(
@@ -1112,7 +1120,7 @@ class View:
                     ),
                 ),
             ],
-            layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
+            layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px", overflow_y="hidden"),
         )
         # growth trends tab page
         self.growth_trends_tab_content = ui.VBox(
@@ -1127,7 +1135,7 @@ class View:
                         self.variable_select,
                     ),
                     layout=ui.Layout(
-                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px"
+                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", overflow_y="hidden"
                     ),
                 ),
                 ui.Box(
@@ -1142,7 +1150,7 @@ class View:
                     ),
                 ),
             ],
-            layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
+            layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px", overflow_y="hidden"),
         )
         self.growth_trends_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
         # box plot tab page
@@ -1162,8 +1170,7 @@ class View:
                         self.year_select,
                     ),
                     layout=ui.Layout(
-                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr",
-                        grid_gap="16px 16px",
+                        grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", overflow_y="hidden"
                     ),
                 ),
                 ui.Box(
@@ -1178,7 +1185,7 @@ class View:
                     ),
                 ),
             ],
-            layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px"),
+            layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px", overflow_y="hidden"),
         )
         self.box_plot_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
         # -page navigation widgets
@@ -1220,7 +1227,8 @@ class View:
                                                 ),
                                                 ui.HTML(
                                                     '<span style="line-height: 13px; color: var(--grey);">Visualize the'
-                                                    " uploaded data and verify that it looks plausible (Work-in-progress).</span>"
+                                                    " uploaded data and verify that it looks plausible"
+                                                    " (Work-in-progress).</span>"
                                                 ),
                                             ],
                                             layout=ui.Layout(height="32px"),
@@ -1240,7 +1248,9 @@ class View:
                     ),
                     layout=ui.Layout(flex="1", width="100%", justify_content="center", align_items="center"),
                 ),
-                ui.HBox([previous, download], layout=ui.Layout(justify_content="flex-end", width="100%")),  # -buttons box
+                ui.HBox(
+                    [previous, download], layout=ui.Layout(justify_content="flex-end", width="100%")
+                ),  # -buttons box
             ),
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
         )
