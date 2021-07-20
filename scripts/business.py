@@ -520,7 +520,9 @@ class DataCleaningService:
                 line = line[:-1] if line[-1] == "\n" else line
                 rownum = line_idx + 1
                 row = line.split(delimiter)
-                if (rownum == 1) and self.data_specification.header_is_included:
+                if rownum <= self.data_specification.initial_lines_to_skip:
+                    continue
+                if (rownum == self.data_specification.initial_lines_to_skip + 1) and self.data_specification.header_is_included:
                     continue
                 # Check and filter rows with various issues
                 if self.check_for_structural_issue(rownum, row, structissuefile):

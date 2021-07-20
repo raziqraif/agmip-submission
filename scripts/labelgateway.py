@@ -237,8 +237,8 @@ class LabelGateway:
     @classmethod
     def query_variable_min_value(cls, variable: str) -> float:
         """Returns the min value"""
-        return -10000000.0
+        return -math.inf
 
     @classmethod
     def query_variable_max_value(cls, variable: str) -> float:
-        return 1000000000.0
+        return math.inf 

@@ -247,17 +247,27 @@ class View:
         self.unknown_labels_table = ui.GridBox()
         self._unknown_labels_table_childrenpool: list[ui.Widget] = []
         # Widgets in the plausibility checking page that need to be manipulated
-        self.value_trends_tab_element: ui.Box = None
-        self.value_trends_tab_content: ui.Box = None
-        self.growth_trends_tab_element: ui.Box = None
-        self.growth_trends_tab_content: ui.Box = None
-        self.box_plot_tab_element: ui.Box = None
-        self.box_plot_tab_content: ui.Box = None
-        self.scenario_select = ui.Select()
-        self.region_select = ui.Select()
-        self.variable_select = ui.Select()
-        self.item_select = ui.Select()
-        self.year_select = ui.Select()
+        # - tab elements & tab contents
+        self.valuetrends_tabelement: ui.Box = None
+        self.valuetrends_tabcontent: ui.Box = None
+        self.growthtrends_tabelement: ui.Box = None
+        self.growthtrends_tabcontent: ui.Box = None
+        self.boxplot_tabelement: ui.Box = None
+        self.boxplot_tabcontent: ui.Box = None
+        # - dropdowns for value trends visualization
+        self.value_scenario_ddown = ui.Dropdown()
+        self.value_region_ddown = ui.Dropdown()
+        self.value_variable_ddown = ui.Dropdown()
+        # -dropdowns for growth trends visualization
+        self.growth_scenario_ddown = ui.Dropdown()
+        self.growth_region_ddown = ui.Dropdown()
+        self.growth_variable_ddown = ui.Dropdown()
+        # -dropdowns for box plot visualization
+        self.boxplot_scenario_ddown = ui.Dropdown()
+        self.boxplot_region_ddown = ui.Dropdown()
+        self.boxplot_variable_ddown = ui.Dropdown()
+        self.boxplot_item_ddown = ui.Dropdown()
+        self.boxplot_year_ddown = ui.Dropdown()
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -536,29 +546,38 @@ class View:
         # Update tab elemetns and tab content
         is_active: Callable[[VisualizationTab], bool] = lambda tab: self.model.active_visualization_tab == tab
         if is_active(VisualizationTab.VALUE_TRENDS):
-            self.value_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-            self.value_trends_tab_content.remove_class(CSS.DISPLAY_MOD__NONE)
+            self.valuetrends_tabelement.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.valuetrends_tabcontent.remove_class(CSS.DISPLAY_MOD__NONE)
+
         else:
-            self.value_trends_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-            self.value_trends_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+            self.valuetrends_tabelement.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.valuetrends_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
         if is_active(VisualizationTab.GROWTH_TRENDS):
-            self.growth_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-            self.growth_trends_tab_content.remove_class(CSS.DISPLAY_MOD__NONE)
+            self.growthtrends_tabelement.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.growthtrends_tabcontent.remove_class(CSS.DISPLAY_MOD__NONE)
         else:
-            self.growth_trends_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-            self.growth_trends_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+            self.growthtrends_tabelement.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.growthtrends_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
         if is_active(VisualizationTab.BOX_PLOT):
-            self.box_plot_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-            self.box_plot_tab_content.remove_class(CSS.DISPLAY_MOD__NONE)
+            self.boxplot_tabelement.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.boxplot_tabcontent.remove_class(CSS.DISPLAY_MOD__NONE)
         else:
-            self.box_plot_tab_element.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-            self.box_plot_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
-        # Update select options
-        self.scenario_select.options = self.model.uploaded_scenarios
-        self.region_select.options = self.model.uploaded_regions
-        self.variable_select.options = self.model.uploaded_variables
-        self.item_select.options = self.model.uploaded_items
-        self.year_select.options = self.model.uploaded_years
+            self.boxplot_tabelement.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
+            self.boxplot_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
+        # Update dropdown options for value trends
+        self.value_scenario_ddown.options = self.model.uploaded_scenarios
+        self.value_region_ddown.options = self.model.uploaded_regions
+        self.value_variable_ddown.options = self.model.uploaded_variables
+        # Update dropdown options for growth trends
+        self.growth_scenario_ddown.options = self.model.uploaded_scenarios
+        self.growth_region_ddown.options = self.model.uploaded_regions
+        self.growth_variable_ddown.options = self.model.uploaded_variables
+        # Update dropdown options for boxplot visualization
+        self.boxplot_scenario_ddown.options = self.model.uploaded_scenarios
+        self.boxplot_region_ddown.options = self.model.uploaded_regions
+        self.boxplot_variable_ddown.options = self.model.uploaded_variables
+        self.boxplot_item_ddown.options = self.model.uploaded_items
+        self.boxplot_year_ddown.options = self.model.uploaded_years
 
     def _build_app(self) -> ui.Box:
         """Build the application"""
@@ -1067,42 +1086,38 @@ class View:
         growth_tab_btn.on_click(self.ctrl.onclick_growth_trends_tab)
         box_tab_btn = ui.Button()
         box_tab_btn.on_click(self.ctrl.onclick_box_plot_tab)
-        self.value_trends_tab_element = ui.Box([ui.Label("Value trends"), value_tab_btn])
-        self.value_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT)
-        self.growth_trends_tab_element = ui.Box([ui.Label("Growth trends"), growth_tab_btn])
-        self.growth_trends_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT)
-        self.box_plot_tab_element = ui.Box([ui.Label("Box plot"), box_tab_btn])
-        self.box_plot_tab_element.add_class(CSS.VISUALIZATION_TAB__ELEMENT)
+        self.valuetrends_tabelement = ui.Box([ui.Label("Value trends"), value_tab_btn])
+        self.valuetrends_tabelement.add_class(CSS.VISUALIZATION_TAB__ELEMENT)
+        self.growthtrends_tabelement = ui.Box([ui.Label("Growth trends"), growth_tab_btn])
+        self.growthtrends_tabelement.add_class(CSS.VISUALIZATION_TAB__ELEMENT)
+        self.boxplot_tabelement = ui.Box([ui.Label("Box plot"), box_tab_btn])
+        self.boxplot_tabelement.add_class(CSS.VISUALIZATION_TAB__ELEMENT)
         visualization_tab = CSS.assign_class(
             ui.GridBox(
                 [
-                    self.value_trends_tab_element,
-                    self.growth_trends_tab_element,
-                    self.box_plot_tab_element,
+                    self.valuetrends_tabelement,
+                    self.growthtrends_tabelement,
+                    self.boxplot_tabelement,
                 ]
             ),
             CSS.VISUALIZATION_TAB,
         )
         visualization_tab.children[0].add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
         # value trends tab page
-        _select_layout = ui.Layout(width="200px")
-        self.scenario_select = ui.Dropdown(layout=_select_layout, options=self.model.uploaded_scenarios)
-        self.region_select = ui.Dropdown(layout=_select_layout, options=self.model.uploaded_regions)
-        self.variable_select = ui.Dropdown(layout=_select_layout, options=self.model.uploaded_variables)
-        self.item_select = ui.Dropdown(layout=_select_layout, options=self.model.uploaded_items)
-        self.year_select = ui.Dropdown(layout=_select_layout, options=self.model.uploaded_years)
-        self.value_trends_tab_content = ui.VBox(
+        _ddown_layout = ui.Layout(width="200px")
+        self.value_scenario_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_scenarios)
+        self.value_region_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_regions)
+        self.value_variable_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_variables)
+        self.valuetrends_tabcontent = ui.VBox(
             [
                 ui.GridBox(
                     (
                         ui.HTML("1. Scenario"),
-                        self.scenario_select,
+                        self.value_scenario_ddown,
                         ui.HTML("2. Region"),
-                        self.region_select,
+                        self.value_region_ddown,
                         ui.HTML("3. Variable"),
-                        self.variable_select,
-                        ui.HTML("4. Base year"),
-                        self.year_select,
+                        self.value_variable_ddown,
                     ),
                     layout=ui.Layout(
                         grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", overflow_y="hidden"
@@ -1123,16 +1138,19 @@ class View:
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px", overflow_y="hidden"),
         )
         # growth trends tab page
-        self.growth_trends_tab_content = ui.VBox(
+        self.growth_scenario_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_scenarios)
+        self.growth_region_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_regions)
+        self.growth_variable_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_variables)
+        self.growthtrends_tabcontent = ui.VBox(
             [
                 ui.GridBox(
                     (
                         ui.HTML("1. Scenario"),
-                        self.scenario_select,
+                        self.growth_scenario_ddown,
                         ui.HTML("2. Region"),
-                        self.region_select,
+                        self.growth_region_ddown,
                         ui.HTML("3. Variable"),
-                        self.variable_select,
+                        self.growth_variable_ddown,
                     ),
                     layout=ui.Layout(
                         grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", overflow_y="hidden"
@@ -1152,22 +1170,27 @@ class View:
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px", overflow_y="hidden"),
         )
-        self.growth_trends_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+        self.growthtrends_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
         # box plot tab page
-        self.box_plot_tab_content = ui.VBox(
+        self.boxplot_scenario_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_scenarios)
+        self.boxplot_region_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_regions)
+        self.boxplot_variable_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_variables)
+        self.boxplot_item_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_items)
+        self.boxplot_year_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_items)
+        self.boxplot_tabcontent = ui.VBox(
             [
                 ui.GridBox(
                     (
                         ui.HTML("1. Scenario"),
-                        self.scenario_select,
+                        self.boxplot_scenario_ddown,
                         ui.HTML("2. Region"),
-                        self.region_select,
+                        self.boxplot_region_ddown,
                         ui.HTML("3. Variable"),
-                        self.variable_select,
+                        self.boxplot_variable_ddown,
                         ui.HTML("4. Item"),
-                        self.item_select,
+                        self.boxplot_item_ddown,
                         ui.HTML("5. Year"),
-                        self.year_select,
+                        self.boxplot_year_ddown,
                     ),
                     layout=ui.Layout(
                         grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", overflow_y="hidden"
@@ -1187,7 +1210,7 @@ class View:
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px", overflow_y="hidden"),
         )
-        self.box_plot_tab_content.add_class(CSS.DISPLAY_MOD__NONE)
+        self.boxplot_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
         # -page navigation widgets
         # TODO: Incorporate submit
         # submit = ui.Button(description="Submit", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
@@ -1239,9 +1262,9 @@ class View:
                                         align_items="center", justify_content="space-between", width="100%"
                                     ),
                                 ),
-                                self.value_trends_tab_content,
-                                self.growth_trends_tab_content,
-                                self.box_plot_tab_content,
+                                self.valuetrends_tabcontent,
+                                self.growthtrends_tabcontent,
+                                self.boxplot_tabcontent,
                             ),
                             layout=ui.Layout(width="900px", align_items="center"),
                         ),
