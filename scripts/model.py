@@ -462,6 +462,7 @@ class Model:
         for row in unknown_labels_table:
             _, _, _, fix, override = row
             assert isinstance(fix, str)
+            assert isinstance(override, bool)
             if override == True and fix.strip() != "":
                 return "Unknown labels cannot be both fixed and overridden"
 
@@ -469,12 +470,12 @@ class Model:
         """Initialize plausibility checking states"""
         assert isinstance(self.datacleaner, DataCleaningService)
         # Pass unknown label tables back to data cleaner
-        # The table now contains the (fix or override) actions selected by the user
-        # Note that we also make sure dummy rows are pruned before passing the table 
+        # Note: The table now contains the (fix or override) actions selected by the user
+        # Note: We need to make sure dummy rows are pruned before passing the table
         self.datacleaner.unknown_labels_table = [row for row in self.unknown_labels_table if row[0] != "-"]
         self.datacleaner.process_bad_and_unknown_labels()
         # Get a list of unique uploaded labels
-        # Note that some of the columns in processed table may contain categorical data, which can't be sorted straight 
+        # Note that some of the columns in processed table may contain categorical data, which can't be sorted straight
         # away
         self.uploaded_scenarios = np.asarray(
             self.datacleaner.processed_table[self.datacleaner.scenario_colname].unique()
@@ -492,5 +493,5 @@ class Model:
         self.uploaded_years.sort()
         self.uploaded_units = np.asarray(self.datacleaner.processed_table[self.datacleaner.unit_colname].unique())
         self.uploaded_units.sort()
-        # Store processed table in a downloadable file 
+        # Store processed table in a downloadable file
         self.datacleaner.processed_table.to_csv(self.output_filepath, header=False, index=False)
