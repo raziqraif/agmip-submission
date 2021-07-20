@@ -99,6 +99,11 @@
         display: flex !important;
     }
 
+    /* Make sure long selection options are truncated */
+    select {
+        text-overflow: ellipsis;
+    }
+
     /*** CSS classes for custom components.
 
        To avoid name clashes with the existing classes used by ipywidgets,
