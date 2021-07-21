@@ -270,7 +270,7 @@ class DataCleaningService:
     @date July 5, 2021
     """
 
-    WORKING_DIRPATH = Path(__name__).parent.parent / "workingdir"
+    DOWNLOADS_DIRPATH = Path(__name__).parent.parent / "workingdir" / "downloads"
     BAD_LABELS_TABLE_COLTITLES = ["Label", "Associated Column", "Fix"]
     UNKNOWN_LABELS_TABLE_COLTITLES = ["Label", "Associated Column", "Closest Match", "Fix", "Override"]
 
@@ -282,10 +282,10 @@ class DataCleaningService:
         self.nrows_duplicate = 0
         self.nrows_accepted = 0
         # Destination files' path
-        self.accepted_rows_dstpath = self.WORKING_DIRPATH / "AcceptedRecords.csv"
-        self.duplicate_rows_dstpath = self.WORKING_DIRPATH / "DuplicateRecords.csv"
-        self.rows_w_ignored_scenario_dstpath = self.WORKING_DIRPATH / "RecordsWithIgnoredScenario.csv"
-        self.rows_w_struct_issue_dstpath = self.WORKING_DIRPATH / "RowsWithStructuralIssue.csv"
+        self.accepted_rows_dstpath = self.DOWNLOADS_DIRPATH / "AcceptedRecords.csv"
+        self.duplicate_rows_dstpath = self.DOWNLOADS_DIRPATH / "DuplicateRecords.csv"
+        self.rows_w_ignored_scenario_dstpath = self.DOWNLOADS_DIRPATH / "RecordsWithIgnoredScenario.csv"
+        self.rows_w_struct_issue_dstpath = self.DOWNLOADS_DIRPATH / "RowsWithStructuralIssue.csv"
         # Accepted table
         self._preprocessed_table = pd.DataFrame()
         self.processed_table = pd.DataFrame()

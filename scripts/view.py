@@ -694,10 +694,10 @@ class View:
         self.uploaded_file_name_box = ui.Box([no_file_uploaded, uploaded_file_snackbar])
         # Buttons
         download_button = ui.HTML(
-            """
+            f"""
                 <a
                     href="workingdir/SampleData.csv" 
-                    download="SampleData.csv"
+                    download="{str(self.model.samplefile_path)}"
                     class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-danger" 
                     style="line-height:36px;"
                     title=""

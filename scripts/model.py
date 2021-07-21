@@ -46,6 +46,7 @@ class JSAppModel:
 class Model:
     WORKING_DIR: Path = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
     UPLOAD_DIR: Path = WORKING_DIR / "uploads"
+    DOWNLOAD_DIR: Path = WORKING_DIR / "downloads"
 
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
@@ -61,6 +62,7 @@ class Model:
         self.furthest_active_page = Page.FILE_UPLOAD  # furthest/last active page
         # States for file upload page
         self.uploaded_filename = ""  # Tracks uploaded file's name (should be empty when the file was removed)
+        self.samplefile_path = self.DOWNLOAD_DIR / "SampleData.csv"
         # States for data specification page
         self.model_names = RuleGateway.query_model_names()
         self.data_specification = DataSpecification()
@@ -70,11 +72,11 @@ class Model:
         self.nrows_w_ignored_scenario = 0
         self.nrows_duplicates = 0
         self.nrows_accepted = 0
-        self.struct_issue_filepath = self.WORKING_DIR / "RowsWithStructuralIssue.csv"
-        self.duplicates_filepath = self.WORKING_DIR / "DuplicateRecords.csv"
-        self.ignored_scenario_filepath = self.WORKING_DIR / "RecordsWithIgnoredScenario.csv"
-        self.accepted_filepath = self.WORKING_DIR / "AcceptedRecords.csv"
-        self.output_filepath = self.WORKING_DIR / "OutputTable.csv"
+        self.struct_issue_filepath = self.DOWNLOAD_DIR / "RowsWithStructuralIssue.csv"
+        self.duplicates_filepath = self.DOWNLOAD_DIR / "DuplicateRecords.csv"
+        self.ignored_scenario_filepath = self.DOWNLOAD_DIR / "RecordsWithIgnoredScenario.csv"
+        self.accepted_filepath = self.DOWNLOAD_DIR / "AcceptedRecords.csv"
+        self.output_filepath = self.DOWNLOAD_DIR / "OutputTable.csv"
         self.bad_labels_table: list[list[str]] = []
         self.unknown_labels_table: list[list[Union[str, bool]]] = []
         self.valid_scenarios = RuleGateway.query_scenarios()
