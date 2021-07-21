@@ -3,7 +3,7 @@ import math
 import numpy as np
 from numpy import diff, mat
 from pathlib import Path
-from typing import Dict, List, Set, Optional
+from typing import Dict, List, Set, Optional, Tuple
 
 import pandas as pd
 from pandas import DataFrame
@@ -27,65 +27,91 @@ class LabelGateway:
         keep_default_na=False,
     )
     # Valid labels table
-    __model_table = __spreadsheet["ModelTable"]
-    __scenario_table = __spreadsheet["ScenarioTable"]
-    __region_table = __spreadsheet["RegionTable"]
-    __variable_table = __spreadsheet["VariableTable"]
-    __item_table = __spreadsheet["ItemTable"]
-    __unit_table = __spreadsheet["UnitTable"]
-    __year_table = __spreadsheet["YearTable"]
+    _model_table = __spreadsheet["ModelTable"]
+    _scenario_table = __spreadsheet["ScenarioTable"]
+    _region_table = __spreadsheet["RegionTable"]
+    _variable_table = __spreadsheet["VariableTable"]
+    _item_table = __spreadsheet["ItemTable"]
+    _unit_table = __spreadsheet["UnitTable"]
+    _year_table = __spreadsheet["YearTable"]
     # Fix tables
-    __region_fix_table = __spreadsheet["RegionFixTable"]
-    __value_fix_table = __spreadsheet["ValueFixTable"]
+    _regionfix_table = __spreadsheet["RegionFixTable"]
+    _valuefix_table = __spreadsheet["ValueFixTable"]
+    # Constraint tables
+    __variableunitvalue_table = __spreadsheet["VariableUnitValueTable"]
     # Valid columns
-    _model_names = set(__model_table["Model"].astype("str"))
-    _scenarios = set(__scenario_table["Scenario"].astype("str"))
-    _regions = set(__region_table["Region"].astype("str"))
-    _variables = set(__variable_table["Variable"].astype("str"))
-    _items = set(__item_table["Item"].astype("str"))
-    _units = set(__unit_table["Unit"].astype("str"))
-    _years = set(__year_table["Year"].astype("str"))
+    _model_names = set(_model_table["Model"].astype("str"))
+    _scenarios = set(_scenario_table["Scenario"].astype("str"))
+    _regions = set(_region_table["Region"].astype("str"))
+    _variables = set(_variable_table["Variable"].astype("str"))
+    _items = set(_item_table["Item"].astype("str"))
+    _units = set(_unit_table["Unit"].astype("str"))
+    _years = set(_year_table["Year"].astype("str"))
     # Data structure for critical queries
-    _matching_variable_memo: Dict[str, str] = {}
-    _value_fix_memo: Dict[str, str] = dict(__value_fix_table.iloc[:, 1:].values)
+    _matchingunit_memo: Dict[str, str] = {}
+    _matchingvariable_memo: Dict[str, str] = {}
+    _valuefix_memo: Dict[str, str] = dict(_valuefix_table.iloc[:, 1:].values)  # Load dataframe as dict
+    _variable_minvalue_memo: Dict[Tuple[str, str], float] = {}
+    _variable_maxvalue_memo: Dict[Tuple[str, str], float] = {}
     # Populate data structures for critical queries
+    # - Populate matching unit memo
+    for unit in _units:
+        _matchingunit_memo[unit.lower()] = unit 
+    # - Populate matching variable memo
     for variable in _variables:
-        _matching_variable_memo[variable.lower()] = variable
-    for key in _value_fix_memo.keys():
-        _value_fix_memo[key] = str(_value_fix_memo[key])  # store numbers as strings
+        _matchingvariable_memo[variable.lower()] = variable
+    # - Populate value-fix memo
+    for key in _valuefix_memo.keys():
+        _valuefix_memo[key] = str(_valuefix_memo[key])  # store numbers as strings
+    # - Populate variable's min/max value memo
+    for namedtuple in __variableunitvalue_table.itertuples(index=False):
+        # Get required variables
+        variable = namedtuple.Variable
+        unit = namedtuple.Unit
+        minvalue = namedtuple[__variableunitvalue_table.columns.get_loc("Minimum Value")]
+        maxvalue = namedtuple[__variableunitvalue_table.columns.get_loc("Maximum Value")]
+        # Update memo
+        _variable_minvalue_memo[(variable, unit)] = minvalue
+        _variable_maxvalue_memo[(variable, unit)] = maxvalue
 
     @classmethod
     def query_model_names(cls) -> List[str]:
+        """Get all valid model names"""
         result = list(cls._model_names)
         result.sort()
         return result
 
     @classmethod
     def query_scenarios(cls) -> List[str]:
+        """Get all valid scenarios"""
         result = list(cls._scenarios)
         result.sort()
         return result
 
     @classmethod
     def query_regions(cls) -> List[str]:
+        """Get all valid regions"""
         result = list(cls._regions)
         result.sort()
         return result
 
     @classmethod
     def query_variables(cls) -> List[str]:
+        """Get all valid variables"""
         result = list(cls._variables)
         result.sort()
         return result
 
     @classmethod
     def query_items(cls) -> List[str]:
+        """Get all valid items """
         result = list(cls._items)
         result.sort()
         return result
 
     @classmethod
     def query_units(cls) -> List[str]:
+        """Get all valid units """
         result = list(cls._units)
         result.sort()
         return result
@@ -129,7 +155,7 @@ class LabelGateway:
     def query_matching_scenario(cls, scenario: str) -> Optional[str]:
         """Returns a scenario with the exact case-insensitive spelling as the argument, or None"""
         scenario = scenario.lower()
-        table = cls.__scenario_table
+        table = cls._scenario_table
         table = table[table["Scenario"].str.lower() == scenario]
         assert table.shape[0] <= 1
         if table.shape[0] != 0:
@@ -147,7 +173,7 @@ class LabelGateway:
     def query_matching_region(cls, region: str) -> Optional[str]:
         """Returns a region with the exact case-insensitive spelling as the argument, or None"""
         region = region.lower()
-        table = cls.__region_table
+        table = cls._region_table
         table = table[table["Region"].str.lower() == region]
         assert table.shape[0] <= 1
         if table.shape[0] != 0:
@@ -166,7 +192,7 @@ class LabelGateway:
         """Returns a variable with the exact case-insensitive spelling as the argument, or None"""
         variable = variable.lower()
         try:
-            return cls._matching_variable_memo[variable]
+            return cls._matchingvariable_memo[variable]
         except:
             return None
 
@@ -181,7 +207,7 @@ class LabelGateway:
     def query_matching_item(cls, item: str) -> Optional[str]:
         """Returns an item with the exact case-insensitive spelling as the argument, or None"""
         item = item.lower()
-        table = cls.__item_table
+        table = cls._item_table
         table = table[table["Item"].str.lower() == item]
         assert table.shape[0] <= 1
         if table.shape[0] != 0:
@@ -199,12 +225,10 @@ class LabelGateway:
     def query_matching_unit(cls, unit: str) -> Optional[str]:
         """Returns an unit with the exact case-insensitive spelling as the argument, or None"""
         unit = unit.lower()
-        table = cls.__unit_table
-        table = table[table["Unit"].str.lower() == unit]
-        assert table.shape[0] <= 1
-        if table.shape[0] != 0:
-            return str(table.iloc[0]["Unit"])  # type: ignore
-        return None
+        try:
+            return cls._matchingunit_memo[unit]
+        except:
+            return None
 
     @classmethod
     def query_partially_matching_unit(cls, unit: str) -> str:
@@ -216,7 +240,7 @@ class LabelGateway:
     @classmethod
     def query_fix_from_value_fix_table(cls, value: str) -> Optional[str]:
         """Checks if a fix exists in the fix table and returns it. Returns None otherwise."""
-        fix_table = cls._value_fix_memo
+        fix_table = cls._valuefix_memo
         try:
             return fix_table[value.lower()]
         except:
@@ -225,7 +249,7 @@ class LabelGateway:
     @classmethod
     def query_fix_from_region_fix_table(cls, region: str) -> Optional[str]:
         """Checks if a fix exists in the fix table and returns it. Returns None otherwise."""
-        fix_table = cls.__region_fix_table
+        fix_table = cls._regionfix_table
         # Get all rows containing the fix
         fix_table = fix_table[fix_table["Region"] == region.lower()]
         assert fix_table.shape[0] <= 1
@@ -235,10 +259,17 @@ class LabelGateway:
         return None
 
     @classmethod
-    def query_variable_min_value(cls, variable: str) -> float:
-        """Returns the min value"""
-        return -math.inf
+    def query_variable_min_value(cls, variable: str, unit: str) -> float:
+        """Return the minimum value for a variable"""
+        if (variable, unit) in cls._variable_minvalue_memo.keys():
+            return float(cls._variable_minvalue_memo[(variable, unit)])
+        else:
+            return -math.inf
 
     @classmethod
-    def query_variable_max_value(cls, variable: str) -> float:
-        return math.inf 
+    def query_variable_max_value(cls, variable: str, unit: str) -> float:
+        """Return the maximum value for a variable"""
+        if (variable, unit) in cls._variable_maxvalue_memo.keys():
+            return float(cls._variable_maxvalue_memo[(variable, unit)])
+        else:
+            return +math.inf

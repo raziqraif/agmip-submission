@@ -1,3 +1,5 @@
+import math
+
 from scripts.labelgateway import LabelGateway
 
 
@@ -19,6 +21,7 @@ def test_matching_queries():
     assert LabelGateway.query_matching_item("Vfn|Veg") == "VFN|VEG"
     assert LabelGateway.query_matching_unit("1000 T dm") == "1000 t dm"
 
+
 def test_partially_matching_queries():
     scenarios = LabelGateway._scenarios
     assert LabelGateway.query_partially_matching_scenario("dummy_label") in scenarios
@@ -30,3 +33,12 @@ def test_partially_matching_queries():
     assert LabelGateway.query_partially_matching_region("dummy_label") in regions
     units = LabelGateway._units
     assert LabelGateway.query_partially_matching_unit("dummy_label") in units
+
+
+def test_minimum_and_maximum_variable_value():
+    assert LabelGateway.query_variable_min_value("POPT", "million") > -1
+    assert LabelGateway.query_variable_max_value("POPT", "million") > 1000
+    assert LabelGateway.query_variable_min_value("ECH4", "MtCO2e") >= 0
+    assert LabelGateway.query_variable_max_value("ECH4", "MtCO2e") <= math.inf
+    assert LabelGateway.query_variable_min_value("YILD", "dm t/ha") >= 0
+    assert LabelGateway.query_variable_max_value("YILD", "fm t/ha") <= 1000
