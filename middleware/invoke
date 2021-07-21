@@ -1,0 +1,5 @@
+#!/bin/sh
+
+/usr/bin/invoke_app "$@" -t agmipsub \
+                         -C "start_jupyter -A -T @tool agmip-submission.ipynb" \
+                         -u anaconda-6
