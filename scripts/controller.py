@@ -259,7 +259,7 @@ class Controller:
         destination = self.model.SUBMISSIONDIR_PATH / source.name
         shutil.copy(source, destination) 
         self.view.modify_cursor(None)
-        self.view.show_notification(Notification.INFO, "Your file has been successfully submitted")
+        self.view.show_notification(Notification.SUCCESS, "Your file has been successfully submitted")
 
     def onclick_previous_from_page_4(self, widget: ui.Button) -> None:
         """The 'submit' button in the last page was clicked"""
