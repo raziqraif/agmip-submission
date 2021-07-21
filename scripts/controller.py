@@ -1,5 +1,6 @@
 from __future__ import annotations  # Delay the evaluation of undefined types
 from pathlib import Path
+import shutil
 
 import ipywidgets as ui
 
@@ -253,7 +254,10 @@ class Controller:
 
     def onclick_submit(self, widget: ui.Button) -> None:
         """The 'submit' button in the last page was clicked"""
-        self.view.show_notification(Notification.INFO, "Submission feature is still in progress.")
+        source = self.model.outputfile_path
+        destination = self.model.SUBMISSIONDIR_PATH / source.name
+        shutil.copy(source, destination) 
+        self.view.show_notification(Notification.INFO, "Your file has been successfully submitted")
 
     def onclick_previous_from_page_4(self, widget: ui.Button) -> None:
         """The 'submit' button in the last page was clicked"""

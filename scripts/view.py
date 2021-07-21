@@ -1212,23 +1212,22 @@ class View:
         )
         self.boxplot_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
         # -page navigation widgets
-        # TODO: Incorporate submit
-        # submit = ui.Button(description="Submit", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
-        # submit.on_click(self.ctrl.onclick_submit)
-        download = ui.HTML(
-            f"""
-                <a
-                    href="{str(self.model.outputfile_path)}" 
-                    download="{str(self.model.outputfile_path.name)}"
-                    class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-info" 
-                    style="line-height:36px;"
-                    title=""
-                >
-                    Download
-                    <i class="fa fa-download" style="margin-left: 4px;"></i>
-                </a>
-            """
-        )
+        submit = ui.Button(description="Submit", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
+        submit.on_click(self.ctrl.onclick_submit)
+        # download = ui.HTML(
+        #     f"""
+        #         <a
+        #             href="{str(self.model.outputfile_path)}" 
+        #             download="{str(self.model.outputfile_path.name)}"
+        #             class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-info" 
+        #             style="line-height:36px;"
+        #             title=""
+        #         >
+        #             Download
+        #             <i class="fa fa-download" style="margin-left: 4px;"></i>
+        #         </a>
+        #     """
+        # )
         previous = ui.Button(
             description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
         )
@@ -1272,7 +1271,7 @@ class View:
                     layout=ui.Layout(flex="1", width="100%", justify_content="center", align_items="center"),
                 ),
                 ui.HBox(
-                    [previous, download], layout=ui.Layout(justify_content="flex-end", width="100%")
+                    [previous, submit], layout=ui.Layout(justify_content="flex-end", width="100%")
                 ),  # -buttons box
             ),
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
