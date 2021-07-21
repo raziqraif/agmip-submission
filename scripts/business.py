@@ -303,7 +303,9 @@ class DataCleaningService:
         self._update_ncolumns_info()
 
     def _parse_data(self) -> None:
-        """Parse data in pandas (WIP)"""
+        """
+        Attempt to reimplement parse data with pandas to gain better performance (WORK-IN-PROGRESS)
+        """
         error_buffer = io.StringIO()
         with redirect_stderr(error_buffer):
             dataframe = pd.read_csv(
@@ -333,8 +335,8 @@ class DataCleaningService:
         maxval_colname = "Maximum Value"
         dataframe[matchingvar_colname] = dataframe[variable_colname].apply(lambda x: LabelGateway.query_matching_variable(x) if LabelGateway.query_matching_variable(x) is not None else x)
         dataframe[fixedval_colname] = dataframe[value_colname].apply(lambda x: self._get_fixed_value_or_dummy_value(x))
-        dataframe[minval_colname] = dataframe[variable_colname].apply(lambda x: LabelGateway.query_variable_min_value(x))
-        dataframe[maxval_colname] = dataframe[variable_colname].apply(lambda x: LabelGateway.query_variable_max_value(x))
+        dataframe[minval_colname] = dataframe.apply(lambda x: LabelGateway.query_variable_min_value(x[variable_colname], x[unit_colname]))
+        dataframe[maxval_colname] = dataframe.apply(lambda x: LabelGateway.query_variable_max_value(x[variable_colname], x[unit_colname]))
         # Reassign coltypes
         dataframe[scenario_colname] = dataframe[scenario_colname].apply(str)  
         dataframe[region_colname] = dataframe[region_colname].apply(str)
@@ -633,13 +635,20 @@ class DataCleaningService:
         """Check if row has a value field with a structural issue and log it if it does"""
         value_field = row[self.data_specification.value_colnum - 1]
         try:
+            # Get fixed value
             value_fix = LabelGateway.query_fix_from_value_fix_table(value_field)
             value_fix = value_fix if value_fix is not None else value_field
+            # Get matching variable 
             variable_field = row[self.data_specification.variable_colnum - 1]
             matching_variable = LabelGateway.query_matching_variable(variable_field)
             matching_variable = matching_variable if matching_variable is not None else variable_field
-            min_value = LabelGateway.query_variable_min_value(matching_variable)
-            max_value = LabelGateway.query_variable_max_value(matching_variable)
+            # Get matching unit
+            unit_field = row[self.data_specification.unit_colnum - 1]
+            matching_unit = LabelGateway.query_matching_unit(unit_field)
+            matching_unit = matching_unit if matching_unit is not None else unit_field 
+            # Get min/max value for the given variable and unit
+            min_value = LabelGateway.query_variable_min_value(matching_variable, matching_unit)
+            max_value = LabelGateway.query_variable_max_value(matching_variable, matching_unit)
             if float(value_fix) < min_value:
                 issue_text = "Value for variable {} is too small".format(matching_variable)
                 self._log_row_w_struct_issue(rownum, row, issue_text, structissuefile)
