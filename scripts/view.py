@@ -1,5 +1,5 @@
-from __future__ import annotations
-from scripts.labelgateway import LabelGateway  # Delay the evaluation of undefined types
+from __future__ import annotations # Delay the evaluation of undefined types
+from scripts.dataaccess import RuleGateway  
 
 from threading import Timer
 from typing import Callable, Optional, Union

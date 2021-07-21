@@ -11,7 +11,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Optional, List, Dict, Set, Union
 
-from .labelgateway import LabelGateway
+from .dataaccess import RuleGateway
 pd.read_csv 
 
 class DataSpecification:
@@ -198,22 +198,22 @@ class DataSpecification:
         Return -1 if no guesses were made, or a non-negative integer if a guess was made
         Each type of successful guess is associated with a unique non-negative integer
         """
-        if LabelGateway.query_label_in_model_names(cell_value):
+        if RuleGateway.query_label_in_model_names(cell_value):
             self.model_name = cell_value
             return 0
-        elif (cell_value == "Scenario") or LabelGateway.query_label_in_scenarios(cell_value):
+        elif (cell_value == "Scenario") or RuleGateway.query_label_in_scenarios(cell_value):
             self.scenario_colnum = col_index + 1
             return 1
-        elif (cell_value == "Region") or LabelGateway.query_label_in_regions(cell_value):
+        elif (cell_value == "Region") or RuleGateway.query_label_in_regions(cell_value):
             self.region_colnum = col_index + 1
             return 2
-        elif (cell_value == "Variable") or LabelGateway.query_label_in_variables(cell_value):
+        elif (cell_value == "Variable") or RuleGateway.query_label_in_variables(cell_value):
             self.variable_colnum = col_index + 1
             return 3
-        elif (cell_value == "Item") or LabelGateway.query_label_in_items(cell_value):
+        elif (cell_value == "Item") or RuleGateway.query_label_in_items(cell_value):
             self.item_colnum = col_index + 1
             return 4
-        elif (cell_value == "Unit") or LabelGateway.query_label_in_units(cell_value):
+        elif (cell_value == "Unit") or RuleGateway.query_label_in_units(cell_value):
             self.unit_colnum = col_index + 1
             return 5
         try:
@@ -333,10 +333,10 @@ class DataCleaningService:
         fixedval_colname = "Fixed Value"
         minval_colname = "Minimum Value"
         maxval_colname = "Maximum Value"
-        dataframe[matchingvar_colname] = dataframe[variable_colname].apply(lambda x: LabelGateway.query_matching_variable(x) if LabelGateway.query_matching_variable(x) is not None else x)
+        dataframe[matchingvar_colname] = dataframe[variable_colname].apply(lambda x: RuleGateway.query_matching_variable(x) if RuleGateway.query_matching_variable(x) is not None else x)
         dataframe[fixedval_colname] = dataframe[value_colname].apply(lambda x: self._get_fixed_value_or_dummy_value(x))
-        dataframe[minval_colname] = dataframe.apply(lambda x: LabelGateway.query_variable_min_value(x[variable_colname], x[unit_colname]))
-        dataframe[maxval_colname] = dataframe.apply(lambda x: LabelGateway.query_variable_max_value(x[variable_colname], x[unit_colname]))
+        dataframe[minval_colname] = dataframe.apply(lambda x: RuleGateway.query_variable_min_value(x[variable_colname], x[unit_colname]))
+        dataframe[maxval_colname] = dataframe.apply(lambda x: RuleGateway.query_variable_max_value(x[variable_colname], x[unit_colname]))
         # Reassign coltypes
         dataframe[scenario_colname] = dataframe[scenario_colname].apply(str)  
         dataframe[region_colname] = dataframe[region_colname].apply(str)
@@ -386,7 +386,7 @@ class DataCleaningService:
         # self.accepted_rows = _remaining_rows.drop_duplicates(subset=KEY_COLUMNS)
 
     def _get_fixed_value_or_dummy_value(self, value: str) -> float:
-        fix = LabelGateway.query_fix_from_value_fix_table(value)
+        fix = RuleGateway.query_fix_from_value_fix_table(value)
         fix = fix if fix is not None else value 
         try: 
             return float(fix)
@@ -636,19 +636,19 @@ class DataCleaningService:
         value_field = row[self.data_specification.value_colnum - 1]
         try:
             # Get fixed value
-            value_fix = LabelGateway.query_fix_from_value_fix_table(value_field)
+            value_fix = RuleGateway.query_fix_from_value_fix_table(value_field)
             value_fix = value_fix if value_fix is not None else value_field
             # Get matching variable 
             variable_field = row[self.data_specification.variable_colnum - 1]
-            matching_variable = LabelGateway.query_matching_variable(variable_field)
+            matching_variable = RuleGateway.query_matching_variable(variable_field)
             matching_variable = matching_variable if matching_variable is not None else variable_field
             # Get matching unit
             unit_field = row[self.data_specification.unit_colnum - 1]
-            matching_unit = LabelGateway.query_matching_unit(unit_field)
+            matching_unit = RuleGateway.query_matching_unit(unit_field)
             matching_unit = matching_unit if matching_unit is not None else unit_field 
             # Get min/max value for the given variable and unit
-            min_value = LabelGateway.query_variable_min_value(matching_variable, matching_unit)
-            max_value = LabelGateway.query_variable_max_value(matching_variable, matching_unit)
+            min_value = RuleGateway.query_variable_min_value(matching_variable, matching_unit)
+            max_value = RuleGateway.query_variable_max_value(matching_variable, matching_unit)
             if float(value_fix) < min_value:
                 issue_text = "Value for variable {} is too small".format(matching_variable)
                 self._log_row_w_struct_issue(rownum, row, issue_text, structissuefile)
@@ -695,7 +695,7 @@ class DataCleaningService:
 
     def parse_value_field(self, value: str) -> None:
         """Checks if a value exists in the fix table and logs it if it does"""
-        fixed_value = LabelGateway.query_fix_from_value_fix_table(value)
+        fixed_value = RuleGateway.query_fix_from_value_fix_table(value)
         if fixed_value is not None:
             float(fixed_value)  # Raise an error if it's non-numeric
             self._log_bad_label(value, "Value", fixed_value)
@@ -704,13 +704,13 @@ class DataCleaningService:
 
     def parse_scenario_field(self, scenario: str) -> None:
         """Checks if a scenario is bad / unknown and logs it if it is"""
-        scenario_w_correct_case = LabelGateway.query_matching_scenario(scenario)
+        scenario_w_correct_case = RuleGateway.query_matching_scenario(scenario)
         # Correct scenario
         if scenario_w_correct_case == scenario:
             return
         # Unkown scenario
         if scenario_w_correct_case is None:
-            closest_scenario = LabelGateway.query_partially_matching_scenario(scenario)
+            closest_scenario = RuleGateway.query_partially_matching_scenario(scenario)
             self._log_unknown_label(scenario, "Scenario", closest_scenario)
             return
         # Known scenario but spelled wrongly
@@ -719,14 +719,14 @@ class DataCleaningService:
 
     def parse_region_field(self, region: str) -> None:
         """Check if a region is bad or unknown and logs it if it is"""
-        region_w_correct_case = LabelGateway.query_matching_region(region)
+        region_w_correct_case = RuleGateway.query_matching_region(region)
         # Correct region
         if region_w_correct_case == region:
             return
-        fixed_region = LabelGateway.query_fix_from_region_fix_table(region)
+        fixed_region = RuleGateway.query_fix_from_region_fix_table(region)
         # Unknown region
         if (region_w_correct_case is None) and (fixed_region is None):
-            closest_region = LabelGateway.query_partially_matching_region(region)
+            closest_region = RuleGateway.query_partially_matching_region(region)
             self._log_unknown_label(region, "Region", closest_region)
             return
         # Known region but spelled wrongly
@@ -738,13 +738,13 @@ class DataCleaningService:
 
     def parse_variable_field(self, variable: str) -> None:
         """Check if a variable is bad or unknown and logs it if it is"""
-        variable_w_correct_case = LabelGateway.query_matching_variable(variable)
+        variable_w_correct_case = RuleGateway.query_matching_variable(variable)
         # Correct variable
         if variable_w_correct_case == variable:
             return
         # Unkown variable
         if variable_w_correct_case is None:
-            closest_variable = LabelGateway.query_partially_matching_variable(variable)
+            closest_variable = RuleGateway.query_partially_matching_variable(variable)
             self._log_unknown_label(variable, "Variable", closest_variable)
             return
         # Known variable but spelled wrongly
@@ -753,13 +753,13 @@ class DataCleaningService:
 
     def parse_item_field(self, item: str) -> None:
         """Check if an item is bad or unknown and logs it if it is"""
-        item_w_correct_case = LabelGateway.query_matching_item(item)
+        item_w_correct_case = RuleGateway.query_matching_item(item)
         # Correct item
         if item_w_correct_case == item:
             return
         # Unkown item
         if item_w_correct_case is None:
-            closest_item = LabelGateway.query_partially_matching_item(item)
+            closest_item = RuleGateway.query_partially_matching_item(item)
             self._log_unknown_label(item, "Item", closest_item)
             return
         # Known item but spelled wrongly
@@ -768,18 +768,18 @@ class DataCleaningService:
 
     def parse_year_field(self, year: str) -> None:
         """Check if a year is bad or unknown and logs it if it is"""
-        if not LabelGateway.query_label_in_years(year):
+        if not RuleGateway.query_label_in_years(year):
             self._unknown_years.append(year)  # Unknown years will be automatically recognized
 
     def parse_unit_field(self, unit: str) -> None:
         """Check if an unit is bad or unknown and logs it if it is"""
-        unit_w_correct_case = LabelGateway.query_matching_unit(unit)
+        unit_w_correct_case = RuleGateway.query_matching_unit(unit)
         # Correct unit
         if unit_w_correct_case == unit:
             return
         # Unkown unit
         if unit_w_correct_case is None:
-            closest_unit = LabelGateway.query_partially_matching_unit(unit)
+            closest_unit = RuleGateway.query_partially_matching_unit(unit)
             self._log_unknown_label(unit, "Unit", closest_unit)
             return
         # Known unit but spelled wrongly

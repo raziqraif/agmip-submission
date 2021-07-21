@@ -10,13 +10,13 @@ from pandas import DataFrame
 
 
 WORKING_DIR: Path = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
-VALID_LABELS_SPREADSHEET: Path = WORKING_DIR / "label_data.xlsx"
+VALID_LABELS_SPREADSHEET: Path = WORKING_DIR / "RuleTables.xlsx"
 
 
-class LabelGateway:
+class RuleGateway:
     """
-    Provides a gateway to label-related data
-    Intended design pattern = https://martinfowler.com/eaaCatalog/gateway.html
+    Provides a gateway to the spreadsheet that contains rules about accepted field values, automatic fix, etc
+    Intended pattern = https://martinfowler.com/eaaCatalog/gateway.html
     """
 
     # Spreadsheet containing labels information

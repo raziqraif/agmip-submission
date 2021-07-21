@@ -12,7 +12,7 @@ from pandas.core.frame import DataFrame
 from .namespaces import Page
 from .namespaces import VisualizationTab
 from .view import Delimiter
-from .labelgateway import LabelGateway
+from .dataaccess import RuleGateway
 from .business import DataSpecification, DataCleaningService
 
 
@@ -62,7 +62,7 @@ class Model:
         # States for file upload page
         self.uploaded_filename = ""  # Tracks uploaded file's name (should be empty when the file was removed)
         # States for data specification page
-        self.model_names = LabelGateway.query_model_names()
+        self.model_names = RuleGateway.query_model_names()
         self.data_specification = DataSpecification()
         # States for integrity checking page
         self.datacleaner: DataCleaningService | None = None
@@ -77,11 +77,11 @@ class Model:
         self.output_filepath = self.WORKING_DIR / "OutputTable.csv"
         self.bad_labels_table: list[list[str]] = []
         self.unknown_labels_table: list[list[Union[str, bool]]] = []
-        self.valid_scenarios = LabelGateway.query_scenarios()
-        self.valid_regions = LabelGateway.query_regions()
-        self.valid_variables = LabelGateway.query_variables()
-        self.valid_items = LabelGateway.query_items()
-        self.valid_units = LabelGateway.query_units()
+        self.valid_scenarios = RuleGateway.query_scenarios()
+        self.valid_regions = RuleGateway.query_regions()
+        self.valid_variables = RuleGateway.query_variables()
+        self.valid_items = RuleGateway.query_items()
+        self.valid_units = RuleGateway.query_units()
         # States for plausibility checking page
         self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
         self.uploaded_scenarios = []
@@ -423,27 +423,27 @@ class Model:
         _bad_labels = []
         _unknown_labels = []
         for label in self.uploaded_scenarios:
-            if label not in LabelGateway.valid_scenarios:
+            if label not in RuleGateway.valid_scenarios:
                 _unknown_labels.append([label, "Scenario"])
-            # matching_label = LabelGateway.query_matching_scenario(label)
+            # matching_label = RuleGateway.query_matching_scenario(label)
             # if (matching_label != label) and (matching_label is not None):
             #     _bad_labels.append([label, "Scenario", matching_label])
             # elif (matching_label is None):
             #     _unknown_labels.append([label, "Scenario"])
         for label in self.uploaded_regions:
-            if label not in LabelGateway.valid_regions:
+            if label not in RuleGateway.valid_regions:
                 _unknown_labels.append([label, "Region"])
         for label in self.uploaded_items:
-            if label not in LabelGateway.valid_items:
+            if label not in RuleGateway.valid_items:
                 _unknown_labels.append([label, "Item"])
         for label in self.uploaded_variables:
-            if label not in LabelGateway.valid_variables:
+            if label not in RuleGateway.valid_variables:
                 _unknown_labels.append([label, "Variable"])
         for label in self.uploaded_units:
-            if label not in LabelGateway.valid_units:
+            if label not in RuleGateway.valid_units:
                 _unknown_labels.append([label, "Unit"])
-            # matching_label = LabelGateway.query_matching_region(label)
-            # fixed_label = LabelGateway.query_fix_from_region_fix_table(label)
+            # matching_label = RuleGateway.query_matching_region(label)
+            # fixed_label = RuleGateway.query_fix_from_region_fix_table(label)
             # if fixed_label is not None:
             #     _bad_labels.append([label, "Region", fixed_label])
             # elif (matching_label != label) and (matching_label is not None):
