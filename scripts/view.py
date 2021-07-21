@@ -696,8 +696,8 @@ class View:
         download_button = ui.HTML(
             f"""
                 <a
-                    href="workingdir/SampleData.csv" 
-                    download="{str(self.model.samplefile_path)}"
+                    href="{str(self.model.samplefile_path)}" 
+                    download="{str(self.model.samplefile_path.name)}"
                     class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-danger" 
                     style="line-height:36px;"
                     title=""
@@ -887,8 +887,8 @@ class View:
         download_rows_field_issues_btn = ui.HTML(
             f"""
                 <a
-                    href="{str(self.model.struct_issue_filepath)}" 
-                    download="{str(self.model.struct_issue_filepath.name)}"
+                    href="{str(self.model.structissuefile_path)}" 
+                    download="{str(self.model.structissuefile_path.name)}"
                     class="{CSS.ICON_BUTTON}"
                     style="line-height:36px;"
                     title=""
@@ -900,8 +900,8 @@ class View:
         download_rows_w_ignored_scenario_btn = ui.HTML(
             f"""
                 <a
-                    href="{str(self.model.ignored_scenario_filepath)}" 
-                    download="{str(self.model.ignored_scenario_filepath.name)}"
+                    href="{str(self.model.ignoredscenariofile_path)}" 
+                    download="{str(self.model.ignoredscenariofile_path.name)}"
                     class="{CSS.ICON_BUTTON}"
                     style="line-height:36px;"
                     title=""
@@ -913,8 +913,8 @@ class View:
         download_duplicate_rows_btn = ui.HTML(
             f"""
                 <a
-                    href="{str(self.model.duplicates_filepath)}" 
-                    download="{str(self.model.duplicates_filepath.name)}"
+                    href="{str(self.model.duplicatesfile_path)}" 
+                    download="{str(self.model.duplicatesfile_path.name)}"
                     class="{CSS.ICON_BUTTON}"
                     style="line-height:36px;"
                     title=""
@@ -926,8 +926,8 @@ class View:
         download_accepted_rows = ui.HTML(
             f"""
                 <a
-                    href="{str(self.model.accepted_filepath)}" 
-                    download="{str(self.model.accepted_filepath.name)}"
+                    href="{str(self.model.acceptedfile_path)}" 
+                    download="{str(self.model.acceptedfile_path.name)}"
                     class="{CSS.ICON_BUTTON}"
                     style="line-height:36px;"
                     title=""
@@ -1218,8 +1218,8 @@ class View:
         download = ui.HTML(
             f"""
                 <a
-                    href="{str(self.model.output_filepath)}" 
-                    download="{str(self.model.output_filepath.name)}"
+                    href="{str(self.model.outputfile_path)}" 
+                    download="{str(self.model.outputfile_path.name)}"
                     class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-info" 
                     style="line-height:36px;"
                     title=""

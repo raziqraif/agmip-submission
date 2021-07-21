@@ -27,7 +27,7 @@ SAMPLE RAW CSV
 
 """
 
-TESTFILE_PATH = Model.UPLOAD_DIR / "temp_testfile.csv"
+TESTFILE_PATH = Model.UPLOADDIR_PATH / "temp_testfile.csv"
 
 
 def create_test_file(input_data: List[str]) -> Path:

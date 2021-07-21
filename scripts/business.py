@@ -728,7 +728,6 @@ class DataCleaningService:
         if (region_w_correct_case is None) and (fixed_region is None):
             closest_region = RuleGateway.query_partially_matching_region(region)
             self._log_unknown_label(region, "Region", closest_region)
-            return
         # Known region but spelled wrongly
         elif (region_w_correct_case != region) and (region_w_correct_case is not None):
             self._log_bad_label(region, "Region", region_w_correct_case)

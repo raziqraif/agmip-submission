@@ -44,9 +44,10 @@ class JSAppModel:
 
 
 class Model:
-    WORKING_DIR: Path = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
-    UPLOAD_DIR: Path = WORKING_DIR / "uploads"
-    DOWNLOAD_DIR: Path = WORKING_DIR / "downloads"
+    WORKINGDIR_PATH = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
+    UPLOADDIR_PATH = WORKINGDIR_PATH / "uploads"
+    DOWNLOADDIR_PATH = WORKINGDIR_PATH / "downloads"
+    SUBMISSIONDIR_PATH = Path("/srv/irods/agmipglobalecondata/.submissions")
 
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
@@ -61,8 +62,8 @@ class Model:
         self.current_page = Page.FILE_UPLOAD
         self.furthest_active_page = Page.FILE_UPLOAD  # furthest/last active page
         # States for file upload page
-        self.uploaded_filename = ""  # Tracks uploaded file's name (should be empty when the file was removed)
-        self.samplefile_path = self.DOWNLOAD_DIR / "SampleData.csv"
+        self.uploadedfile_name = ""  # Tracks uploaded file's name (should be empty when the file was removed)
+        self.samplefile_path = self.DOWNLOADDIR_PATH / "SampleData.csv"
         # States for data specification page
         self.model_names = RuleGateway.query_model_names()
         self.data_specification = DataSpecification()
@@ -72,11 +73,11 @@ class Model:
         self.nrows_w_ignored_scenario = 0
         self.nrows_duplicates = 0
         self.nrows_accepted = 0
-        self.struct_issue_filepath = self.DOWNLOAD_DIR / "RowsWithStructuralIssue.csv"
-        self.duplicates_filepath = self.DOWNLOAD_DIR / "DuplicateRecords.csv"
-        self.ignored_scenario_filepath = self.DOWNLOAD_DIR / "RecordsWithIgnoredScenario.csv"
-        self.accepted_filepath = self.DOWNLOAD_DIR / "AcceptedRecords.csv"
-        self.output_filepath = self.DOWNLOAD_DIR / "OutputTable.csv"
+        self.structissuefile_path = self.DOWNLOADDIR_PATH / "RowsWithStructuralIssue.csv"
+        self.duplicatesfile_path = self.DOWNLOADDIR_PATH / "DuplicateRecords.csv"
+        self.ignoredscenariofile_path = self.DOWNLOADDIR_PATH / "RecordsWithIgnoredScenario.csv"
+        self.acceptedfile_path = self.DOWNLOADDIR_PATH / "AcceptedRecords.csv"
+        self.outputfile_path = self.DOWNLOADDIR_PATH / "OutputTable.csv"
         self.bad_labels_table: list[list[str]] = []
         self.unknown_labels_table: list[list[Union[str, bool]]] = []
         self.valid_scenarios = RuleGateway.query_scenarios()
@@ -101,7 +102,7 @@ class Model:
     def remove_file(self, file_name: str) -> None:
         """Remove uploaded file from the upload directory"""
         assert len(file_name) > 0
-        file_path = self.UPLOAD_DIR / Path(file_name)
+        file_path = self.UPLOADDIR_PATH / Path(file_name)
         assert file_path.is_file()
         file_path.unlink()
 
@@ -323,7 +324,7 @@ class Model:
         assert len(file_name) > 0
         # Reset all states
         self.data_specification = DataSpecification()
-        self.data_specification.uploaded_filepath = self.UPLOAD_DIR / file_name
+        self.data_specification.uploaded_filepath = self.UPLOADDIR_PATH / file_name
         error_message = self.data_specification.load_file()
         if error_message is not None:
             return error_message
@@ -496,4 +497,4 @@ class Model:
         self.uploaded_units = np.asarray(self.datacleaner.processed_table[self.datacleaner.unit_colname].unique())
         self.uploaded_units.sort()
         # Store processed table in a downloadable file
-        self.datacleaner.processed_table.to_csv(self.output_filepath, header=False, index=False)
+        self.datacleaner.processed_table.to_csv(self.outputfile_path, header=False, index=False)

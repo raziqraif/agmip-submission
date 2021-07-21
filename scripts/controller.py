@@ -39,34 +39,34 @@ class Controller:
         file_name: str = change["new"]
         if len(file_name) == 0:  # This change was triggered by View's internal operation, not by a user aciton
             return
-        self.model.uploaded_filename = file_name
+        self.model.uploadedfile_name = file_name
         if file_name.endswith(CSV):
             self.view.show_notification(Notification.SUCCESS, Notification.FILE_UPLOAD_SUCCESS)
             self.view.update_file_upload_page(file_name)
         else:
             self.view.show_notification(Notification.ERROR, Notification.INVALID_FILE_FORMAT)
             self.model.remove_file(file_name)
-            self.model.uploaded_filename = ""
+            self.model.uploadedfile_name = ""
         self._reset_later_pages()
 
     def onclick_remove_file(self, widget: ui.Button) -> None:
         """'x' button in the file upload snackbar was clicked"""
-        assert len(self.model.uploaded_filename) > 0
-        self.model.remove_file(self.model.uploaded_filename)
-        self.model.uploaded_filename = ""
+        assert len(self.model.uploadedfile_name) > 0
+        self.model.remove_file(self.model.uploadedfile_name)
+        self.model.uploadedfile_name = ""
         self.view.update_file_upload_page(None)
         self._reset_later_pages()
 
     def onclick_next_from_page_1(self, widget: ui.Button) -> None:
         """'Next' button on the file upload page was clicked"""
-        if len(self.model.uploaded_filename) == 0:
+        if len(self.model.uploadedfile_name) == 0:
             self.view.show_notification(Notification.INFO, Notification.PLEASE_UPLOAD)
             return
         self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
         self.model.current_page = Page.DATA_SPECIFICATION
         if self.model.furthest_active_page == Page.FILE_UPLOAD:
             self.model.furthest_active_page = Page.DATA_SPECIFICATION
-            error_message = self.model.init_data_specification_states(self.model.uploaded_filename)
+            error_message = self.model.init_data_specification_states(self.model.uploadedfile_name)
             self.view.update_data_specification_page()
             if error_message is not None:
                 self.view.show_notification(Notification.ERROR, error_message)
