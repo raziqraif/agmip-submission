@@ -1,6 +1,5 @@
 .*
-workingdir/*.csv
-workingdir/*.xlsx
+workingdir/downloads/*.csv
 **.pyc
 **/__pycache__/
 **~*.xlsx
