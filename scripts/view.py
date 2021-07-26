@@ -1,19 +1,14 @@
-from __future__ import annotations # Delay the evaluation of undefined types
-from scripts.dataaccess import RuleGateway  
-
+from __future__ import annotations  # Delay the evaluation of undefined types
+from matplotlib import pyplot as plt
 from threading import Timer
 from typing import Callable, Optional, Union
 
 import ipywidgets as ui
 import numpy as np
-from IPython.core.display import display
+from IPython.core.display import clear_output, display
 from IPython.core.display import HTML
 
 from .namespaces import VisualizationTab
-
-
-DARK_BLUE = "#1E3A8A"
-LIGHT_GREY = "#D3D3D3"
 
 
 class Icon:
@@ -254,20 +249,23 @@ class View:
         self.growthtrends_tabcontent: ui.Box = None
         self.boxplot_tabelement: ui.Box = None
         self.boxplot_tabcontent: ui.Box = None
-        # - dropdowns for value trends visualization
-        self.value_scenario_ddown = ui.Dropdown()
-        self.value_region_ddown = ui.Dropdown()
-        self.value_variable_ddown = ui.Dropdown()
-        # -dropdowns for growth trends visualization
-        self.growth_scenario_ddown = ui.Dropdown()
-        self.growth_region_ddown = ui.Dropdown()
-        self.growth_variable_ddown = ui.Dropdown()
-        # -dropdowns for box plot visualization
+        # - widgets for value trends visualization
+        self.valuetrends_scenario_ddown = ui.Dropdown()
+        self.valuetrends_region_ddown = ui.Dropdown()
+        self.valuetrends_variable_ddown = ui.Dropdown()
+        self.valuetrends_vis_output = ui.Output()
+        # - widgets for growth trends visualization
+        self.growthtrends_scenario_ddown = ui.Dropdown()
+        self.growthtrends_region_ddown = ui.Dropdown()
+        self.growthtrends_variable_ddown = ui.Dropdown()
+        self.growthtrends_vis_output = ui.Output()
+        # - widgets for box plot visualization
         self.boxplot_scenario_ddown = ui.Dropdown()
         self.boxplot_region_ddown = ui.Dropdown()
         self.boxplot_variable_ddown = ui.Dropdown()
         self.boxplot_item_ddown = ui.Dropdown()
         self.boxplot_year_ddown = ui.Dropdown()
+        self.boxplot_vis_output = ui.Output()
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -548,7 +546,6 @@ class View:
         if is_active(VisualizationTab.VALUE_TRENDS):
             self.valuetrends_tabelement.add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.valuetrends_tabcontent.remove_class(CSS.DISPLAY_MOD__NONE)
-
         else:
             self.valuetrends_tabelement.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.valuetrends_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
@@ -565,19 +562,66 @@ class View:
             self.boxplot_tabelement.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.boxplot_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
         # Update dropdown options for value trends
-        self.value_scenario_ddown.options = self.model.uploaded_scenarios
-        self.value_region_ddown.options = self.model.uploaded_regions
-        self.value_variable_ddown.options = self.model.uploaded_variables
+        set_options(self.valuetrends_scenario_ddown, self.model.uploaded_scenarios, self.ctrl.onchange_valuetrends_scenario)
+        self.valuetrends_scenario_ddown.value = self.model.valuetrends_scenario
+        set_options(self.valuetrends_region_ddown, self.model.uploaded_regions, self.ctrl.onchange_valuetrends_region)
+        self.valuetrends_region_ddown.value = self.model.valuetrends_region
+        set_options(self.valuetrends_variable_ddown, self.model.uploaded_variables, self.ctrl.onchange_valuetrends_variable)
+        self.valuetrends_variable_ddown.value = self.model.valuetrends_variable
         # Update dropdown options for growth trends
-        self.growth_scenario_ddown.options = self.model.uploaded_scenarios
-        self.growth_region_ddown.options = self.model.uploaded_regions
-        self.growth_variable_ddown.options = self.model.uploaded_variables
+        set_options(self.growthtrends_scenario_ddown, self.model.uploaded_scenarios, self.ctrl.onchange_growthtrends_scenario)
+        self.growthtrends_scenario_ddown.value = self.model.growthtrends_scenario
+        set_options(self.growthtrends_region_ddown, self.model.uploaded_regions, self.ctrl.onchange_growthtrends_region)
+        self.growthtrends_region_ddown.value = self.model.growthtrends_region
+        set_options(self.growthtrends_variable_ddown, self.model.uploaded_variables, self.ctrl.onchange_growthtrends_variable)
+        self.growthtrends_variable_ddown.value = self.model.growthtrends_variable
         # Update dropdown options for boxplot visualization
         self.boxplot_scenario_ddown.options = self.model.uploaded_scenarios
         self.boxplot_region_ddown.options = self.model.uploaded_regions
         self.boxplot_variable_ddown.options = self.model.uploaded_variables
         self.boxplot_item_ddown.options = self.model.uploaded_items
         self.boxplot_year_ddown.options = self.model.uploaded_years
+
+    def visualize_value_trends(self) -> None:
+        """Visualize value trends"""
+        with self.valuetrends_vis_output:
+            clear_output(wait=True)
+            _, axes = plt.subplots(figsize=(12, 6))  # size in inches
+            if self.model.valuetrends_vis_groupedtable is not None:
+                # Make sure we have enough colors for all lines
+                # https://stackoverflow.com/a/35971096/16133077
+                num_plots = self.model.valuetrends_vis_groupedtable.ngroups
+                axes.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
+                # Multi-line chart
+                # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top 
+                for key, group in self.model.valuetrends_vis_groupedtable:
+                    axes = group.plot(ax=axes, kind='line', x=self.model.valuetrends_year_colname, y=self.model.valuetrends_value_colname, label=key)
+            axes.set_xlabel("Year")
+            axes.set_ylabel("Value")
+            plt.title("Value Trends")
+            plt.grid()
+            plt.show()
+
+    def visualize_growth_trends(self) -> None:
+        """Visualize growth trends"""
+        with self.growthtrends_vis_output:
+            clear_output(wait=True)
+            _, axes = plt.subplots(figsize=(12, 6))  # size in inches
+            if self.model.growthtrends_vis_groupedtable is not None:
+                # Make sure we have enough colors for all lines
+                # https://stackoverflow.com/a/35971096/16133077
+                num_plots = self.model.growthtrends_vis_groupedtable.ngroups
+                axes.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
+                # Multi-line chart
+                # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top 
+                for key, group in self.model.growthtrends_vis_groupedtable:
+                    
+                    axes = group.plot(ax=axes, kind='line', x=self.model.growthtrends_year_colname, y=self.model.growthtrends_growthvalue_colname, label=key)
+            axes.set_xlabel("Year")
+            axes.set_ylabel("Growth Value")
+            plt.title("Growth Rate Trends")
+            plt.grid()
+            plt.show()
 
     def _build_app(self) -> ui.Box:
         """Build the application"""
@@ -1103,70 +1147,84 @@ class View:
             CSS.VISUALIZATION_TAB,
         )
         visualization_tab.children[0].add_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
-        # value trends tab page
+        # Shared layouts
         _ddown_layout = ui.Layout(width="200px")
-        self.value_scenario_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_scenarios)
-        self.value_region_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_regions)
-        self.value_variable_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_variables)
+        _vis_output_layout = ui.Layout(
+            margin="24px 0px 0px",
+            justify_content="center",
+            align_items="center",
+        )
+        # value trends tab page
+        self.valuetrends_scenario_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_scenarios)
+        self.valuetrends_scenario_ddown.observe(self.ctrl.onchange_valuetrends_scenario, "value")
+        self.valuetrends_region_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_regions)
+        self.valuetrends_region_ddown.observe(self.ctrl.onchange_valuetrends_region, "value")
+        self.valuetrends_variable_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_variables)
+        self.valuetrends_variable_ddown.observe(self.ctrl.onchange_valuetrends_variable, "value")
+        visualize_value_btn = ui.Button(description="Visualize", layout=ui.Layout(margin="24px 0px 0px 0px"))
+        visualize_value_btn.on_click(self.ctrl.onclick_visualize_value_trends)
+        self.valuetrends_vis_output.layout = _vis_output_layout
+        with self.valuetrends_vis_output:
+            _, axes = plt.subplots(figsize=(12, 6))  # size in inches
+            axes.set_xlabel("Year")
+            axes.set_ylabel("Value")
+            plt.title("Value Trends")
+            plt.grid()
+            plt.show()
         self.valuetrends_tabcontent = ui.VBox(
             [
                 ui.GridBox(
                     (
                         ui.HTML("1. Scenario"),
-                        self.value_scenario_ddown,
+                        self.valuetrends_scenario_ddown,
                         ui.HTML("2. Region"),
-                        self.value_region_ddown,
+                        self.valuetrends_region_ddown,
                         ui.HTML("3. Variable"),
-                        self.value_variable_ddown,
+                        self.valuetrends_variable_ddown,
                     ),
                     layout=ui.Layout(
                         grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", overflow_y="hidden"
                     ),
                 ),
-                ui.Box(
-                    [ui.HTML('<img src="value_trends.png">')],
-                    layout=ui.Layout(
-                        width="600px",
-                        height="330px",
-                        border="1px solid grey",
-                        margin="24px 0px 0px",
-                        justify_content="center",
-                        align_items="center",
-                    ),
-                ),
+                visualize_value_btn,
+                self.valuetrends_vis_output,
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px", overflow_y="hidden"),
         )
         # growth trends tab page
-        self.growth_scenario_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_scenarios)
-        self.growth_region_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_regions)
-        self.growth_variable_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_variables)
+        self.growthtrends_scenario_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_scenarios)
+        self.growthtrends_scenario_ddown.observe(self.ctrl.onchange_growthtrends_scenario, "value")
+        self.growthtrends_region_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_regions)
+        self.growthtrends_region_ddown.observe(self.ctrl.onchange_growthtrends_region, "value")
+        self.growthtrends_variable_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_variables)
+        self.growthtrends_variable_ddown.observe(self.ctrl.onchange_growthtrends_variable, "value")
+        visualize_growth_btn = ui.Button(description="Visualize", layout=ui.Layout(margin="24px 0px 0px 0px"))
+        visualize_growth_btn.on_click(self.ctrl.onclick_visualize_growth_trends)
+        self.growthtrends_vis_output.layout = _vis_output_layout
+        with self.growthtrends_vis_output:
+            _, axes = plt.subplots(figsize=(12, 6))  # size in inches
+            axes.set_xlabel("Year")
+            axes.set_ylabel("Growth value")
+            plt.title("Growth Rate Trends")
+            plt.grid()
+            plt.show()
         self.growthtrends_tabcontent = ui.VBox(
             [
                 ui.GridBox(
                     (
                         ui.HTML("1. Scenario"),
-                        self.growth_scenario_ddown,
+                        self.growthtrends_scenario_ddown,
                         ui.HTML("2. Region"),
-                        self.growth_region_ddown,
+                        self.growthtrends_region_ddown,
                         ui.HTML("3. Variable"),
-                        self.growth_variable_ddown,
+                        self.growthtrends_variable_ddown,
                     ),
                     layout=ui.Layout(
                         grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", overflow_y="hidden"
                     ),
                 ),
-                ui.Box(
-                    [ui.HTML('<img src="growth_trends.png">')],
-                    layout=ui.Layout(
-                        width="600px",
-                        height="330px",
-                        border="1px solid grey",
-                        margin="24px 0px 0px",
-                        justify_content="center",
-                        align_items="center",
-                    ),
-                ),
+                visualize_growth_btn,
+                self.growthtrends_vis_output,
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px", overflow_y="hidden"),
         )
@@ -1177,6 +1235,9 @@ class View:
         self.boxplot_variable_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_variables)
         self.boxplot_item_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_items)
         self.boxplot_year_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_items)
+        visualize_box_btn = ui.Button(description="Visualize", layout=ui.Layout(margin="24px 0px 0px 0px"))
+        visualize_box_btn.on_click(self.ctrl.onclick_visualize_box_plot)
+        self.boxplot_vis_output.layout = _vis_output_layout
         self.boxplot_tabcontent = ui.VBox(
             [
                 ui.GridBox(
@@ -1196,30 +1257,25 @@ class View:
                         grid_template_columns="1fr 2fr 1fr 2fr 1fr 2fr", grid_gap="16px 16px", overflow_y="hidden"
                     ),
                 ),
-                ui.Box(
-                    [ui.HTML('<img src="box_plot.png">')],
-                    layout=ui.Layout(
-                        width="600px",
-                        height="330px",
-                        border="1px solid grey",
-                        margin="24px 0px 0px",
-                        justify_content="center",
-                        align_items="center",
-                    ),
-                ),
+                visualize_box_btn,
+                self.boxplot_vis_output,
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px", overflow_y="hidden"),
         )
         self.boxplot_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
         # -page navigation widgets
-        submit = ui.Button(description="Submit", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
+        submit = ui.Button(
+            description="Submit",
+            button_style="success",
+            layout=ui.Layout(align_self="flex-end", justify_self="flex-end"),
+        )
         submit.on_click(self.ctrl.onclick_submit)
         # download = ui.HTML(
         #     f"""
         #         <a
-        #             href="{str(self.model.outputfile_path)}" 
+        #             href="{str(self.model.outputfile_path)}"
         #             download="{str(self.model.outputfile_path.name)}"
-        #             class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-info" 
+        #             class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-info"
         #             style="line-height:36px;"
         #             title=""
         #         >
@@ -1270,9 +1326,7 @@ class View:
                     ),
                     layout=ui.Layout(flex="1", width="100%", justify_content="center", align_items="center"),
                 ),
-                ui.HBox(
-                    [previous, submit], layout=ui.Layout(justify_content="flex-end", width="100%")
-                ),  # -buttons box
+                ui.HBox([previous, submit], layout=ui.Layout(justify_content="flex-end", width="100%")),  # -buttons box
             ),
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
         )

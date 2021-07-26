@@ -1,6 +1,7 @@
 from __future__ import annotations  # Delay the evaluation of undefined types
 from copy import copy
 import csv
+from datetime import date, datetime
 import os
 from pathlib import Path
 from typing import Any, Callable, Optional, Dict, Union
@@ -8,6 +9,7 @@ from typing import Any, Callable, Optional, Dict, Union
 import numpy as np
 import pandas as pd
 from pandas.core.frame import DataFrame
+from pandas.core.groupby.generic import DataFrameGroupBy
 
 from .namespaces import Page
 from .namespaces import VisualizationTab
@@ -69,17 +71,21 @@ class Model:
         self.data_specification = DataSpecification()
         # States for integrity checking page
         self.datacleaner: DataCleaningService | None = None
+        # - simple statistics for row/record checks
         self.nrows_w_struct_issue = 0
         self.nrows_w_ignored_scenario = 0
         self.nrows_duplicates = 0
         self.nrows_accepted = 0
+        # - paths to downloadable files
         self.structissuefile_path = self.DOWNLOADDIR_PATH / "RowsWithStructuralIssue.csv"
         self.duplicatesfile_path = self.DOWNLOADDIR_PATH / "DuplicateRecords.csv"
         self.ignoredscenariofile_path = self.DOWNLOADDIR_PATH / "RecordsWithIgnoredScenario.csv"
         self.acceptedfile_path = self.DOWNLOADDIR_PATH / "AcceptedRecords.csv"
         self.outputfile_path = self.DOWNLOADDIR_PATH / "OutputTable.csv"
+        # - tables to summarize "field checks"
         self.bad_labels_table: list[list[str]] = []
         self.unknown_labels_table: list[list[Union[str, bool]]] = []
+        # - valid labels for fixing
         self.valid_scenarios = RuleGateway.query_scenarios()
         self.valid_regions = RuleGateway.query_regions()
         self.valid_variables = RuleGateway.query_variables()
@@ -87,12 +93,25 @@ class Model:
         self.valid_units = RuleGateway.query_units()
         # States for plausibility checking page
         self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
+        self.valuetrends_year_colname = ""
+        self.valuetrends_value_colname = ""
+        self.valuetrends_vis_groupedtable: DataFrameGroupBy | None = None
+        self.growthtrends_vis_groupedtable: DataFrameGroupBy | None = None
+        # - uploaded labels
         self.uploaded_scenarios = []
         self.uploaded_regions = []
         self.uploaded_items = []
         self.uploaded_variables = []
         self.uploaded_units = []
         self.uploaded_years = []
+        # - selections for value trends visualization
+        self.valuetrends_scenario = ""
+        self.valuetrends_region = ""
+        self.valuetrends_variable = ""
+        # - selections for growth trends visualization
+        self.growthtrends_scenario = ""
+        self.growthtrends_region = ""
+        self.growthtrends_variable = ""
 
     def intro(self, view: View, controller: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -354,112 +373,7 @@ class Model:
         if len(self.unknown_labels_table) < UNKNOWN_LABELS_NROWS:
             self.unknown_labels_table += [["-", "-", "-", "", False] for _ in range(UNKNOWN_LABELS_NROWS)]
             self.unknown_labels_table[:UNKNOWN_LABELS_NROWS]
-        """ 
-        delimiter = data_specification.delimiter
-        header_is_included = data_specification.header_is_included
-        with open(str(data_specification.uploaded_filepath)) as csvfile:
-            raw_csv = csvfile.readlines()
-        scenarios_to_ignore = data_specification.scenarios_to_ignore
-        scenario_colnum = data_specification.scenario_colnum
-        region_colnum = data_specification.region_colnum
-        item_colnum = data_specification.item_colnum
-        variable_colnum = data_specification.variable_colnum
-        unit_colnum = data_specification.unit_colnum
-        year_colnum = data_specification.year_colnum
-        value_colnum = data_specification.value_colnum
-        assert delimiter != ""
-        ROWS = [  # Each row contains the line number in the first column & header row is skipped
-            [str(i + 1)] + raw_csv[i].split(delimiter) for i in range(int(header_is_included), len(raw_csv))
-        ]
-        MOST_FREQUENT_NCOLS = int(np.bincount([len(row) for row in ROWS]).argmax())
-        # From ROWS, prune rows with field issues
-        # - rows with mismatched number of fields
-        # - rows with empty fields
-        # - rows with a non-numeric value in a numeric field
-        _rows_w_field_issues = []
-        _rows_w_no_field_issues = []  # rows without field issues
-        for row in ROWS:
-            if len(row) != MOST_FREQUENT_NCOLS:
-                row += ["Mismatched number of fields"]
-                _rows_w_field_issues.append(row)
-                continue
-            elif "" in row:
-                row += ["Contains empty fields"]
-                _rows_w_field_issues.append(row)
-                continue
-            try:
-                value = row[value_colnum]
-                int(row[year_colnum])  # no need to set to 0-index due to the previously added line number column
-                float(value)
-            except:
-                row += ["Non-numeric value in a numeric field"]
-                _rows_w_field_issues.append(row)
-                continue
-            _rows_w_no_field_issues.append(row)
-        # From rows with no field issues, prune rows containing an ignored scenario
-        _rows_w_ignored_scenario = [
-            row for row in _rows_w_no_field_issues if row[scenario_colnum] in scenarios_to_ignore
-        ]
-        _rows_w_no_ignored_scenario = [
-            row for row in _rows_w_no_field_issues if row[scenario_colnum] not in scenarios_to_ignore
-        ]
-        # Initialize the integrity checking states
-        _remaining_rows = pd.DataFrame(_rows_w_no_ignored_scenario)
-        KEY_COLUMNS = _remaining_rows.columns.values.tolist()[1:]  # all columns except the line number column
-        # -rows
-        self.rows_w_field_issues = pd.DataFrame(_rows_w_field_issues)
-        self.rows_w_ignored_scenario = pd.DataFrame(_rows_w_ignored_scenario)
-        self.duplicate_rows = _remaining_rows[_remaining_rows.duplicated(subset=KEY_COLUMNS)]
-        self.accepted_rows = _remaining_rows.drop_duplicates(subset=KEY_COLUMNS)
-        # print("FIELD ISSUES:\n", self.rows_w_field_issues)
-        # print("IGNORED:\n", self.rows_w_ignored_scenario)
-        # print("DUPLICATES:\n", self.duplicate_rows)
-        # print("ACCEPTED:\n", self.accepted_rows)
-        # -uploaded labels
-        self.uploaded_scenarios = self.accepted_rows.iloc[:, scenario_colnum].unique().tolist()
-        self.uploaded_regions = self.accepted_rows.iloc[:, region_colnum].unique().tolist()
-        self.uploaded_items = self.accepted_rows.iloc[:, item_colnum].unique().tolist()
-        self.uploaded_variables = self.accepted_rows.iloc[:, variable_colnum].unique().tolist()
-        self.uploaded_units = self.accepted_rows.iloc[:, unit_colnum].unique().tolist()
-        self.uploaded_years = self.accepted_rows.iloc[:, year_colnum].unique().tolist()
-        # -bad labels
-        _bad_labels = []
-        _unknown_labels = []
-        for label in self.uploaded_scenarios:
-            if label not in RuleGateway.valid_scenarios:
-                _unknown_labels.append([label, "Scenario"])
-            # matching_label = RuleGateway.query_matching_scenario(label)
-            # if (matching_label != label) and (matching_label is not None):
-            #     _bad_labels.append([label, "Scenario", matching_label])
-            # elif (matching_label is None):
-            #     _unknown_labels.append([label, "Scenario"])
-        for label in self.uploaded_regions:
-            if label not in RuleGateway.valid_regions:
-                _unknown_labels.append([label, "Region"])
-        for label in self.uploaded_items:
-            if label not in RuleGateway.valid_items:
-                _unknown_labels.append([label, "Item"])
-        for label in self.uploaded_variables:
-            if label not in RuleGateway.valid_variables:
-                _unknown_labels.append([label, "Variable"])
-        for label in self.uploaded_units:
-            if label not in RuleGateway.valid_units:
-                _unknown_labels.append([label, "Unit"])
-            # matching_label = RuleGateway.query_matching_region(label)
-            # fixed_label = RuleGateway.query_fix_from_region_fix_table(label)
-            # if fixed_label is not None:
-            #     _bad_labels.append([label, "Region", fixed_label])
-            # elif (matching_label != label) and (matching_label is not None):
-            #     _bad_labels.append([label, "Region", matching_label])
-            # elif (matching_label is None):
-            #     _unknown_labels.append([label, "Region"])
-        self.bad_labels_overview = pd.DataFrame(_bad_labels)
-        self.unknown_labels_overview = pd.DataFrame(_unknown_labels)
-        print("Bad labels overview:\n", self.bad_labels_overview)
-        print("")
-        print("Unknown labels overview:\n", self.unknown_labels_overview)
-        """
-
+        self.outputfile_path = self.DOWNLOADDIR_PATH / (Path(self.uploadedfile_name).stem + datetime.now().strftime("_%b%d%Y_%H%M%S").upper() + ".csv")
     def validate_unknown_labels_table(self, unknown_labels_table: list[list[str | bool]]) -> str | None:
         """Validate unknown labels table"""
         for row in unknown_labels_table:
@@ -469,32 +383,95 @@ class Model:
             if override == True and fix.strip() != "":
                 return "Unknown labels cannot be both fixed and overridden"
 
-    def init_plausibility_checking_states(self) -> None:
-        """Initialize plausibility checking states"""
-        assert isinstance(self.datacleaner, DataCleaningService)
+    def init_plausibility_checking_states(self, unknown_labels_table: list[list[str | bool]]) -> None:
+        """
+        Initialize plausibility checking states
+        @date Jul 26 2021
+        """
+        assert self.datacleaner is not None
         # Pass unknown label tables back to data cleaner
-        # Note: The table now contains the (fix or override) actions selected by the user
-        # Note: We need to make sure dummy rows are pruned before passing the table
-        self.datacleaner.unknown_labels_table = [row for row in self.unknown_labels_table if row[0] != "-"]
+        # NOTE: The table now contains the (fix or override) actions selected by the user
+        # NOTE: We need to make sure dummy rows are pruned before passing the table
+        self.datacleaner.unknown_labels_table = [row for row in unknown_labels_table if row[0] != "-"]
         self.datacleaner.process_bad_and_unknown_labels()
         # Get a list of unique uploaded labels
-        # Note that some of the columns in processed table may contain categorical data, which can't be sorted straight
-        # away
+        # NOTE: The lists are prepended with empty string,for ease-of-use (by the View object)
+        # NOTE: Some of the columns in processed table may contain categorical data, which can't be sorted straight
+        # away, so we need to pass them to np.assarray first  @date jul 26, 2021
         self.uploaded_scenarios = np.asarray(
-            self.datacleaner.processed_table[self.datacleaner.scenario_colname].unique()
+            np.append(self.datacleaner.processed_table[self.datacleaner.scenario_colname].unique(), "")
         )
         self.uploaded_scenarios.sort()
-        self.uploaded_regions = np.asarray(self.datacleaner.processed_table[self.datacleaner.region_colname].unique())
+        self.uploaded_regions = np.asarray(
+            np.append(self.datacleaner.processed_table[self.datacleaner.region_colname].unique(), "")
+        )
         self.uploaded_regions.sort()
         self.uploaded_variables = np.asarray(
-            self.datacleaner.processed_table[self.datacleaner.variable_colname].unique()
+            np.append(self.datacleaner.processed_table[self.datacleaner.variable_colname].unique(), "")
         )
         self.uploaded_variables.sort()
-        self.uploaded_items = np.asarray(self.datacleaner.processed_table[self.datacleaner.item_colname].unique())
+        self.uploaded_items = np.asarray(
+            np.append(self.datacleaner.processed_table[self.datacleaner.item_colname].unique(), "")
+        )
         self.uploaded_items.sort()
-        self.uploaded_years = np.asarray(self.datacleaner.processed_table[self.datacleaner.year_colname].unique())
+        self.uploaded_years = np.asarray(
+            np.append(self.datacleaner.processed_table[self.datacleaner.year_colname].unique(), "")
+        )
         self.uploaded_years.sort()
-        self.uploaded_units = np.asarray(self.datacleaner.processed_table[self.datacleaner.unit_colname].unique())
+        self.uploaded_units = np.asarray(
+            np.append(self.datacleaner.processed_table[self.datacleaner.unit_colname].unique(), "")
+        )
         self.uploaded_units.sort()
         # Store processed table in a downloadable file
         self.datacleaner.processed_table.to_csv(self.outputfile_path, header=False, index=False)
+        # Update default value
+        if "SSP2_NoMt_NoCC" in self.uploaded_scenarios:
+            self.valuetrends_scenario = "SSP2_NoMt_NoCC"
+            self.growthtrends_scenario = "SSP2_NoMt_NoCC"
+        if "WLD" in self.uploaded_regions:
+            self.valuetrends_region = "WLD"
+            self.growthtrends_region = "WLD"
+        if "PROD" in self.uploaded_variables:
+            self.valuetrends_variable = "PROD"
+            self.growthtrends_variable = "PROD"
+
+    def compute_valuetrends_vis_groupedtable(self) -> None:
+        """Initialize grouped table for value trends visualization"""
+        assert self.datacleaner is not None
+        _table = self.datacleaner.processed_table
+        _table = _table.loc[
+            (_table[self.datacleaner.scenario_colname] == self.valuetrends_scenario)
+            & (_table[self.datacleaner.region_colname] == self.valuetrends_region)
+            & (_table[self.datacleaner.variable_colname] == self.valuetrends_variable)
+        ].copy()
+        if _table.shape[0] == 0:
+            self.valuetrends_vis_groupedtable = None
+            return
+        # make sure that assignments to df's slice (which will not be reflected in the original df) does not raise any warning
+        # pd.options.mode.chained_assignment = None
+        _table[self.datacleaner.year_colname] = pd.to_numeric(_table[self.datacleaner.year_colname])
+        _table[self.datacleaner.value_colname] = pd.to_numeric(_table[self.datacleaner.value_colname])
+        # enable the warning back
+        # pd.options.mode.chained_assignment = "warn"
+        self.valuetrends_vis_groupedtable = _table.groupby(self.datacleaner.item_colname)
+        self.valuetrends_year_colname = self.datacleaner.year_colname
+        self.valuetrends_value_colname = self.datacleaner.value_colname
+
+    def compute_growthtrends_vis_groupedtable(self) -> None:
+        """Initialize grouped table for growth trends visualization"""
+        assert self.datacleaner is not None
+        _table = self.datacleaner.processed_table
+        _table = _table.loc[
+            (_table[self.datacleaner.scenario_colname] == self.growthtrends_scenario)
+            & (_table[self.datacleaner.region_colname] == self.growthtrends_region)
+            & (_table[self.datacleaner.variable_colname] == self.growthtrends_variable)
+        ].copy()
+        if _table.shape[0] == 0:
+            self.growthtrends_vis_groupedtable = None
+            return
+        _table[self.datacleaner.year_colname] = pd.to_numeric(_table[self.datacleaner.year_colname])
+        _table[self.datacleaner.value_colname] = pd.to_numeric(_table[self.datacleaner.value_colname])
+        _table.sort_values([self.datacleaner.item_colname, self.datacleaner.year_colname], inplace=True)
+        self.growthtrends_vis_groupedtable = _table.groupby(self.datacleaner.item_colname)
+        self.growthtrends_year_colname = self.datacleaner.year_colname
+        self.growthtrends_value_colname = self.datacleaner.value_colname
