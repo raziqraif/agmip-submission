@@ -13,8 +13,9 @@
         --alert-green: var(--green);
         /* --alert-green: #28a745; */
         --alert-yellow: #ffc107;
-    
-        --jp-widgets-input-border-color: var(--light-grey)
+
+        --jp-success-color1: var(--green);
+        --jp-widgets-input-border-color: var(--light-grey);
     }
 
     /*** Style basic HTML elements ***/
@@ -47,7 +48,7 @@
 
     /* Make sure the jupyter notebook is large enough */ 
     #notebook-container{
-        min-width: 1200px !important;
+        min-width: 1250px !important;
     }
 
     /* Change button style */
@@ -59,7 +60,7 @@
         color: white;
     }
     .jupyter-button:active:enabled {
-        background: #4999fa;
+        background: #458ce2;
         color: white;
     }
     .jupyter-button:active:disabled {
@@ -75,6 +76,9 @@
     }
     .jupyter-button.mod-info:active {  /*button with info variant*/
         background: #00b4d4;
+    }
+    .jupyter-button.mod-success:active {  /*button with info variant*/
+        background: #31c28d;
     }
     /* Remove margin that jupyter widgets have*/
     .jupyter-widgets {
@@ -489,7 +493,7 @@
     /* Visualization tab */
     .c-visualization-tab {
         grid-template-columns: 1fr 1fr 1fr;
-        width: 330px;
+        width: 331px;
         height: 36px;
         border-radius: 5px;
         border: 1px solid #60A5FA;
