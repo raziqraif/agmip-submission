@@ -7,6 +7,7 @@ import ipywidgets as ui
 import numpy as np
 from IPython.core.display import clear_output, display
 from IPython.core.display import HTML
+from pandas.core.frame import DataFrame
 
 from .namespaces import VisualizationTab
 
@@ -615,7 +616,11 @@ class View:
                 # Multi-line chart
                 # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top 
                 for key, group in self.model.growthtrends_vis_groupedtable:
-                    
+                    assert isinstance(group, DataFrame) 
+                    # group.sort_values([self.model.growthtrends_year_colname], inplace=True)
+                    # growtrates_colname = "GrowthRates"
+                    # group[growtrates_colname] = 0.0
+                    # group[growtrates_colname].apply(lambda x: 100 * (pow(x/x.shift(1), 1/)))
                     axes = group.plot(ax=axes, kind='line', x=self.model.growthtrends_year_colname, y=self.model.growthtrends_growthvalue_colname, label=key)
             axes.set_xlabel("Year")
             axes.set_ylabel("Growth Value")

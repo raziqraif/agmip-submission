@@ -95,6 +95,8 @@ class Model:
         self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
         self.valuetrends_year_colname = ""
         self.valuetrends_value_colname = ""
+        self.growthtrends_year_colname = ""
+        self.growthtrends_growthvalue_colname = ""
         self.valuetrends_vis_groupedtable: DataFrameGroupBy | None = None
         self.growthtrends_vis_groupedtable: DataFrameGroupBy | None = None
         # - uploaded labels
@@ -471,7 +473,6 @@ class Model:
             return
         _table[self.datacleaner.year_colname] = pd.to_numeric(_table[self.datacleaner.year_colname])
         _table[self.datacleaner.value_colname] = pd.to_numeric(_table[self.datacleaner.value_colname])
-        _table.sort_values([self.datacleaner.item_colname, self.datacleaner.year_colname], inplace=True)
         self.growthtrends_vis_groupedtable = _table.groupby(self.datacleaner.item_colname)
         self.growthtrends_year_colname = self.datacleaner.year_colname
-        self.growthtrends_value_colname = self.datacleaner.value_colname
+        self.growthtrends_growthvalue_colname = self.datacleaner.value_colname
