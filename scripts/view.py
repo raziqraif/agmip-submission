@@ -5,7 +5,7 @@ from typing import Callable, Optional, Union
 
 import ipywidgets as ui
 import numpy as np
-from IPython.core.display import clear_output, display
+from IPython.core.display import Javascript, clear_output, display
 from IPython.core.display import HTML
 from pandas.core.frame import DataFrame
 
@@ -341,6 +341,27 @@ class View:
         self.notification_timer = Timer(3.5, self.notification.remove_class, args=[CSS.NOTIFICATION__SHOW])
         self.notification_timer.start()
 
+    def show_modal_dialog(self, title: str, body: str) -> None:
+        """Show modal dialog"""
+        data = """
+            require(
+                ["base/js/dialog"],
+                function(dialog) {
+                    dialog.modal({
+                        title: '%s',
+                        body: '%s',
+                        sanitize: false,
+                        buttons: {
+                            'Close': {}
+                        }
+                });
+            })
+            """ % (
+            title,
+            body,
+        )
+        display(Javascript(data=data, css="modal.css"))
+
     def update_base_app(self) -> None:
         """Update the base app"""
         NUM_OF_PAGES = len(self.page_container.children)
@@ -651,7 +672,7 @@ class View:
     def _build_app(self) -> ui.Box:
         """Build the application"""
         # Constants
-        APP_TITLE = "AgMIP Model Submission Pipeline"
+        APP_TITLE = "AgMIP GlobalEcon Data Submission"
         PAGE_TITLES = ["File Upload", "Data Specification", "Integrity Checking", "Plausibility Checking"]
         NUM_OF_PAGES = len(PAGE_TITLES)
         # Create notification widget
@@ -753,6 +774,10 @@ class View:
         # - create the box
         self.uploaded_file_name_box = ui.Box([no_file_uploaded, uploaded_file_snackbar])
         self.uploaded_file_name_box.layout = ui.Layout(margin="0px 0px 24px 0px")
+        # Create project selection
+        associatedprojects_select = ui.SelectMultiple(options=self.model.associated_projects_pool)
+        associatedprojects_select.observe(self.ctrl.onchange_associated_projects, "value")
+        associatedprojects_select.layout = ui.Layout(margin="20px 0px 0px 0px", width="500px")
         # Create navigation button
         next_button = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_button.on_click(self.ctrl.onclick_next_from_page_1)
@@ -761,10 +786,29 @@ class View:
             [
                 ui.VBox(  # -container to fill up the space above navigation buttons
                     [
-                        ui.HTML('<h4 style="margin: 0px;">Upload a data file</h4>'),
+                        ui.HBox(
+                            [
+                                ui.HTML('<h4 style="margin: 0px;">1) Upload a data file</h4>'),
+                                ui.HTML(
+                                    f"""
+                                    <a
+                                        href="{str(self.model.samplefile_path)}" 
+                                        download="{str(self.model.samplefile_path.name)}"
+                                        class="{CSS.ICON_BUTTON}"
+                                        style="line-height:16px; height:16px"
+                                        title="Download a sample file"
+                                    >
+                                        <i class="fa fa-download"></i>
+                                    </a>
+                                    """
+                                ),
+                            ],
+                            layout=ui.Layout(width="500px", align_items="flex-end") 
+                        ),
                         upload_area,  # --upload area
                         self.uploaded_file_name_box,
-                        ui.HTML('<h4 style="margin: 0px;">Select associated projects</h4>'),
+                        ui.HTML('<h4 style="margin: 0px;">2) Select associated projects</h4>'),
+                        associatedprojects_select,
                     ],
                     layout=ui.Layout(flex="1", justify_content="center"),
                 ),

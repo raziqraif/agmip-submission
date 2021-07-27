@@ -31,6 +31,10 @@
                                   the parent instead. */
     } 
 
+    a, a:focus, a:hover {
+        color: unset;
+    }
+
     textarea{
         resize: none;
     }
@@ -203,6 +207,9 @@
         box-shadow: none !important;
     }
     .c-icon-button:active {
+        color: var(--light-grey) !important;
+    }
+    .c-icon-button:visited {
         color: var(--light-grey) !important;
     }
 

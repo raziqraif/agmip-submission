@@ -45,11 +45,22 @@ class JSAppModel:
         return token
 
 
+def get_user_agmip_projects() -> list[str]:
+    "Return the list of AgMIP projects that the current user is in"
+    groups = str(os.popen("groups")).split(' ')
+    projects = [group for group in groups if "pr-agmipglobalecon" in group]
+    projects = [project[len("pr-")] for project in projects]
+    if len(projects) == 0:
+        # NOTE: This is just to make developing on local environment easier
+        projects = ["agmipglobalecondata", "agmipglobaleconagclim50iv"]
+    return projects
+
+
 class Model:
     WORKINGDIR_PATH = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
     UPLOADDIR_PATH = WORKINGDIR_PATH / "uploads"
     DOWNLOADDIR_PATH = WORKINGDIR_PATH / "downloads"
-    SUBMISSIONDIR_PATH = Path("/srv/irods/agmipglobalecondata/.submissions")
+    SHAREDDIR_PATH = Path("/srv/irods/")
 
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
@@ -66,6 +77,8 @@ class Model:
         # States for file upload page
         self.uploadedfile_name = ""  # Tracks uploaded file's name (should be empty when the file was removed)
         self.samplefile_path = self.DOWNLOADDIR_PATH / "SampleData.csv"
+        self.associated_projects_pool = get_user_agmip_projects() 
+        self.associated_projects = []
         # States for data specification page
         self.model_names = RuleGateway.query_model_names()
         self.data_specification = DataSpecification()
@@ -93,11 +106,13 @@ class Model:
         self.valid_units = RuleGateway.query_units()
         # States for plausibility checking page
         self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
+        # - value trends states
         self.valuetrends_year_colname = ""
         self.valuetrends_value_colname = ""
+        self.valuetrends_vis_groupedtable: DataFrameGroupBy | None = None
+        # - growth trends states
         self.growthtrends_year_colname = ""
         self.growthtrends_growthvalue_colname = ""
-        self.valuetrends_vis_groupedtable: DataFrameGroupBy | None = None
         self.growthtrends_vis_groupedtable: DataFrameGroupBy | None = None
         # - uploaded labels
         self.uploaded_scenarios = []
@@ -114,6 +129,11 @@ class Model:
         self.growthtrends_scenario = ""
         self.growthtrends_region = ""
         self.growthtrends_variable = ""
+        # - cleaning states
+        self.fixed_bad_labels = 0
+        self.fixed_unknown_labels = 0
+        self.overridden_unknown_labels = 0
+        self.dropped_unknown_labels = 0
 
     def intro(self, view: View, controller: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -369,13 +389,10 @@ class Model:
         )  # don't want to mutate the original table
         BAD_LABELS_NROWS = 3
         UNKNOWN_LABELS_NROWS = 3
-        if len(self.bad_labels_table) < BAD_LABELS_NROWS:
-            self.bad_labels_table += [["-", "-", "-"] for _ in range(BAD_LABELS_NROWS)]
-            self.bad_labels_table[:BAD_LABELS_NROWS]
-        if len(self.unknown_labels_table) < UNKNOWN_LABELS_NROWS:
-            self.unknown_labels_table += [["-", "-", "-", "", False] for _ in range(UNKNOWN_LABELS_NROWS)]
-            self.unknown_labels_table[:UNKNOWN_LABELS_NROWS]
+        self.bad_labels_table += [["-", "-", "-"] for _ in range(BAD_LABELS_NROWS)]
+        self.unknown_labels_table += [["-", "-", "-", "", False] for _ in range(UNKNOWN_LABELS_NROWS)]
         self.outputfile_path = self.DOWNLOADDIR_PATH / (Path(self.uploadedfile_name).stem + datetime.now().strftime("_%b%d%Y_%H%M%S").upper() + ".csv")
+
     def validate_unknown_labels_table(self, unknown_labels_table: list[list[str | bool]]) -> str | None:
         """Validate unknown labels table"""
         for row in unknown_labels_table:
@@ -395,6 +412,10 @@ class Model:
         # NOTE: The table now contains the (fix or override) actions selected by the user
         # NOTE: We need to make sure dummy rows are pruned before passing the table
         self.datacleaner.unknown_labels_table = [row for row in unknown_labels_table if row[0] != "-"]
+        self.fixed_bad_labels = len(self.datacleaner.bad_labels_table)
+        self.fixed_unknown_labels = len([row for row in self.datacleaner.unknown_labels_table if row[3] != ""])
+        self.overridden_unknown_labels = len([row for row in self.datacleaner.unknown_labels_table if row[4] == True])
+        self.dropped_unknown_labels = len(self.datacleaner.unknown_labels_table) - self.fixed_unknown_labels - self.overridden_unknown_labels
         self.datacleaner.process_bad_and_unknown_labels()
         # Get a list of unique uploaded labels
         # NOTE: The lists are prepended with empty string,for ease-of-use (by the View object)

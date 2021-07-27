@@ -551,15 +551,15 @@ class DataCleaningService:
                 accepted_rows.append(row)
                 # 23.5
                 # Store found labels
-                scenarios.add(row[scenario_colidx])
-                regions.add(row[region_colidx])
-                variables.add(row[variable_colidx])
-                items.add(row[item_colidx])
-                units.add(row[unit_colidx])
-                years.add(row[year_colidx])
+                scenarios.add(row[scenario_colidx].strip('"'))
+                regions.add(row[region_colidx].strip('"'))
+                variables.add(row[variable_colidx].strip('"'))
+                items.add(row[item_colidx].strip('"'))
+                units.add(row[unit_colidx].strip('"'))
+                years.add(row[year_colidx].strip('"'))
                 # 28.9
                 # Parse value
-                self.parse_value_field(row[value_colidx])
+                self.parse_value_field(row[value_colidx].strip('"'))
         self._preprocessed_table = pd.DataFrame(accepted_rows) 
         # Get colnames
         _colnames = self._preprocessed_table.columns
