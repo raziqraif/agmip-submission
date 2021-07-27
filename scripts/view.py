@@ -67,6 +67,7 @@ class Delimiter:
     """
     Namespace for supported CSV delimiters and relevant utilities
     """
+
     # TODO: ipywidgets dropdown support having dual representation for selection values (ie, for frontend and backend),
     # so this class is not needed @ date Jul 27 2021
     _model_postfix = "_MODEL"
@@ -129,13 +130,13 @@ class CSS:
     APP = "c-app-container"
     COLOR_MOD__WHITE = "c-color-mod--white"
     COLOR_MOD__BLACK = "c-color-mod--black"
+    COLOR_MOD__BLUE = "c-color-mod--blue"
     COLOR_MOD__GREY = "c-color-mod--grey"
     COLUMN_ASSIGNMENT_TABLE = "c-column-assignment-table"
     CURSOR_MOD__PROGRESS = "c-cursor-mod--progress"
     CURSOR_MOD__WAIT = "c-cursor-mod--wait"
     DISPLAY_MOD__NONE = "c-display-mod--none"
     FILENAME_SNACKBAR = "c-filename-snackbar"
-    FILENAME_SNACKBAR__TEXT = "c-filename-snackbar__text"
     HEADER_BAR = "c-header-bar"
     ICON_BUTTON = "c-icon-button"
     BAD_LABELS_TABLE = "c-bad-labels-table"
@@ -363,24 +364,18 @@ class View:
                     else (CSS.STEPPER_EL, CSS.STEPPER_EL__INACTIVE)
                 )
 
-    def update_file_upload_page(self, uploaded_file_name: Union[str, None]) -> None:
-        """
-        File upload page has two states:
-        1) when file was uploaded
-        2) when file was not uploaded yet / uploaded file is removed
-
-        To display state 2), pass a None as argument
-        """
+    def update_file_upload_page(self) -> None:
+        """Update the file upload page"""
         children: tuple(ui.HTML, ui.Box) = self.uploaded_file_name_box.children
         no_file_uploaded_widget = children[0]
         file_uploaded_widget = children[1]
 
-        if uploaded_file_name:
+        if self.model.uploadedfile_name != "":
             no_file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
             file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
             children: tuple(ui.Label, ui.Button) = file_uploaded_widget.children
             label_widget = children[0]
-            label_widget.value = uploaded_file_name
+            label_widget.value = self.model.uploadedfile_name
         else:
             file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
             no_file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
@@ -712,18 +707,11 @@ class View:
         """Build the file upload page"""
         from scripts.model import JSAppModel
 
-        INSTRUCTION = '<h3 style="margin: 0px;">Upload file to be processed</h3>'
-        SUB_INSTRUCTION = (
-            '<span style="font-size: 15px; line-height: 20px; margin: 0px; color: var(--grey);">'
-            "File should be in CSV format</span>"
-        )
-        UPLOADED_FILE = '<div style="width: 125px; line-height: 36px;">Uploaded file</div>'
-        SAMPLE_FILE = '<div style="width: 125px; line-height: 36px;">Sample file</div>'
         # Create file upload area / ua
-        ua_background = ui.Box(
+        ua_background = ui.HBox(
             [
-                ui.HTML('<img src="upload_file.svg" width="80px" height="800px"/>'),
-                ui.HTML(f'<div class="{CSS.COLOR_MOD__GREY}"">Browse files from your computer</div>'),
+                ui.HTML(f'<strong class="{CSS.COLOR_MOD__BLUE}"">&#128206;&nbsp;Add a CSV file&nbsp;</strong>'),
+                ui.HTML(f'<div class="{CSS.COLOR_MOD__GREY}"">from your computer</div>'),
             ]
         )
         ua_background.add_class(CSS.UA__BACKGROUND)
@@ -736,25 +724,23 @@ class View:
         self.ua_file_label = ui.Label("")
         self.ua_file_label.add_class(CSS.UA__FILE_LABEL)
         self.ua_file_label.observe(self.ctrl.onchange_ua_file_label, "value")
+        upload_area = ui.Box(
+            [ua_background, ua_overlay, self.ua_file_label],
+            layout=ui.Layout(margin="20px 0px"),
+        )
+        upload_area._dom_classes = [CSS.UA]
         # Store the model id of file label in the js model (so that the label can be manipulated within js context)
         javascript_model: JSAppModel = self.model.javascript_model
         javascript_model.ua_file_label_model_id = self.ua_file_label.model_id
-        upload_area = ui.Box(
-            [ua_background, ua_overlay, self.ua_file_label],
-            layout=ui.Layout(margin="32px 0px"),
-        )
-        upload_area._dom_classes = [CSS.UA]
         # Create uploaded filename box
-        # -Create snackbar to tell the user that no file has been uploaded
+        # - create snackbar to tell the user that no file has been uploaded
         no_file_uploaded = ui.HTML(
-            '<div style="width: 365px; line-height: 36px; border-radius: 4px; padding: 0px 16px;'
-            ' background: var(--light-grey); color: white;"> No file uploaded </div>'
+            '<div style="width: 500px; line-height: 36px; text-align: center; background: rgba(75, 85, 99, 0.1); color:'
+            ' var(--grey);"> No file uploaded </div>'
         )
         # -Create snackbar to show the uploaded file's name
         uploaded_file_name = ui.Label("")
-        uploaded_file_name.add_class(CSS.FILENAME_SNACKBAR__TEXT)
         x_button = ui.Button(icon="times")
-        x_button.add_class(CSS.ICON_BUTTON)
         x_button.on_click(self.ctrl.onclick_remove_file)
         uploaded_file_snackbar = ui.Box(
             [
@@ -764,40 +750,21 @@ class View:
         )
         uploaded_file_snackbar.add_class(CSS.FILENAME_SNACKBAR)
         uploaded_file_snackbar.add_class(CSS.DISPLAY_MOD__NONE)  # By default this snackbar is hidden
-        # -Create the box
+        # - create the box
         self.uploaded_file_name_box = ui.Box([no_file_uploaded, uploaded_file_snackbar])
-        # Buttons
-        download_button = ui.HTML(
-            f"""
-                <a
-                    href="{str(self.model.samplefile_path)}" 
-                    download="{str(self.model.samplefile_path.name)}"
-                    class="btn p-Widget jupyter-widgets jupyter-button widget-button mod-danger" 
-                    style="line-height:36px;"
-                    title=""
-                >
-                    Download
-                    <i class="fa fa-download" style="margin-left: 4px;"></i>
-                </a>
-            """
-        )
+        self.uploaded_file_name_box.layout = ui.Layout(margin="0px 0px 24px 0px")
+        # Create navigation button
         next_button = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_button.on_click(self.ctrl.onclick_next_from_page_1)
+        # Create page
         return ui.VBox(  # page
             [
                 ui.VBox(  # -container to fill up the space above navigation buttons
                     [
-                        ui.VBox(  # --instructions container
-                            layout=ui.Layout(width="500px"), children=[ui.HTML(INSTRUCTION), ui.HTML(SUB_INSTRUCTION)]
-                        ),
+                        ui.HTML('<h4 style="margin: 0px;">Upload a data file</h4>'),
                         upload_area,  # --upload area
-                        ui.HBox(  # --uploaded file container
-                            [ui.HTML(UPLOADED_FILE), self.uploaded_file_name_box],
-                            layout=ui.Layout(width="500px", margin="0px 0px 4px 0px"),
-                        ),
-                        ui.HBox(  # --sample file container
-                            [ui.HTML(SAMPLE_FILE), download_button], layout=ui.Layout(width="500px")
-                        ),
+                        self.uploaded_file_name_box,
+                        ui.HTML('<h4 style="margin: 0px;">Select associated projects</h4>'),
                     ],
                     layout=ui.Layout(flex="1", justify_content="center"),
                 ),

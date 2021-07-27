@@ -43,7 +43,7 @@ class Controller:
         self.model.uploadedfile_name = file_name
         if file_name.endswith(CSV):
             self.view.show_notification(Notification.SUCCESS, Notification.FILE_UPLOAD_SUCCESS)
-            self.view.update_file_upload_page(file_name)
+            self.view.update_file_upload_page()
         else:
             self.view.show_notification(Notification.ERROR, Notification.INVALID_FILE_FORMAT)
             self.model.remove_file(file_name)
@@ -55,7 +55,7 @@ class Controller:
         assert len(self.model.uploadedfile_name) > 0
         self.model.remove_file(self.model.uploadedfile_name)
         self.model.uploadedfile_name = ""
-        self.view.update_file_upload_page(None)
+        self.view.update_file_upload_page()
         self._reset_later_pages()
 
     def onclick_next_from_page_1(self, widget: ui.Button) -> None:

@@ -148,22 +148,42 @@
     .c-color-mod--grey {
         color: var(--grey);
     }
-
+    .c-color-mod--blue{
+        color: var(--blue);
+    }
     /* Snackbar to show the name of the uploaded file */
     .c-filename-snackbar {
-        width: 365px;
+        width: 500px;
         height: 36px;
         padding: 0px 6px 0px 16px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-flow: row nowrap;
-        border-radius: 4px;
-        background: var(--blue);
-        color: white;
+        background: rgba(96, 165, 250, 0.1);
     }
-    .c-filename-snackbar__text {
-        color: white;
+    .c-filename-snackbar .widget-label {
+        color: var(--blue);
+        background: transparent;
+        text-overflow: ellipsis;
+    }
+    .c-filename-snackbar .widget-button {
+        height: 30px;
+        width: 30px;
+        border-radius: 50%;
+        background: transparent !important;
+        color: var(--blue);
+        font-size: 10px;
+        line-height: 10px;
+        text-align: center;
+    }
+    .c-filename-snackbar .widget-button:hover,
+    .c-filename-snackbar .widget-button:active,
+    .c-filename-snackbar .widget-button:focus {
+        box-shadow: none !important;
+    }
+    .c-filename-snackbar .widget-button:active {
+        color: transparent !important;
     }
 
     /* Icon button */
@@ -183,7 +203,7 @@
         box-shadow: none !important;
     }
     .c-icon-button:active {
-        color: transparent !important;
+        color: var(--light-grey) !important;
     }
 
     /* Header bar */
@@ -248,8 +268,9 @@
     .c-upload-area {
         background: transparent;
         width: 500px;
-        height: 200px;
+        height: 90px;
         position: relative;
+        margin: 20px 0px;
     }
     .c-upload-area__background,
     .c-upload-area__overlay {
@@ -264,9 +285,10 @@
     }
     .c-upload-area__background {
         color: var(--grey);
-        background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='15' ry='15' stroke='%23757575' stroke-width='2' stroke-dasharray='6%2c 6' stroke-dashoffset='0' stroke-linecap='butt'/%3e%3c/svg%3e") !important;
+        /*draw custom dashed border*/
+        background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='15' ry='15' stroke='%23757575' stroke-width='2' stroke-dasharray='6%2c 6' stroke-dashoffset='0' stroke-linecap='butt'/%3e%3c/svg%3e") !important;  
         display: flex;
-        flex-flow: column nowrap;
+        flex-flow: row nowrap;
         align-items: center;
         justify-content: center;
     }
@@ -279,7 +301,7 @@
     }
     .c-upload-area__file-uploader {
         width: 500px;
-        height: 200px;
+        height: 90px;
         opacity: 0;
         color: transparent;
     }
