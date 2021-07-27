@@ -426,7 +426,7 @@ class Model:
         self.uploaded_units.sort()
         # Store processed table in a downloadable file
         self.datacleaner.processed_table.to_csv(self.outputfile_path, header=False, index=False)
-        # Update default value
+        # Set default values if they exist
         if "SSP2_NoMt_NoCC" in self.uploaded_scenarios:
             self.valuetrends_scenario = "SSP2_NoMt_NoCC"
             self.growthtrends_scenario = "SSP2_NoMt_NoCC"
@@ -436,6 +436,9 @@ class Model:
         if "PROD" in self.uploaded_variables:
             self.valuetrends_variable = "PROD"
             self.growthtrends_variable = "PROD"
+        # Compute grouped tables for visualization
+        self.compute_valuetrends_vis_groupedtable()
+        self.compute_growthtrends_vis_groupedtable()
 
     def compute_valuetrends_vis_groupedtable(self) -> None:
         """Initialize grouped table for value trends visualization"""

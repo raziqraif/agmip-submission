@@ -67,7 +67,8 @@ class Delimiter:
     """
     Namespace for supported CSV delimiters and relevant utilities
     """
-
+    # TODO: ipywidgets dropdown support having dual representation for selection values (ie, for frontend and backend),
+    # so this class is not needed @ date Jul 27 2021
     _model_postfix = "_MODEL"
     _view_postfix = "_VIEW"
     COMMA_MODEL = ","
@@ -179,6 +180,10 @@ class CSS:
         name_prefix = "CURSOR_MOD__"
         names = [name for name in cls.__dict__.keys() if name_prefix in name]
         return [getattr(cls, name) for name in names]
+
+
+PLOT_HEIGHT = 11
+PLOT_WIDTH = 5.5
 
 
 def set_options(widget: ui.Dropdown, options: tuple[str], onchange_callback) -> None:
@@ -563,18 +568,26 @@ class View:
             self.boxplot_tabelement.remove_class(CSS.VISUALIZATION_TAB__ELEMENT__ACTIVE)
             self.boxplot_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
         # Update dropdown options for value trends
-        set_options(self.valuetrends_scenario_ddown, self.model.uploaded_scenarios, self.ctrl.onchange_valuetrends_scenario)
+        set_options(
+            self.valuetrends_scenario_ddown, self.model.uploaded_scenarios, self.ctrl.onchange_valuetrends_scenario
+        )
         self.valuetrends_scenario_ddown.value = self.model.valuetrends_scenario
         set_options(self.valuetrends_region_ddown, self.model.uploaded_regions, self.ctrl.onchange_valuetrends_region)
         self.valuetrends_region_ddown.value = self.model.valuetrends_region
-        set_options(self.valuetrends_variable_ddown, self.model.uploaded_variables, self.ctrl.onchange_valuetrends_variable)
+        set_options(
+            self.valuetrends_variable_ddown, self.model.uploaded_variables, self.ctrl.onchange_valuetrends_variable
+        )
         self.valuetrends_variable_ddown.value = self.model.valuetrends_variable
         # Update dropdown options for growth trends
-        set_options(self.growthtrends_scenario_ddown, self.model.uploaded_scenarios, self.ctrl.onchange_growthtrends_scenario)
+        set_options(
+            self.growthtrends_scenario_ddown, self.model.uploaded_scenarios, self.ctrl.onchange_growthtrends_scenario
+        )
         self.growthtrends_scenario_ddown.value = self.model.growthtrends_scenario
         set_options(self.growthtrends_region_ddown, self.model.uploaded_regions, self.ctrl.onchange_growthtrends_region)
         self.growthtrends_region_ddown.value = self.model.growthtrends_region
-        set_options(self.growthtrends_variable_ddown, self.model.uploaded_variables, self.ctrl.onchange_growthtrends_variable)
+        set_options(
+            self.growthtrends_variable_ddown, self.model.uploaded_variables, self.ctrl.onchange_growthtrends_variable
+        )
         self.growthtrends_variable_ddown.value = self.model.growthtrends_variable
         # Update dropdown options for boxplot visualization
         self.boxplot_scenario_ddown.options = self.model.uploaded_scenarios
@@ -587,16 +600,22 @@ class View:
         """Visualize value trends"""
         with self.valuetrends_vis_output:
             clear_output(wait=True)
-            _, axes = plt.subplots(figsize=(12, 6))  # size in inches
+            _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
             if self.model.valuetrends_vis_groupedtable is not None:
                 # Make sure we have enough colors for all lines
                 # https://stackoverflow.com/a/35971096/16133077
                 num_plots = self.model.valuetrends_vis_groupedtable.ngroups
-                axes.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
+                axes.set_prop_cycle(plt.cycler("color", plt.cm.jet(np.linspace(0, 1, num_plots))))
                 # Multi-line chart
-                # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top 
+                # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top
                 for key, group in self.model.valuetrends_vis_groupedtable:
-                    axes = group.plot(ax=axes, kind='line', x=self.model.valuetrends_year_colname, y=self.model.valuetrends_value_colname, label=key)
+                    axes = group.plot(
+                        ax=axes,
+                        kind="line",
+                        x=self.model.valuetrends_year_colname,
+                        y=self.model.valuetrends_value_colname,
+                        label=key,
+                    )
             axes.set_xlabel("Year")
             axes.set_ylabel("Value")
             plt.title("Value Trends")
@@ -607,21 +626,27 @@ class View:
         """Visualize growth trends"""
         with self.growthtrends_vis_output:
             clear_output(wait=True)
-            _, axes = plt.subplots(figsize=(12, 6))  # size in inches
+            _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
             if self.model.growthtrends_vis_groupedtable is not None:
                 # Make sure we have enough colors for all lines
                 # https://stackoverflow.com/a/35971096/16133077
                 num_plots = self.model.growthtrends_vis_groupedtable.ngroups
-                axes.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
+                axes.set_prop_cycle(plt.cycler("color", plt.cm.jet(np.linspace(0, 1, num_plots))))
                 # Multi-line chart
-                # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top 
+                # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top
                 for key, group in self.model.growthtrends_vis_groupedtable:
-                    assert isinstance(group, DataFrame) 
+                    assert isinstance(group, DataFrame)
                     # group.sort_values([self.model.growthtrends_year_colname], inplace=True)
                     # growtrates_colname = "GrowthRates"
                     # group[growtrates_colname] = 0.0
                     # group[growtrates_colname].apply(lambda x: 100 * (pow(x/x.shift(1), 1/)))
-                    axes = group.plot(ax=axes, kind='line', x=self.model.growthtrends_year_colname, y=self.model.growthtrends_growthvalue_colname, label=key)
+                    axes = group.plot(
+                        ax=axes,
+                        kind="line",
+                        x=self.model.growthtrends_year_colname,
+                        y=self.model.growthtrends_growthvalue_colname,
+                        label=key,
+                    )
             axes.set_xlabel("Year")
             axes.set_ylabel("Growth Value")
             plt.title("Growth Rate Trends")
@@ -1158,6 +1183,9 @@ class View:
             margin="24px 0px 0px",
             justify_content="center",
             align_items="center",
+            height="360px",
+            width="100%",
+            overflow="auto",
         )
         # value trends tab page
         self.valuetrends_scenario_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_scenarios)
@@ -1170,7 +1198,7 @@ class View:
         visualize_value_btn.on_click(self.ctrl.onclick_visualize_value_trends)
         self.valuetrends_vis_output.layout = _vis_output_layout
         with self.valuetrends_vis_output:
-            _, axes = plt.subplots(figsize=(12, 6))  # size in inches
+            _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))
             axes.set_xlabel("Year")
             axes.set_ylabel("Value")
             plt.title("Value Trends")
@@ -1207,7 +1235,7 @@ class View:
         visualize_growth_btn.on_click(self.ctrl.onclick_visualize_growth_trends)
         self.growthtrends_vis_output.layout = _vis_output_layout
         with self.growthtrends_vis_output:
-            _, axes = plt.subplots(figsize=(12, 6))  # size in inches
+            _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
             axes.set_xlabel("Year")
             axes.set_ylabel("Growth value")
             plt.title("Growth Rate Trends")
@@ -1243,6 +1271,12 @@ class View:
         visualize_box_btn = ui.Button(description="Visualize", layout=ui.Layout(margin="24px 0px 0px 0px"))
         visualize_box_btn.on_click(self.ctrl.onclick_visualize_box_plot)
         self.boxplot_vis_output.layout = _vis_output_layout
+        with self.boxplot_vis_output:
+            _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))
+            axes.boxplot([1, 2, 3, 4, 5, 6])  # Dummy data
+            plt.title("Inter-model Box Plot (Work-in-progress)")
+            plt.show()
+            print("*The shown boxplot is just a sample")
         self.boxplot_tabcontent = ui.VBox(
             [
                 ui.GridBox(

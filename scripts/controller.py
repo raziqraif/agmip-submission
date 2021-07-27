@@ -108,6 +108,8 @@ class Controller:
             self.model.furthest_active_page = Page.PLAUSIBILITY_CHECKING
             assert self.model.datacleaner is not None
             self.model.init_plausibility_checking_states(self.model.unknown_labels_table)
+            self.view.visualize_value_trends()
+            self.view.visualize_growth_trends()
         self.view.update_plausibility_checking_page()
         self.view.update_base_app()
         self.view.modify_cursor(None)
