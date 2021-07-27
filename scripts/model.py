@@ -426,6 +426,8 @@ class Model:
         self.uploaded_units.sort()
         # Store processed table in a downloadable file
         self.datacleaner.processed_table.to_csv(self.outputfile_path, header=False, index=False)
+        # Reset active tab
+        self.active_visualization_tab = VisualizationTab.VALUE_TRENDS  
         # Set default values if they exist
         if "SSP2_NoMt_NoCC" in self.uploaded_scenarios:
             self.valuetrends_scenario = "SSP2_NoMt_NoCC"

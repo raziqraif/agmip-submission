@@ -1127,7 +1127,7 @@ class View:
                                 ui.HTML(
                                     '<span style="line-height: 13px; color: var(--grey);">The table lists'
                                     " labels that are recognized by the program but do not adhere to the correct"
-                                    " standard. They have been fixed automatically."
+                                    " standard. They will be fixed automatically."
                                 ),
                                 self.bad_labels_table,
                                 ui.HTML(

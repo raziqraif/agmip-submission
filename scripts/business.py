@@ -286,12 +286,21 @@ class DataCleaningService:
         self.duplicate_rows_dstpath = self.DOWNLOADS_DIRPATH / "DuplicateRecords.csv"
         self.rows_w_ignored_scenario_dstpath = self.DOWNLOADS_DIRPATH / "RecordsWithIgnoredScenario.csv"
         self.rows_w_struct_issue_dstpath = self.DOWNLOADS_DIRPATH / "RowsWithStructuralIssue.csv"
-        # Accepted table
+        # Processed table and its column names
         self._preprocessed_table = pd.DataFrame()
         self.processed_table = pd.DataFrame()
+        self.scenario_colname = ""
+        self.region_colname = ""
+        self.variable_colname = ""
+        self.item_colname = ""
+        self.year_colname = ""
+        self.value_colname = ""
+        self.unit_colname = ""
         # Labels table
         self.bad_labels_table: list[list[str]] = []
         self.unknown_labels_table: list[list[Union[str, bool]]] = []
+        self._bad_labels = set()
+        self._unknown_labels = set()
         self._unknown_years: list[str] = []  # Unknown years will be added into the rule table automatically
         # Number of columns info
         self._correct_ncolumns = 0
@@ -582,6 +591,9 @@ class DataCleaningService:
             self.parse_year_field(year)
         for unit in units:
             self.parse_unit_field(unit)
+        # Remove duplicates from bad/unknown table
+        self.bad_labels_table = [list(tupl) for tupl in set(tuple(tbl_entry) for tbl_entry in self.bad_labels_table)]
+        self.unknown_labels_table = [list(tupl) for tupl in set(tuple(tbl_entry) for tbl_entry in self.unknown_labels_table)]
 
     def check_for_structural_issue(self, rownum: int, row: list[str], structissuefile: TextIOWrapper) -> bool:
         """
@@ -650,11 +662,11 @@ class DataCleaningService:
             min_value = RuleGateway.query_variable_min_value(matching_variable, matching_unit)
             max_value = RuleGateway.query_variable_max_value(matching_variable, matching_unit)
             if float(value_fix) < min_value:
-                issue_text = "Value for variable {} is too small".format(matching_variable)
+                issue_text = "Value for variable {} is smaller than {} {}".format(matching_variable, min_value, matching_unit)
                 self._log_row_w_struct_issue(rownum, row, issue_text, structissuefile)
                 return True
             if float(value_fix) > max_value:
-                issue_text = "Value for variable {} is too large".format(matching_variable)
+                issue_text = "Value for variable {} is greater than {} {}".format(matching_variable, max_value, matching_unit)
                 self._log_row_w_struct_issue(rownum, row, issue_text, structissuefile)
                 return True
         except:
@@ -828,7 +840,6 @@ class DataCleaningService:
 
     def _log_bad_label(self, bad_label: str, associated_column: str, fix: str) -> None:
         """Logs bad label"""
-        # Appending row 1 by 1 to a pandas dataframe is slow, so we store these rows in a list first
         self.bad_labels_table.append([bad_label, associated_column, fix])
 
     def _log_unknown_label(self, unknown_label: str, associated_column: str, closest_label: str) -> None:
