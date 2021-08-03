@@ -7,7 +7,7 @@
 	/* Clickaway listener for notification */
 
 	document.addEventListener('mousedown', function(event) {  // cannot be 'click' as it will interfere with the 'blur'
-		notification = document.getElementsByClassName('c-notification')[0]
+		notification = document.getElementsByClassName('rc-notification')[0]
 		// Ignore if user clicks inside notification
 		if (notification === undefined || notification.contains(event.target)) {
 			return;
@@ -16,12 +16,12 @@
 		// Note that doing this will only modify the notification view, without changing the notification model. The 
 		// model will still think that the removed CSS class is present in the view
 		// We will reset the model's CSS classes in the server-side the next time the notification is being shown again.
-		notification.classList.remove("c-notification--show")
+		notification.classList.remove("rc-notification--show")
 	})
 	
 	/* Manage file uploading */
 
-	document.getElementsByClassName("c-upload-area__file-uploader")[0].onchange = function () {
+	document.getElementsByClassName("rc-upload-area__file-uploader")[0].onchange = function () {
 		/**
 		 * Upload selected file to Jupyter notebook server
 		 *
@@ -43,7 +43,7 @@
 
 		var file = this.files[0];
 		this.disabled = true;
-		document.body.classList.add("c-cursor-mod--progress")
+		document.body.classList.add("rc-cursor-mod--progress")
 		
 		// Determine file destination path & destination url
 		var current_url = window.location.href;
@@ -139,8 +139,8 @@
 						}
 						// Update relevant states after sending the last chunk
 						else {	
-							document.body.classList.remove("c-cursor-mod--progress")
-							fileUploader = document.getElementsByClassName("c-upload-area__file-uploader")[0];
+							document.body.classList.remove("rc-cursor-mod--progress")
+							fileUploader = document.getElementsByClassName("rc-upload-area__file-uploader")[0];
 							fileUploader.disabled = false;
 							fileUploader.value = null;
 							// Communicate the name of uploaded file to the Python backend by manipulating the model of  
@@ -162,8 +162,8 @@
 					}
 					// Error when sending http request
 					else {
-						document.body.classList.remove("c-cursor-mod--progress")
-						fileUploader = document.getElementsByClassName("c-upload-area__file-uploader")[0];
+						document.body.classList.remove("rc-cursor-mod--progress")
+						fileUploader = document.getElementsByClassName("rc-upload-area__file-uploader")[0];
 						fileUploader.disabled = false;
 						fileUploader.value = null;
 						alert("Fail to upload file. HTTP status: " + http.status);
