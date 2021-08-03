@@ -11,43 +11,17 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 from pandas.core.groupby.generic import DataFrameGroupBy
 
-from .namespaces import Page
-from .namespaces import VisualizationTab
-from .view import Delimiter
+from .utils import Delimiter
+from .utils import JSAppModel
+from .utils import Page
+from .utils import VisualizationTab
 from .dataaccess import RuleGateway
 from .business import DataSpecification, DataCleaningService
 
 
-class JSAppModel:
-    """Class to group attributes that needs to be passed to Javascript context"""
-
-    def __init__(self):
-        # Auth token of notebook server
-        self.nbserver_auth_token: str = self._get_notebook_auth_token()
-        # Model ID of the filename label in "UA" (upload area)
-        self.ua_file_label_model_id: str = ""
-
-    def serialize(self) -> str:
-        """Serialize self into a format that can be embedded into the Javascript context"""
-        return str(vars(self))
-
-    def _get_notebook_auth_token(self) -> str:
-        """Get auth token to interact with notebook server's API"""
-        # Terminal command to print the urls of running servers.
-        stream = os.popen("jupyter notebook list")
-        output = stream.read()
-        assert "http" in output
-        # Assume our server is at the top of the output and extract its token
-        # format of output -> "<title>\nhttp://<nbserver_baseurl>/?token=TOKEN :: ...\n"
-        output = output.split("token=")[1]
-        # Format of output is "TOKEN :: ..."
-        token = output.split(" ")[0]
-        return token
-
-
 def get_user_agmip_projects() -> list[str]:
     "Return the list of AgMIP projects that the current user is in"
-    groups = str(os.popen("groups")).split(' ')
+    groups = str(os.popen("groups")).split(" ")
     projects = [group for group in groups if "pr-agmipglobalecon" in group]
     projects = [project[len("pr-")] for project in projects]
     if len(projects) == 0:
@@ -77,7 +51,7 @@ class Model:
         # States for file upload page
         self.uploadedfile_name = ""  # Tracks uploaded file's name (should be empty when the file was removed)
         self.samplefile_path = self.DOWNLOADDIR_PATH / "SampleData.csv"
-        self.associated_projects_pool = get_user_agmip_projects() 
+        self.associated_projects_pool = get_user_agmip_projects()
         self.associated_projects = []
         # States for data specification page
         self.model_names = RuleGateway.query_model_names()
@@ -391,7 +365,9 @@ class Model:
         UNKNOWN_LABELS_NROWS = 3
         self.bad_labels_table += [["-", "-", "-"] for _ in range(BAD_LABELS_NROWS)]
         self.unknown_labels_table += [["-", "-", "-", "", False] for _ in range(UNKNOWN_LABELS_NROWS)]
-        self.outputfile_path = self.DOWNLOADDIR_PATH / (Path(self.uploadedfile_name).stem + datetime.now().strftime("_%b%d%Y_%H%M%S").upper() + ".csv")
+        self.outputfile_path = self.DOWNLOADDIR_PATH / (
+            Path(self.uploadedfile_name).stem + datetime.now().strftime("_%b%d%Y_%H%M%S").upper() + ".csv"
+        )
 
     def validate_unknown_labels_table(self, unknown_labels_table: list[list[str | bool]]) -> str | None:
         """Validate unknown labels table"""
@@ -415,7 +391,9 @@ class Model:
         self.fixed_bad_labels = len(self.datacleaner.bad_labels_table)
         self.fixed_unknown_labels = len([row for row in self.datacleaner.unknown_labels_table if row[3] != ""])
         self.overridden_unknown_labels = len([row for row in self.datacleaner.unknown_labels_table if row[4] == True])
-        self.dropped_unknown_labels = len(self.datacleaner.unknown_labels_table) - self.fixed_unknown_labels - self.overridden_unknown_labels
+        self.dropped_unknown_labels = (
+            len(self.datacleaner.unknown_labels_table) - self.fixed_unknown_labels - self.overridden_unknown_labels
+        )
         self.datacleaner.process_bad_and_unknown_labels()
         # Get a list of unique uploaded labels
         # NOTE: The lists are prepended with empty string,for ease-of-use (by the View object)
@@ -448,7 +426,7 @@ class Model:
         # Store processed table in a downloadable file
         self.datacleaner.processed_table.to_csv(self.outputfile_path, header=False, index=False)
         # Reset active tab
-        self.active_visualization_tab = VisualizationTab.VALUE_TRENDS  
+        self.active_visualization_tab = VisualizationTab.VALUE_TRENDS
         # Set default values if they exist
         if "SSP2_NoMt_NoCC" in self.uploaded_scenarios:
             self.valuetrends_scenario = "SSP2_NoMt_NoCC"

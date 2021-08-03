@@ -4,9 +4,10 @@ import shutil
 
 import ipywidgets as ui
 
-from .namespaces import VisualizationTab
-from .namespaces import Page
-from .view import CSS, Delimiter, Notification
+from .utils import VisualizationTab
+from .utils import Page
+from .utils import Notification
+from .utils import CSS, Delimiter
 
 
 class Controller:
@@ -60,7 +61,7 @@ class Controller:
 
     def onchange_associated_projects(self, change: dict) -> None:
         """The selections for associated projects has changed"""
-        self.model.associated_projects = list(change['new'])
+        self.model.associated_projects = list(change["new"])
         self._reset_later_pages()
 
     def onclick_next_from_page_1(self, widget: ui.Button) -> None:
@@ -122,7 +123,7 @@ class Controller:
         self.view.update_base_app()
         self.view.modify_cursor(None)
         # TODO: Fix this
-        # self.view.show_modal_dialog("Data Cleaning Summary", 
+        # self.view.show_modal_dialog("Data Cleaning Summary",
         # f"""
         # {self.model.fixed_bad_labels} bad labels were fixed
         # {self.model.fixed_unknown_labels} unknown labels were fixed
@@ -282,13 +283,16 @@ class Controller:
                 shutil.copy(source, destination)
             except:
                 from time import sleep
+
                 sleep(3)
         self.view.modify_cursor(None)
         self.view.show_notification(Notification.SUCCESS, "Your file has been successfully submitted")
         if self.model.overridden_unknown_labels > 0:
             self.view.show_modal_dialog(
-                "Pending Submission Approval", 
-                "Your data file was successfully submitted. However, since you requested to override some unknown labels, your submission needs to be approved first. Inform Dominique (vandermd@purdue.edu) about this request so he can begin reviewing."
+                "Pending Submission Approval",
+                "Your data file was successfully submitted. However, since you requested to override some unknown"
+                " labels, your submission needs to be approved first. Inform Dominique (vandermd@purdue.edu) about this"
+                " request so he can begin reviewing.",
             )
 
     def onclick_previous_from_page_4(self, widget: ui.Button) -> None:
@@ -341,7 +345,7 @@ class Controller:
     def onchange_valuetrends_variable(self, change: dict) -> None:
         """The variable selection for value trends visualization was changed"""
         self.model.valuetrends_variable = change["new"]
-    
+
     def onchange_growthtrends_scenario(self, change: dict) -> None:
         """The scenario selection for growth trends visualization was changed"""
         self.model.growthtrends_scenario = change["new"]
@@ -387,7 +391,7 @@ class Controller:
         self.view.visualize_growth_trends()
         self.view.modify_cursor(None)
         self.view.show_notification(Notification.SUCCESS, "Visualized growth trends")
-    
+
     def onclick_visualize_box_plot(self, widget: ui.Button) -> None:
         """Visualize button was clicked"""
         pass

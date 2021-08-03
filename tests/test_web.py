@@ -14,8 +14,8 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 # Add project directory to PATH so system can find scripts/ pkg
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from scripts.view import CSS
-from scripts.view import Notification
+from scripts.utils import CSS
+from scripts.utils import Notification
 from .test_nbserver import nb_url
 
 
