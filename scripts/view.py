@@ -227,32 +227,32 @@ class View:
         self.uploaded_file_name_box = ui.Box()
         # Widgets in the data specification page that need to be manipulated
         # - parsing widgets
-        self.model_name_dropdown = ui.Dropdown()
-        self.delimiter_dropdown = ui.Dropdown()
-        self.header_is_included_checkbox = ui.Checkbox()
-        self.lines_to_skip_text = ui.Text()
-        self.scenarios_to_ignore_text = ui.Textarea()
+        self.model_name_ddown = ui.Dropdown()
+        self.delimiter_ddown = ui.Dropdown()
+        self.header_is_included_chkbox = ui.Checkbox()
+        self.lines_to_skip_txt = ui.Text()
+        self.scenarios_to_ignore_txt = ui.Textarea()
         # - column assignment widgets
-        self.model_name_label = ui.Label()
-        self.scenario_column_dropdown = ui.Dropdown()
-        self.region_column_dropdown = ui.Dropdown()
-        self.variable_column_dropdown = ui.Dropdown()
-        self.item_column_dropdown = ui.Dropdown()
-        self.unit_column_dropdown = ui.Dropdown()
-        self.year_column_dropdown = ui.Dropdown()
-        self.value_column_dropdown = ui.Dropdown()
+        self.model_name_lbl = ui.Label()
+        self.scenario_column_ddown = ui.Dropdown()
+        self.region_column_ddown = ui.Dropdown()
+        self.variable_column_ddown = ui.Dropdown()
+        self.item_column_ddown = ui.Dropdown()
+        self.unit_column_ddown = ui.Dropdown()
+        self.year_column_ddown = ui.Dropdown()
+        self.value_column_ddown = ui.Dropdown()
         # - preview tables
-        self.input_data_preview_table = ui.GridBox()
-        self.output_data_preview_table = ui.GridBox()
+        self.input_data_preview_tbl = ui.GridBox()
+        self.output_data_preview_tbl = ui.GridBox()
         self._input_data_table_childrenpool: list[ui.Box] = []
         # Widgets in the integrity checking page that need to be manipulated
         self.duplicate_rows_lbl = ui.Label()
         self.rows_w_struct_issues_lbl = ui.Label()
         self.rows_w_ignored_scenario_lbl = ui.Label()
         self.accepted_rows_lbl = ui.Label()
-        self.bad_labels_table = ui.HTML()
-        self.unknown_labels_table = ui.GridBox()
-        self._unknown_labels_table_childrenpool: list[ui.Box] = []
+        self.bad_labels_tbl = ui.HTML()
+        self.unknown_labels_tbl = ui.GridBox()
+        self._unknown_labels_tbl_childrenpool: list[ui.Box] = []
         # Widgets in the plausibility checking page that need to be manipulated
         # - viz tab elements & tab contents
         self.valuetrends_tabelement = ui.Box()
@@ -265,19 +265,19 @@ class View:
         self.valuetrends_scenario_ddown = ui.Dropdown()
         self.valuetrends_region_ddown = ui.Dropdown()
         self.valuetrends_variable_ddown = ui.Dropdown()
-        self.valuetrends_vis_output = ui.Output()
+        self.valuetrends_viz_output = ui.Output()
         # - widgets for growth trends viz
         self.growthtrends_scenario_ddown = ui.Dropdown()
         self.growthtrends_region_ddown = ui.Dropdown()
         self.growthtrends_variable_ddown = ui.Dropdown()
-        self.growthtrends_vis_output = ui.Output()
+        self.growthtrends_viz_output = ui.Output()
         # - widgets for box plot viz
         self.boxplot_scenario_ddown = ui.Dropdown()
         self.boxplot_region_ddown = ui.Dropdown()
         self.boxplot_variable_ddown = ui.Dropdown()
         self.boxplot_item_ddown = ui.Dropdown()
         self.boxplot_year_ddown = ui.Dropdown()
-        self.boxplot_vis_output = ui.Output()
+        self.boxplot_viz_output = ui.Output()
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -415,30 +415,30 @@ class View:
         assert self.DATA_SPEC_PAGE_IS_BEING_UPDATED != True
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = True
         # Format specification controls
-        set_options(self.model_name_dropdown, ("", *self.model.model_names), self.ctrl.onchange_model_name_dropdown)
-        self.model_name_dropdown.value = self.model.model_name
-        set_options(self.delimiter_dropdown, ("", *Delimiter.get_views()), self.ctrl.onchange_delimiter_dropdown)
-        self.delimiter_dropdown.value = Delimiter.get_view(self.model.delimiter)
-        self.header_is_included_checkbox.value = self.model.header_is_included
-        self.lines_to_skip_text.value = str(self.model.lines_to_skip)
-        self.scenarios_to_ignore_text.value = self.model.scenarios_to_ignore_str
+        set_options(self.model_name_ddown, ("", *self.model.model_names), self.ctrl.onchange_model_name_dropdown)
+        self.model_name_ddown.value = self.model.model_name
+        set_options(self.delimiter_ddown, ("", *Delimiter.get_views()), self.ctrl.onchange_delimiter_dropdown)
+        self.delimiter_ddown.value = Delimiter.get_view(self.model.delimiter)
+        self.header_is_included_chkbox.value = self.model.header_is_included
+        self.lines_to_skip_txt.value = str(self.model.lines_to_skip)
+        self.scenarios_to_ignore_txt.value = self.model.scenarios_to_ignore_str
         # Column assignment controls
         column_options = ("", *self.model.column_assignment_options)
-        self.model_name_label.value = self.model.model_name if len(self.model.model_name) > 0 else "<Model Name>"
-        set_options(self.scenario_column_dropdown, column_options, self.ctrl.onchange_scenario_column_dropdown)
-        self.scenario_column_dropdown.value = self.model.assigned_scenario_column
-        set_options(self.region_column_dropdown, column_options, self.ctrl.onchange_region_column_dropdown)
-        self.region_column_dropdown.value = self.model.assigned_region_column
-        set_options(self.variable_column_dropdown, column_options, self.ctrl.onchange_variable_column_dropdown)
-        self.variable_column_dropdown.value = self.model.assigned_variable_column
-        set_options(self.item_column_dropdown, column_options, self.ctrl.onchange_item_column_dropdown)
-        self.item_column_dropdown.value = self.model.assigned_item_column
-        set_options(self.unit_column_dropdown, column_options, self.ctrl.onchange_unit_column_dropdown)
-        self.unit_column_dropdown.value = self.model.assigned_unit_column
-        set_options(self.year_column_dropdown, column_options, self.ctrl.onchange_year_column_dropdown)
-        self.year_column_dropdown.value = self.model.assigned_year_column
-        set_options(self.value_column_dropdown, column_options, self.ctrl.onchange_value_column_dropdown)
-        self.value_column_dropdown.value = self.model.assigned_value_column
+        self.model_name_lbl.value = self.model.model_name if len(self.model.model_name) > 0 else "<Model Name>"
+        set_options(self.scenario_column_ddown, column_options, self.ctrl.onchange_scenario_column_dropdown)
+        self.scenario_column_ddown.value = self.model.assigned_scenario_column
+        set_options(self.region_column_ddown, column_options, self.ctrl.onchange_region_column_dropdown)
+        self.region_column_ddown.value = self.model.assigned_region_column
+        set_options(self.variable_column_ddown, column_options, self.ctrl.onchange_variable_column_dropdown)
+        self.variable_column_ddown.value = self.model.assigned_variable_column
+        set_options(self.item_column_ddown, column_options, self.ctrl.onchange_item_column_dropdown)
+        self.item_column_ddown.value = self.model.assigned_item_column
+        set_options(self.unit_column_ddown, column_options, self.ctrl.onchange_unit_column_dropdown)
+        self.unit_column_ddown.value = self.model.assigned_unit_column
+        set_options(self.year_column_ddown, column_options, self.ctrl.onchange_year_column_dropdown)
+        self.year_column_ddown.value = self.model.assigned_year_column
+        set_options(self.value_column_ddown, column_options, self.ctrl.onchange_value_column_dropdown)
+        self.value_column_ddown.value = self.model.assigned_value_column
         # Upload data preview table
         table_content = self.model.input_data_preview_content
         number_of_columns = table_content.shape[1]
@@ -456,15 +456,15 @@ class View:
             assert isinstance(content_label, ui.Label)
             content_label.value = content
             content_index += 1
-        self.input_data_preview_table.children = self._input_data_table_childrenpool[: table_content.size]
-        self.input_data_preview_table.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
+        self.input_data_preview_tbl.children = self._input_data_table_childrenpool[: table_content.size]
+        self.input_data_preview_tbl.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
         # Output data preview table
         table_content = self.model.output_data_preview_content
         table_content = table_content.flatten()
-        assert table_content.size == len(self.output_data_preview_table.children)
+        assert table_content.size == len(self.output_data_preview_tbl.children)
         content_index = 0
         for content in table_content:
-            content_box = self.output_data_preview_table.children[content_index]
+            content_box = self.output_data_preview_tbl.children[content_index]
             assert isinstance(content_box, ui.Box)
             content_label = content_box.children[0]
             assert isinstance(content_label, ui.Label)
@@ -491,7 +491,7 @@ class View:
                 else:
                     _table_rows += f'<td title="{field}">{field}</td>'
             _table_rows += "</tr>"
-        self.bad_labels_table.value = f"""
+        self.bad_labels_tbl.value = f"""
             <table>
                 <thead>
                     <th>Label</th>
@@ -506,7 +506,7 @@ class View:
         # Update unknown labels table
         # - make sure the children pool is large enough
         nrowsneeded = len(self.model.unknown_labels_table)
-        nrowssupported = int((len(self._unknown_labels_table_childrenpool) - 5) / 5)  # -5 to account for header row
+        nrowssupported = int((len(self._unknown_labels_tbl_childrenpool) - 5) / 5)  # -5 to account for header row
         if nrowsneeded > nrowssupported:
             for row_index in range(nrowssupported, nrowsneeded):
                 dropdown = ui.Dropdown()
@@ -521,7 +521,7 @@ class View:
                     change, row_index
                 )
                 checkbox.observe(_get_checkbox_callback(row_index), "value")
-                self._unknown_labels_table_childrenpool += [
+                self._unknown_labels_tbl_childrenpool += [
                     ui.Box(children=[ui.Label(value="-")]),
                     ui.Box(children=[ui.Label(value="-")]),
                     ui.Box(children=[ui.Label(value="-")]),
@@ -535,7 +535,7 @@ class View:
             poolstartindex = (row_index * 5) + 5  # +5 to account for header row
             unknownlabel_w, associatedcolumn_w, closestmatch_w, fix_w, override_w = [
                 wrapper.children[0]
-                for wrapper in self._unknown_labels_table_childrenpool[poolstartindex : poolstartindex + 5]
+                for wrapper in self._unknown_labels_tbl_childrenpool[poolstartindex : poolstartindex + 5]
             ]
             assert isinstance(unknownlabel_w, ui.Label)
             assert isinstance(associatedcolumn_w, ui.Label)
@@ -565,7 +565,7 @@ class View:
                 raise Exception("Unexpected associated column")
             fix_w.value = fix
             override_w.value = override
-        self.unknown_labels_table.children = self._unknown_labels_table_childrenpool[: (nrowsneeded + 1) * 5]
+        self.unknown_labels_tbl.children = self._unknown_labels_tbl_childrenpool[: (nrowsneeded + 1) * 5]
 
     def update_plausibility_checking_page(self) -> None:
         """Update the plausibility checking page"""
@@ -626,7 +626,7 @@ class View:
 
     def visualize_value_trends(self) -> None:
         """Visualize value trends"""
-        with self.valuetrends_vis_output:
+        with self.valuetrends_viz_output:
             clear_output(wait=True)
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
             if self.model.valuetrends_vis_groupedtable is not None:
@@ -652,7 +652,7 @@ class View:
 
     def visualize_growth_trends(self) -> None:
         """Visualize growth trends"""
-        with self.growthtrends_vis_output:
+        with self.growthtrends_viz_output:
             clear_output(wait=True)
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
             if self.model.growthtrends_vis_groupedtable is not None:
@@ -836,54 +836,54 @@ class View:
         # Create all control widgets in this page
         # -specification widgets
         control_layout = ui.Layout(flex="1 1", max_width="100%")
-        self.model_name_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
-        self.model_name_dropdown.observe(self.ctrl.onchange_model_name_dropdown, "value")
-        self.header_is_included_checkbox = ui.Checkbox(indent=False, value=False, description="", layout=control_layout)
-        self.header_is_included_checkbox.observe(self.ctrl.onchange_header_is_included_checkbox, "value")
-        self.lines_to_skip_text = ui.Text(layout=control_layout, continuous_update=False)
-        self.lines_to_skip_text.observe(self.ctrl.onchange_lines_to_skip_text, "value")
-        self.delimiter_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
-        self.delimiter_dropdown.observe(self.ctrl.onchange_delimiter_dropdown, "value")
-        self.scenarios_to_ignore_text = ui.Textarea(
+        self.model_name_ddown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.model_name_ddown.observe(self.ctrl.onchange_model_name_dropdown, "value")
+        self.header_is_included_chkbox = ui.Checkbox(indent=False, value=False, description="", layout=control_layout)
+        self.header_is_included_chkbox.observe(self.ctrl.onchange_header_is_included_checkbox, "value")
+        self.lines_to_skip_txt = ui.Text(layout=control_layout, continuous_update=False)
+        self.lines_to_skip_txt.observe(self.ctrl.onchange_lines_to_skip_text, "value")
+        self.delimiter_ddown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.delimiter_ddown.observe(self.ctrl.onchange_delimiter_dropdown, "value")
+        self.scenarios_to_ignore_txt = ui.Textarea(
             placeholder="(Optional) Enter comma-separated scenario values",
             layout=ui.Layout(flex="1", height="72px"),
             continuous_update=False,
         )
-        self.scenarios_to_ignore_text.observe(self.ctrl.onchange_scenarios_to_ignore_text, "value")
+        self.scenarios_to_ignore_txt.observe(self.ctrl.onchange_scenarios_to_ignore_text, "value")
         # -column assignment widgets
-        self.model_name_label = ui.Label(value="")
-        self.scenario_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
-        self.scenario_column_dropdown.observe(self.ctrl.onchange_scenario_column_dropdown, "value")
-        self.region_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
-        self.region_column_dropdown.observe(self.ctrl.onchange_region_column_dropdown, "value")
-        self.variable_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
-        self.variable_column_dropdown.observe(self.ctrl.onchange_variable_column_dropdown, "value")
-        self.item_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
-        self.item_column_dropdown.observe(self.ctrl.onchange_item_column_dropdown, "value")
-        self.unit_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
-        self.unit_column_dropdown.observe(self.ctrl.onchange_unit_column_dropdown, "value")
-        self.year_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
-        self.year_column_dropdown.observe(self.ctrl.onchange_year_column_dropdown, "value")
-        self.value_column_dropdown = ui.Dropdown(value="", options=[""], layout=control_layout)
-        self.value_column_dropdown.observe(self.ctrl.onchange_value_column_dropdown, "value")
+        self.model_name_lbl = ui.Label(value="")
+        self.scenario_column_ddown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.scenario_column_ddown.observe(self.ctrl.onchange_scenario_column_dropdown, "value")
+        self.region_column_ddown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.region_column_ddown.observe(self.ctrl.onchange_region_column_dropdown, "value")
+        self.variable_column_ddown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.variable_column_ddown.observe(self.ctrl.onchange_variable_column_dropdown, "value")
+        self.item_column_ddown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.item_column_ddown.observe(self.ctrl.onchange_item_column_dropdown, "value")
+        self.unit_column_ddown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.unit_column_ddown.observe(self.ctrl.onchange_unit_column_dropdown, "value")
+        self.year_column_ddown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.year_column_ddown.observe(self.ctrl.onchange_year_column_dropdown, "value")
+        self.value_column_ddown = ui.Dropdown(value="", options=[""], layout=control_layout)
+        self.value_column_ddown.observe(self.ctrl.onchange_value_column_dropdown, "value")
         # -preview table widgets
         self._input_data_table_childrenpool = [
             ui.Box(children=[ui.Label(value="")]) for _ in range(33)  # Using 33 as cache size is random
         ]
-        self.input_data_preview_table = ui.GridBox(
+        self.input_data_preview_tbl = ui.GridBox(
             children=self._input_data_table_childrenpool[:24],  # 24 because we assume the table dimension to be
             # 3 x 8 (the row number will stay the same, but the column number may vary)
             layout=ui.Layout(grid_template_columns="repeat(8, 1fr)"),
         )
-        self.input_data_preview_table.add_class(CSS.PREVIEW_TABLE)
+        self.input_data_preview_tbl.add_class(CSS.PREVIEW_TABLE)
 
-        self.output_data_preview_table = ui.GridBox(
+        self.output_data_preview_tbl = ui.GridBox(
             children=[
                 ui.Box(children=[ui.Label(value="")]) for _ in range(24)
             ],  # 24 because of the 3 x 8 table dimension (invariant)
             layout=ui.Layout(grid_template_columns="repeat(8, 1fr"),
         )
-        self.output_data_preview_table.add_class(CSS.PREVIEW_TABLE)
+        self.output_data_preview_tbl.add_class(CSS.PREVIEW_TABLE)
         # -page navigation widgets
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_.on_click(self.ctrl.onclick_next_from_page_2)
@@ -900,24 +900,24 @@ class View:
                 ui.GridBox(  # -Grid box for all specifications except for "Scenarios to ignore"
                     children=(
                         ui.HBox(
-                            children=(ui.Label(value="Model name *", layout=label_layout), self.model_name_dropdown),
+                            children=(ui.Label(value="Model name *", layout=label_layout), self.model_name_ddown),
                             layout=wrapper_layout,
                         ),
                         ui.HBox(
-                            children=(ui.Label(value="Delimiter *", layout=label_layout), self.delimiter_dropdown),
+                            children=(ui.Label(value="Delimiter *", layout=label_layout), self.delimiter_ddown),
                             layout=wrapper_layout,
                         ),
                         ui.HBox(
                             children=(
                                 ui.Label(value="Header is included *", layout=label_layout),
-                                self.header_is_included_checkbox,
+                                self.header_is_included_chkbox,
                             ),
                             layout=wrapper_layout,
                         ),
                         ui.HBox(
                             children=(
                                 ui.Label(value="Number of initial lines to skip *", layout=label_layout),
-                                self.lines_to_skip_text,
+                                self.lines_to_skip_txt,
                             ),
                             layout=wrapper_layout,
                         ),
@@ -927,7 +927,7 @@ class View:
                 ui.HBox(  # -Scenarios to ignore box
                     children=(
                         ui.Label(value="Scenarios to ignore", layout=label_layout),
-                        self.scenarios_to_ignore_text,
+                        self.scenarios_to_ignore_txt,
                     ),
                     layout=ui.Layout(margin="4px 0px 0px 0px"),
                 ),
@@ -957,22 +957,22 @@ class View:
                                             ui.Box(children=(ui.Label(value="Unit"),)),
                                             ui.Box(children=(ui.Label(value="Year"),)),
                                             ui.Box(children=(ui.Label(value="Value"),)),
-                                            ui.Box(children=(self.model_name_label,)),
-                                            self.scenario_column_dropdown,
-                                            self.region_column_dropdown,
-                                            self.variable_column_dropdown,
-                                            self.item_column_dropdown,
-                                            self.unit_column_dropdown,
-                                            self.year_column_dropdown,
-                                            self.value_column_dropdown,
+                                            ui.Box(children=(self.model_name_lbl,)),
+                                            self.scenario_column_ddown,
+                                            self.region_column_ddown,
+                                            self.variable_column_ddown,
+                                            self.item_column_ddown,
+                                            self.unit_column_ddown,
+                                            self.year_column_ddown,
+                                            self.value_column_ddown,
                                         )
                                     ),
                                     CSS.COLUMN_ASSIGNMENT_TABLE,
                                 ),
                                 ui.HTML(value="<b>Preview of the input data</b>"),
-                                self.input_data_preview_table,  # --preview table
+                                self.input_data_preview_tbl,  # --preview table
                                 ui.HTML(value="<b>Preview of the output data</b>"),
-                                self.output_data_preview_table,  # --preview table
+                                self.output_data_preview_tbl,  # --preview table
                             ),
                             layout=ui.Layout(width="900px"),
                         ),
@@ -1055,7 +1055,7 @@ class View:
                 <td>-</td>
             <tr>
         """
-        self.bad_labels_table.value = f"""
+        self.bad_labels_tbl.value = f"""
             <table>
                 <thead>
                     <th>Label</th>
@@ -1067,9 +1067,9 @@ class View:
                 </tbody>
             </table>
             """
-        self.bad_labels_table.add_class(CSS.BAD_LABELS_TABLE)
+        self.bad_labels_tbl.add_class(CSS.BAD_LABELS_TABLE)
         # - unknown labels table
-        self._unknown_labels_table_childrenpool = [
+        self._unknown_labels_tbl_childrenpool = [
             ui.Box(children=[ui.Label(value="Label")]),
             ui.Box(children=[ui.Label(value="Associated column")]),
             ui.Box(children=[ui.Label(value="Closest Match")]),
@@ -1089,15 +1089,15 @@ class View:
                 change, row_index
             )
             checkbox.observe(_get_checkbox_callback(index), "value")
-            self._unknown_labels_table_childrenpool += [
+            self._unknown_labels_tbl_childrenpool += [
                 ui.Box(children=[ui.Label(value="-")]),
                 ui.Box(children=[ui.Label(value="-")]),
                 ui.Box(children=[ui.Label(value="-")]),
                 ui.Box(children=[dropdown]),
                 ui.Box(children=[checkbox]),
             ]
-        self.unknown_labels_table.children = self._unknown_labels_table_childrenpool[:20]
-        self.unknown_labels_table.add_class(CSS.UNKNOWN_LABELS_TABLE)
+        self.unknown_labels_tbl.children = self._unknown_labels_tbl_childrenpool[:20]
+        self.unknown_labels_tbl.add_class(CSS.UNKNOWN_LABELS_TABLE)
         # - page navigation buttons
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_.on_click(self.ctrl.onclick_next_from_page_3)
@@ -1173,7 +1173,7 @@ class View:
                                         " standard. They will be fixed automatically."
                                     )
                                 ),
-                                self.bad_labels_table,
+                                self.bad_labels_tbl,
                                 ui.HTML(
                                     value=(
                                         '<b style="line-height:13px; margin: 20px 0px 4px;">Unknown labels overview</b>'
@@ -1186,7 +1186,7 @@ class View:
                                         " otherwise records containing them will be dropped."
                                     )
                                 ),
-                                self.unknown_labels_table,
+                                self.unknown_labels_tbl,
                             ),
                             layout=ui.Layout(width="850px"),
                         ),
@@ -1245,8 +1245,8 @@ class View:
         self.valuetrends_variable_ddown.observe(self.ctrl.onchange_valuetrends_variable, "value")
         visualize_value_btn = ui.Button(description="Visualize", layout=ui.Layout(margin="24px 0px 0px 0px"))
         visualize_value_btn.on_click(self.ctrl.onclick_visualize_value_trends)
-        self.valuetrends_vis_output.layout = _vis_output_layout
-        with self.valuetrends_vis_output:
+        self.valuetrends_viz_output.layout = _vis_output_layout
+        with self.valuetrends_viz_output:
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))
             axes.set_xlabel("Year")
             axes.set_ylabel("Value")
@@ -1269,7 +1269,7 @@ class View:
                     ),
                 ),
                 visualize_value_btn,
-                self.valuetrends_vis_output,
+                self.valuetrends_viz_output,
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px", overflow_y="hidden"),
         )
@@ -1282,8 +1282,8 @@ class View:
         self.growthtrends_variable_ddown.observe(self.ctrl.onchange_growthtrends_variable, "value")
         visualize_growth_btn = ui.Button(description="Visualize", layout=ui.Layout(margin="24px 0px 0px 0px"))
         visualize_growth_btn.on_click(self.ctrl.onclick_visualize_growth_trends)
-        self.growthtrends_vis_output.layout = _vis_output_layout
-        with self.growthtrends_vis_output:
+        self.growthtrends_viz_output.layout = _vis_output_layout
+        with self.growthtrends_viz_output:
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
             axes.set_xlabel("Year")
             axes.set_ylabel("Growth value")
@@ -1306,7 +1306,7 @@ class View:
                     ),
                 ),
                 visualize_growth_btn,
-                self.growthtrends_vis_output,
+                self.growthtrends_viz_output,
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px", overflow_y="hidden"),
         )
@@ -1319,8 +1319,8 @@ class View:
         self.boxplot_year_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_items)
         visualize_box_btn = ui.Button(description="Visualize", layout=ui.Layout(margin="24px 0px 0px 0px"))
         visualize_box_btn.on_click(self.ctrl.onclick_visualize_box_plot)
-        self.boxplot_vis_output.layout = _vis_output_layout
-        with self.boxplot_vis_output:
+        self.boxplot_viz_output.layout = _vis_output_layout
+        with self.boxplot_viz_output:
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))
             axes.boxplot([1, 2, 3, 4, 5, 6])  # Dummy data
             plt.title("Inter-model Box Plot (Work-in-progress)")
@@ -1346,7 +1346,7 @@ class View:
                     ),
                 ),
                 visualize_box_btn,
-                self.boxplot_vis_output,
+                self.boxplot_viz_output,
             ],
             layout=ui.Layout(align_items="center", padding="24px 0px 0px 0px", overflow_y="hidden"),
         )
