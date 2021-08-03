@@ -4,7 +4,7 @@ import csv
 from datetime import date, datetime
 import os
 from pathlib import Path
-from typing import Any, Callable, Optional, Dict, Union
+from typing import Any, Callable, Optional, Dict, Union, List
 
 import numpy as np
 import pandas as pd
@@ -115,12 +115,12 @@ class Model:
         self.growthtrends_growthvalue_colname = ""
         self.growthtrends_vis_groupedtable: DataFrameGroupBy | None = None
         # - uploaded labels
-        self.uploaded_scenarios = []
-        self.uploaded_regions = []
-        self.uploaded_items = []
-        self.uploaded_variables = []
-        self.uploaded_units = []
-        self.uploaded_years = []
+        self.uploaded_scenarios: List[str] = []
+        self.uploaded_regions: List[str] = []
+        self.uploaded_items: List[str] = []
+        self.uploaded_variables: List[str] = []
+        self.uploaded_units: List[str] = []
+        self.uploaded_years: List[str] = []
         # - selections for value trends visualization
         self.valuetrends_scenario = ""
         self.valuetrends_region = ""
@@ -423,27 +423,27 @@ class Model:
         # away, so we need to pass them to np.assarray first  @date jul 26, 2021
         self.uploaded_scenarios = np.asarray(
             np.append(self.datacleaner.processed_table[self.datacleaner.scenario_colname].unique(), "")
-        )
+        ).tolist()
         self.uploaded_scenarios.sort()
         self.uploaded_regions = np.asarray(
             np.append(self.datacleaner.processed_table[self.datacleaner.region_colname].unique(), "")
-        )
+        ).tolist()
         self.uploaded_regions.sort()
         self.uploaded_variables = np.asarray(
             np.append(self.datacleaner.processed_table[self.datacleaner.variable_colname].unique(), "")
-        )
+        ).tolist()
         self.uploaded_variables.sort()
         self.uploaded_items = np.asarray(
             np.append(self.datacleaner.processed_table[self.datacleaner.item_colname].unique(), "")
-        )
+        ).tolist()
         self.uploaded_items.sort()
         self.uploaded_years = np.asarray(
             np.append(self.datacleaner.processed_table[self.datacleaner.year_colname].unique(), "")
-        )
+        ).tolist()
         self.uploaded_years.sort()
         self.uploaded_units = np.asarray(
             np.append(self.datacleaner.processed_table[self.datacleaner.unit_colname].unique(), "")
-        )
+        ).tolist()
         self.uploaded_units.sort()
         # Store processed table in a downloadable file
         self.datacleaner.processed_table.to_csv(self.outputfile_path, header=False, index=False)
