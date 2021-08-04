@@ -20,23 +20,14 @@
 
     /*** Style basic HTML elements ***/
 
-    .selmono {
-        font-family: "Lucida Console", Monaco, monospace !important;
-        width: 100%;
-    }
-
-    hr{
-        border-color: inherit; /* It seems like there's no way to assign a CSS class to a <hr> element, since ipywidgets
-                                  will always wrap it with <div>. So, we let it inherit from its parent element and style
-                                  the parent instead. */
-    } 
-
-    a, a:focus, a:hover {
-        color: unset;
-    }
-
+    /* Make sure text areas are not resizeable */
     textarea{
         resize: none;
+    }
+    
+    /* Make sure long selection options are truncated */
+    select {
+        text-overflow: ellipsis;
     }
     
     /*** Extend CSS classes used by native ipywidgets / jupyter notebook components
@@ -107,15 +98,10 @@
         display: flex !important;
     }
 
-    /* Make sure long selection options are truncated */
-    select {
-        text-overflow: ellipsis;
-    }
-
     /*** CSS classes for custom components.
 
        To avoid name clashes with the existing classes used by ipywidgets,
-       their names are prepended with "c" for "custom". The name also follows BEM convention.
+       their names are prepended with "rc" for Rosen Center. The name also follows BEM convention.
     ***/
 
     /* App */
@@ -187,9 +173,25 @@
         box-shadow: none !important;
     }
     .rc-filename-snackbar .widget-button:active {
-        color: transparent !important;
+        color: var(--light-blue) !important;
     }
 
+    /* Selection widget for associated projects */
+    .rc-associated-project-select select {  /* Target the html select widget */
+        border: 1px solid var(--light-grey);
+        color: var(--grey);
+    }
+    .rc-associated-project-select select:focus {   /* Target the html select widget when it is in focus */
+        border: 1px solid var(--light-blue);
+    }
+    .rc-associated-project-select > select > option:checked {   /* Target checked option */
+        box-shadow: 0 0 10px 100px #edeeef inset; /* Change background color by using box shadow */
+    }
+    .rc-associated-project-select > select:focus > option:checked {  /* Target checked option when the widget is in focus */
+        color: white !important;
+        box-shadow: 0 0 10px 100px var(--light-blue) inset; /* Change background color by using box shadow */
+    }
+ 
     /* Icon button */
     .rc-icon-button {
         height: 30px;
@@ -203,13 +205,9 @@
     }
     .rc-icon-button:hover,
     .rc-icon-button:active,
-    .rc-icon-button:focus {
-        box-shadow: none !important;
-    }
-    .rc-icon-button:active {
-        color: var(--light-grey) !important;
-    }
+    .rc-icon-button:focus, 
     .rc-icon-button:visited {
+        box-shadow: none !important;
         color: var(--light-grey) !important;
     }
 
@@ -263,12 +261,12 @@
         color: var(--light-grey);
     }
     /* -style element separator under different element modifiers */
-    .rc-stepper-element--current > .rc-stepper-element__separator,
-    .rc-stepper-element--active > .rc-stepper-element__separator {
-        color: var(--blue);
+    .rc-stepper-element--current > .rc-stepper-element__separator hr,
+    .rc-stepper-element--active > .rc-stepper-element__separator  hr {
+        border-color: var(--blue);
     }
-    .rc-stepper-element--inactive > .rc-stepper-element__separator {
-        color: var(--light-grey);
+    .rc-stepper-element--inactive > .rc-stepper-element__separator hr {
+        border-color: var(--light-grey);
     }
 
     /* File upload area */
@@ -486,7 +484,7 @@
         height: 116px;
         overflow-y: auto;
     }
-    .rc-unknown-labels-table > * {   /* Target all wrappers for table item */
+    .rc-unknown-labels-table > .widget-box {   /* Target all wrappers for table item */
         height: 28px;
         width: 100%;
         background: white;
@@ -541,7 +539,7 @@
         background: var(--blue);
         color: white;
     }
-    .rc-visualization-tab__element > .widget-label {     /* .widget-label is defined by ipywidgets */
+    .rc-visualization-tab__element > .widget-label {     /* Target all ipywidgets labels */
         color: inherit;
     }
     .rc-visualization-tab__element > button {    /* Style the hidden button that gives the tab clickable functionality */
