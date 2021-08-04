@@ -35,6 +35,8 @@ class Controller:
         self.model.furthest_active_page = self.model.current_page
         self.view.update_base_app()
 
+    # File upload page callbacks
+
     def onchange_ua_file_label(self, change: dict) -> None:
         """Value of the hidden file label in upload area (ua) changed"""
         CSV = ".csv"
@@ -85,57 +87,7 @@ class Controller:
         self.view.update_base_app()
         self.view.modify_cursor(None)
 
-    def onclick_next_from_page_2(self, widget: ui.Button) -> None:
-        """'Next' button on the data specification page was clicked"""
-        warning_message = self.model.validate_data_specification_input()
-        if warning_message is not None:
-            self.view.show_notification(Notification.WARNING, warning_message)
-            return
-        self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
-        self.model.current_page = Page.INTEGRITY_CHECKING
-        if self.model.furthest_active_page == Page.DATA_SPECIFICATION:
-            self.model.furthest_active_page = Page.INTEGRITY_CHECKING
-            self.model.init_integrity_checking_states(self.model.data_specification)
-            self.view.update_integrity_checking_page()
-        self.view.update_base_app()
-        self.view.modify_cursor(None)
-
-    def onclick_previous_from_page_2(self, widget: ui.Button) -> None:
-        """'Previous' button on the data specification page was clicked"""
-        self.model.current_page = Page.FILE_UPLOAD
-        self.view.update_base_app()
-
-    def onclick_next_from_page_3(self, widget: ui.Button) -> None:
-        """'Next' button on the data specification page was clicked"""
-        warning_message = self.model.validate_unknown_labels_table(self.model.unknown_labels_table)
-        if warning_message is not None:
-            self.view.show_notification(Notification.WARNING, warning_message)
-            return
-        self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
-        self.model.current_page = Page.PLAUSIBILITY_CHECKING
-        if self.model.furthest_active_page == Page.INTEGRITY_CHECKING:
-            self.model.furthest_active_page = Page.PLAUSIBILITY_CHECKING
-            assert self.model.datacleaner is not None
-            self.model.init_plausibility_checking_states(self.model.unknown_labels_table)
-            self.view.visualize_value_trends()
-            self.view.visualize_growth_trends()
-        self.view.update_plausibility_checking_page()
-        self.view.update_base_app()
-        self.view.modify_cursor(None)
-        # TODO: Fix this
-        # self.view.show_modal_dialog("Data Cleaning Summary",
-        # f"""
-        # {self.model.fixed_bad_labels} bad labels were fixed
-        # {self.model.fixed_unknown_labels} unknown labels were fixed
-        # {self.model.overridden_unknown_labels} unknown labels were requested to be overridden
-        # {self.model.dropped_unknown_labels} unknown labels were dropped
-        # """
-        # )
-
-    def onclick_previous_from_page_3(self, widget: ui.Button) -> None:
-        """'Previous' button on the data specification page was clicked"""
-        self.model.current_page = Page.DATA_SPECIFICATION
-        self.view.update_base_app()
+    # Data specification page callbacks
 
     def onchange_model_name_dropdown(self, change: dict) -> None:
         """The selection in 'model name' dropdown changed"""
@@ -273,6 +225,154 @@ class Controller:
         self.view.update_data_specification_page()
         self._reset_later_pages()
 
+    def onclick_previous_from_page_2(self, widget: ui.Button) -> None:
+        """'Previous' button on the data specification page was clicked"""
+        self.model.current_page = Page.FILE_UPLOAD
+        self.view.update_base_app()
+    
+    def onclick_next_from_page_2(self, widget: ui.Button) -> None:
+        """'Next' button on the data specification page was clicked"""
+        warning_message = self.model.validate_data_specification_input()
+        if warning_message is not None:
+            self.view.show_notification(Notification.WARNING, warning_message)
+            return
+        self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
+        self.model.current_page = Page.INTEGRITY_CHECKING
+        if self.model.furthest_active_page == Page.DATA_SPECIFICATION:
+            self.model.furthest_active_page = Page.INTEGRITY_CHECKING
+            self.model.init_integrity_checking_states(self.model.data_specification)
+            self.view.update_integrity_checking_page()
+        self.view.update_base_app()
+        self.view.modify_cursor(None)
+
+    # Integrity checking page callbacks
+
+    def onchange_fix_dropdown(self, change: dict, row_index: int) -> None:
+        """The selection for one of the fix dropdowns in unknown labels table was changed"""
+        new_value = change["new"]
+        DROPDOWN_INDEX = 3
+        if new_value == self.model.unknown_labels_table[row_index][DROPDOWN_INDEX]:
+            return
+        self.model.unknown_labels_table[row_index][DROPDOWN_INDEX] = new_value
+        self._reset_later_pages()
+
+    def onchange_override_checkbox(self, change: dict, row_index: int) -> None:
+        """The selection for one of the override checkbox in unknown labels table was changed"""
+        new_value = change["new"]
+        CHECKBOX_INDEX = 4
+        # The event is triggered programmatically by page update, instead of by a user action
+        if new_value == self.model.unknown_labels_table[row_index][CHECKBOX_INDEX]:
+            return
+        self.model.unknown_labels_table[row_index][CHECKBOX_INDEX] = new_value
+        self._reset_later_pages()
+    
+    def onclick_previous_from_page_3(self, widget: ui.Button) -> None:
+        """'Previous' button on the data specification page was clicked"""
+        self.model.current_page = Page.DATA_SPECIFICATION
+        self.view.update_base_app()
+
+    def onclick_next_from_page_3(self, widget: ui.Button) -> None:
+        """'Next' button on the data specification page was clicked"""
+        warning_message = self.model.validate_unknown_labels_table(self.model.unknown_labels_table)
+        if warning_message is not None:
+            self.view.show_notification(Notification.WARNING, warning_message)
+            return
+        self.view.modify_cursor(CSS.CURSOR_MOD__WAIT)
+        self.model.current_page = Page.PLAUSIBILITY_CHECKING
+        if self.model.furthest_active_page == Page.INTEGRITY_CHECKING:
+            self.model.furthest_active_page = Page.PLAUSIBILITY_CHECKING
+            assert self.model.datacleaner is not None
+            self.model.init_plausibility_checking_states(self.model.unknown_labels_table)
+            self.view.visualize_value_trends()
+            self.view.visualize_growth_trends()
+        self.view.update_plausibility_checking_page()
+        self.view.update_base_app()
+        self.view.modify_cursor(None)
+        # TODO: Fix this
+        # self.view.show_modal_dialog("Data Cleaning Summary",
+        # f"""
+        # {self.model.fixed_bad_labels} bad labels were fixed
+        # {self.model.fixed_unknown_labels} unknown labels were fixed
+        # {self.model.overridden_unknown_labels} unknown labels were requested to be overridden
+        # {self.model.dropped_unknown_labels} unknown labels were dropped
+        # """
+        # )
+
+    # Plausibility checking page callbacks
+    
+    def onclick_value_trends_tab(self, widget: ui.Button) -> None:
+        """Value trends tab was clicked"""
+        self.model.active_visualization_tab = VisualizationTab.VALUE_TRENDS
+        self.view.update_plausibility_checking_page()
+
+    def onchange_valuetrends_scenario(self, change: dict) -> None:
+        """The scenario selection for value trends visualization was changed"""
+        self.model.valuetrends_scenario = change["new"]
+
+    def onchange_valuetrends_region(self, change: dict) -> None:
+        """The region selection for value trends visualization was changed"""
+        self.model.valuetrends_region = change["new"]
+
+    def onchange_valuetrends_variable(self, change: dict) -> None:
+        """The variable selection for value trends visualization was changed"""
+        self.model.valuetrends_variable = change["new"]
+
+    def onclick_visualize_value_trends(self, widget: ui.Button) -> None:
+        """Visualize button was clicked"""
+        if self.model.valuetrends_scenario == "":
+            self.view.show_notification(Notification.WARNING, "Scenario cannot be empty")
+            return
+        elif self.model.valuetrends_region == "":
+            self.view.show_notification(Notification.WARNING, "Region cannot be empty")
+            return
+        elif self.model.valuetrends_variable == "":
+            self.view.show_notification(Notification.WARNING, "Variable cannot be empty")
+            return
+        self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
+        self.model.compute_valuetrends_vis_groupedtable()
+        self.view.visualize_value_trends()
+        self.view.modify_cursor(None)
+        self.view.show_notification(Notification.SUCCESS, "Visualized value trends")
+
+    def onclick_growth_trends_tab(self, widget: ui.Button) -> None:
+        """Growth trends tab was clicked"""
+        self.model.active_visualization_tab = VisualizationTab.GROWTH_TRENDS
+        self.view.update_plausibility_checking_page()
+
+    def onchange_growthtrends_scenario(self, change: dict) -> None:
+        """The scenario selection for growth trends visualization was changed"""
+        self.model.growthtrends_scenario = change["new"]
+
+    def onchange_growthtrends_region(self, change: dict) -> None:
+        """The region selection for growth trends visualization was changed"""
+        self.model.growthtrends_region = change["new"]
+
+    def onchange_growthtrends_variable(self, change: dict) -> None:
+        """The variable selection for growth trends visualization was changed"""
+        self.model.growthtrends_variable = change["new"]
+
+    def onclick_visualize_growth_trends(self, widget: ui.Button) -> None:
+        """Visualize button was clicked"""
+        if self.model.growthtrends_scenario == "":
+            self.view.show_notification(Notification.WARNING, "Scenario cannot be empty")
+            return
+        elif self.model.growthtrends_region == "":
+            self.view.show_notification(Notification.WARNING, "Region cannot be empty")
+            return
+        elif self.model.growthtrends_variable == "":
+            self.view.show_notification(Notification.WARNING, "Variable cannot be empty")
+            return
+        self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
+        self.model.compute_growthtrends_vis_groupedtable()
+        self.view.visualize_growth_trends()
+        self.view.modify_cursor(None)
+        self.view.show_notification(Notification.SUCCESS, "Visualized growth trends")
+
+    def onclick_previous_from_page_4(self, widget: ui.Button) -> None:
+        """The 'submit' button in the last page was clicked"""
+        self.model.current_page = Page.INTEGRITY_CHECKING
+        self.view.update_base_app()
+
     def onclick_submit(self, widget: ui.Button) -> None:
         """The 'submit' button in the last page was clicked"""
         self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
@@ -294,104 +394,3 @@ class Controller:
                 " labels, your submission needs to be approved first. Inform Dominique (vandermd@purdue.edu) about this"
                 " request so he can begin reviewing.",
             )
-
-    def onclick_previous_from_page_4(self, widget: ui.Button) -> None:
-        """The 'submit' button in the last page was clicked"""
-        self.model.current_page = Page.INTEGRITY_CHECKING
-        self.view.update_base_app()
-
-    def onclick_value_trends_tab(self, widget: ui.Button) -> None:
-        """Value trends tab was clicked"""
-        self.model.active_visualization_tab = VisualizationTab.VALUE_TRENDS
-        self.view.update_plausibility_checking_page()
-
-    def onclick_growth_trends_tab(self, widget: ui.Button) -> None:
-        """Growth trends tab was clicked"""
-        self.model.active_visualization_tab = VisualizationTab.GROWTH_TRENDS
-        self.view.update_plausibility_checking_page()
-
-    def onclick_box_plot_tab(self, widget: ui.Button) -> None:
-        """Box plot tab was clicked"""
-        self.model.active_visualization_tab = VisualizationTab.BOX_PLOT
-        self.view.update_plausibility_checking_page()
-
-    def onchange_fix_dropdown(self, change: dict, row_index: int) -> None:
-        """The selection for one of the fix dropdowns in unknown labels table was changed"""
-        new_value = change["new"]
-        DROPDOWN_INDEX = 3
-        if new_value == self.model.unknown_labels_table[row_index][DROPDOWN_INDEX]:
-            return
-        self.model.unknown_labels_table[row_index][DROPDOWN_INDEX] = new_value
-        self._reset_later_pages()
-
-    def onchange_override_checkbox(self, change: dict, row_index: int) -> None:
-        """The selection for one of the override checkbox in unknown labels table was changed"""
-        new_value = change["new"]
-        CHECKBOX_INDEX = 4
-        # The event is triggered programmatically by page update, instead of by a user action
-        if new_value == self.model.unknown_labels_table[row_index][CHECKBOX_INDEX]:
-            return
-        self.model.unknown_labels_table[row_index][CHECKBOX_INDEX] = new_value
-        self._reset_later_pages()
-
-    def onchange_valuetrends_scenario(self, change: dict) -> None:
-        """The scenario selection for value trends visualization was changed"""
-        self.model.valuetrends_scenario = change["new"]
-
-    def onchange_valuetrends_region(self, change: dict) -> None:
-        """The region selection for value trends visualization was changed"""
-        self.model.valuetrends_region = change["new"]
-
-    def onchange_valuetrends_variable(self, change: dict) -> None:
-        """The variable selection for value trends visualization was changed"""
-        self.model.valuetrends_variable = change["new"]
-
-    def onchange_growthtrends_scenario(self, change: dict) -> None:
-        """The scenario selection for growth trends visualization was changed"""
-        self.model.growthtrends_scenario = change["new"]
-
-    def onchange_growthtrends_region(self, change: dict) -> None:
-        """The region selection for growth trends visualization was changed"""
-        self.model.growthtrends_region = change["new"]
-
-    def onchange_growthtrends_variable(self, change: dict) -> None:
-        """The variable selection for growth trends visualization was changed"""
-        self.model.growthtrends_variable = change["new"]
-
-    def onclick_visualize_value_trends(self, widget: ui.Button) -> None:
-        """Visualize button was clicked"""
-        if self.model.valuetrends_scenario == "":
-            self.view.show_notification(Notification.WARNING, "Scenario cannot be empty")
-            return
-        elif self.model.valuetrends_region == "":
-            self.view.show_notification(Notification.WARNING, "Region cannot be empty")
-            return
-        elif self.model.valuetrends_variable == "":
-            self.view.show_notification(Notification.WARNING, "Variable cannot be empty")
-            return
-        self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
-        self.model.compute_valuetrends_vis_groupedtable()
-        self.view.visualize_value_trends()
-        self.view.modify_cursor(None)
-        self.view.show_notification(Notification.SUCCESS, "Visualized value trends")
-
-    def onclick_visualize_growth_trends(self, widget: ui.Button) -> None:
-        """Visualize button was clicked"""
-        if self.model.growthtrends_scenario == "":
-            self.view.show_notification(Notification.WARNING, "Scenario cannot be empty")
-            return
-        elif self.model.growthtrends_region == "":
-            self.view.show_notification(Notification.WARNING, "Region cannot be empty")
-            return
-        elif self.model.growthtrends_variable == "":
-            self.view.show_notification(Notification.WARNING, "Variable cannot be empty")
-            return
-        self.view.modify_cursor(CSS.CURSOR_MOD__PROGRESS)
-        self.model.compute_growthtrends_vis_groupedtable()
-        self.view.visualize_growth_trends()
-        self.view.modify_cursor(None)
-        self.view.show_notification(Notification.SUCCESS, "Visualized growth trends")
-
-    def onclick_visualize_box_plot(self, widget: ui.Button) -> None:
-        """Visualize button was clicked"""
-        pass
