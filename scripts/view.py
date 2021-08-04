@@ -659,6 +659,7 @@ class View:
         associatedprojects_select = ui.SelectMultiple(options=self.model.associated_projects_pool)
         associatedprojects_select.observe(self.ctrl.onchange_associated_projects, "value")
         associatedprojects_select.layout = ui.Layout(margin="20px 0px 0px 0px", width="500px")
+        associatedprojects_select.add_class(CSS.ASSOCIATED_PROJECT_SELECT)
         # Create navigation button
         next_button = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
         next_button.on_click(self.ctrl.onclick_next_from_page_1)

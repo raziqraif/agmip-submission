@@ -92,6 +92,7 @@ class CSS:
     """Namespace for CSS classes declared in style.html and used inside Python"""
 
     APP = "rc-app-container"
+    ASSOCIATED_PROJECT_SELECT = "rc-associated-project-select"
     BAD_LABELS_TABLE = "rc-bad-labels-table"
     COLOR_MOD__BLACK = "rc-color-mod--black"
     COLOR_MOD__BLUE = "rc-color-mod--blue"
