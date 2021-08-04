@@ -14,10 +14,10 @@ class VisualizationTab(Enum):
 
     VALUE_TRENDS = 0
     GROWTH_TRENDS = 1
-    BOX_PLOT = 2
 
 
 class Page:
+    # TODO: Change this to enum
     """Namespace for the pages in this app"""
 
     FILE_UPLOAD = 1
@@ -27,12 +27,11 @@ class Page:
 
 
 class Delimiter:
-    """
-    Namespace for supported CSV delimiters and relevant utilities
-    """
+    """ Namespace for supported CSV delimiters and relevant utilities """
 
     # TODO: ipywidgets dropdown supports dual representations for selection values, so this class is not needed 
     # @date Jul 27 2021
+    
     _model_postfix = "_MODEL"
     _view_postfix = "_VIEW"
     COMMA_MODEL = ","
