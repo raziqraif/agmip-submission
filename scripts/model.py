@@ -64,9 +64,9 @@ class Model:
         self.nrows_duplicates = 0
         self.nrows_accepted = 0
         # - paths to downloadable files
-        self.structissuefile_path = self.DOWNLOADDIR_PATH / "RowsWithStructuralIssue.csv"
-        self.duplicatesfile_path = self.DOWNLOADDIR_PATH / "DuplicateRecords.csv"
-        self.ignoredscenariofile_path = self.DOWNLOADDIR_PATH / "RecordsWithIgnoredScenario.csv"
+        self.STRUCTISSUEFILE_PATH = self.DOWNLOADDIR_PATH / "RowsWithStructuralIssue.csv"
+        self.DUPLICATESFILE_PATH = self.DOWNLOADDIR_PATH / "DuplicateRecords.csv"
+        self.IGNOREDSCENARIOFILE_PATH = self.DOWNLOADDIR_PATH / "RecordsWithIgnoredScenario.csv"
         self.acceptedfile_path = self.DOWNLOADDIR_PATH / "AcceptedRecords.csv"
         self.outputfile_path = self.DOWNLOADDIR_PATH / "OutputTable.csv"
         # - tables to summarize "field checks"
