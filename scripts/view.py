@@ -117,7 +117,7 @@ class View:
         display(HTML(f"<script> APP_MODEL = {javascript_model.serialize()}</script>"))
         display(HTML(filename="script.html"))
 
-    def modify_cursor(self, new_cursor_mod_class: Optional[str]) -> None:
+    def modify_cursor_style(self, new_cursor_mod_class: Optional[str]) -> None:
         """
         Change cursor style by assigning the passed CSS class to the app's DOM
         If None was passed, the cursor style will be reset
@@ -472,24 +472,24 @@ class View:
         )
         self.growthtrends_variable_ddown.value = self.model.growthtrends_variable
 
-    def visualize_value_trends(self) -> None:
+    def update_value_trends_chart(self) -> None:
         """Visualize value trends"""
         with self.valuetrends_viz_output:
             clear_output(wait=True)
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
-            if self.model.valuetrends_viz_table is not None:
+            if self.model.valuetrends_table is not None:
                 # Make sure we have enough colors for all lines
                 # https://stackoverflow.com/a/35971096/16133077
-                num_plots = self.model.valuetrends_viz_table.ngroups
+                num_plots = self.model.valuetrends_table.ngroups
                 axes.set_prop_cycle(plt.cycler("color", plt.cm.jet(np.linspace(0, 1, num_plots))))  # type: ignore
                 # Multi-line chart
                 # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top
-                for key, group in self.model.valuetrends_viz_table:
+                for key, group in self.model.valuetrends_table:
                     axes = group.plot(
                         ax=axes,
                         kind="line",
-                        x=self.model.valuetrends_viz_table_year_colname,
-                        y=self.model.valuetrends_viz_table_value_colname,
+                        x=self.model.valuetrends_table_year_colname,
+                        y=self.model.valuetrends_table_value_colname,
                         label=key,
                     )
             axes.set_xlabel("Year")
@@ -498,20 +498,20 @@ class View:
             plt.grid()
             plt.show()
 
-    def visualize_growth_trends(self) -> None:
+    def update_growth_trends_chart(self) -> None:
         """Visualize growth trends"""
         # TODO: Complete this
         with self.growthtrends_viz_output:
             clear_output(wait=True)
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
-            if self.model.growthtrends_viztable is not None:
+            if self.model.growthtrends_table is not None:
                 # Make sure we have enough colors for all lines
                 # https://stackoverflow.com/a/35971096/16133077
-                num_plots = self.model.growthtrends_viztable.ngroups
+                num_plots = self.model.growthtrends_table.ngroups
                 axes.set_prop_cycle(plt.cycler("color", plt.cm.jet(np.linspace(0, 1, num_plots))))  # type: ignore
                 # Multi-line chart
                 # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top
-                for key, group in self.model.growthtrends_viztable:
+                for key, group in self.model.growthtrends_table:
                     assert isinstance(group, DataFrame)
                     # group.sort_values([self.model.growthtrends_year_colname], inplace=True)
                     # growtrates_colname = "GrowthRates"
@@ -520,8 +520,8 @@ class View:
                     axes = group.plot(
                         ax=axes,
                         kind="line",
-                        x=self.model.growthtrends_viztable_year_colname,
-                        y=self.model.growthtrends_viztable_value_colname,
+                        x=self.model.growthtrends_table_year_colname,
+                        y=self.model.growthtrends_table_value_colname,
                         label=key,
                     )
             axes.set_xlabel("Year")
@@ -662,7 +662,7 @@ class View:
         associatedprojects_select.add_class(CSS.ASSOCIATED_PROJECT_SELECT)
         # Create navigation button
         next_button = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
-        next_button.on_click(self.ctrl.onclick_next_from_page_1)
+        next_button.on_click(self.ctrl.onclick_next_from_upage_1)
         # Create the page
         return ui.VBox(  # vbox for page
             children=[
@@ -680,7 +680,7 @@ class View:
                                         download="{str(self.model.INFOFILE_PATH.name)}"
                                         class="{CSS.ICON_BUTTON}"
                                         style="line-height:16px; height:16px"
-                                        title="Download a sample file"
+                                        title="Download info file"
                                     >
                                         <i class="fa fa-download"></i>
                                     </a>
@@ -763,9 +763,9 @@ class View:
             description="Previous",
             layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px"),  # NOSONAR
         )
-        previous.on_click(self.ctrl.onclick_previous_from_page_2)
+        previous.on_click(self.ctrl.onclick_previous_from_upage_2)
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
-        next_.on_click(self.ctrl.onclick_next_from_page_2)
+        next_.on_click(self.ctrl.onclick_next_from_upage_2)
         # Create the input format specifications section
         _label_layout = ui.Layout(width="205px")
         _wrapper_layout = ui.Layout(overflow_y="hidden")  # needed to prevent scrollbar from appearing on safari
@@ -987,11 +987,11 @@ class View:
         self.unknown_labels_tbl.add_class(CSS.UNKNOWN_LABELS_TABLE)
         # - create page navigation buttons
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
-        next_.on_click(self.ctrl.onclick_next_from_page_3)
+        next_.on_click(self.ctrl.onclick_next_from_upage_3)
         previous = ui.Button(
             description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
         )
-        previous.on_click(self.ctrl.onclick_previous_from_page_3)
+        previous.on_click(self.ctrl.onclick_previous_from_upage_3)
         # Create the page
         return ui.VBox(  # vbox for page
             children=(
@@ -1178,7 +1178,7 @@ class View:
         previous = ui.Button(
             description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
         )
-        previous.on_click(self.ctrl.onclick_previous_from_page_4)
+        previous.on_click(self.ctrl.onclick_previous_from_upage_4)
         submit = ui.Button(
             description="Submit",
             button_style="success",
