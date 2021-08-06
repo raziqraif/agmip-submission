@@ -1280,6 +1280,13 @@ class View:
 
     def _build_admin_page(self) -> ui.Box:
         """Return an admin page"""
+        table_rows = ""
+        for row in self.model.get_submitted_files_info():
+            table_rows += "<tr>"
+            for colidx in range(len(row)):
+                field = row[colidx]
+                table_rows += f"<td>{field}</td>"
+            table_rows += "</tr>"
         self.submissions_tbl = ui.HTML(
             value=f"""
             <table class="table">
@@ -1289,13 +1296,14 @@ class View:
                     <th style="width: 150px;">Status</th>
                 </thead>
                 <tbody>
+                    {table_rows}
                     {''' 
                     <tr>
                         <td>-</td>
                         <td>-</td>
                         <td>-</td>
                     <tr>
-                    ''' * 15
+                    ''' * (15 - len(table_rows))
                     }
                 </tbody>
             </table>

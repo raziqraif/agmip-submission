@@ -31,6 +31,7 @@ def check_administrator_privilege() -> bool:
     username = os.popen("id -un").read().strip("\n")
     return username in ["raziq", "raziqraif", "lanzhao", "rcampbel"]
 
+
 def get_user_globalecon_project_dirnames() -> list[str]:
     "Return the list of AgMIP projects that the current user is in"
     groups = os.popen("groups").read().strip("\n").split(" ")
@@ -41,9 +42,6 @@ def get_user_globalecon_project_dirnames() -> list[str]:
         project_dirnames = ["agmipglobaleconagclim50iv"]
     return project_dirnames
 
-def get_submitted_files_info() -> list[list[str]]:
-    """Return a list of submitted files' info"""
-    
 
 class Model:
     WORKINGDIR_PATH = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
@@ -59,8 +57,8 @@ class Model:
         # MVC attributes
         self.view: View
         self.controller: Controller
-        # Base app states 
-        self.javascript_model = JSAppModel()    # - object to facilitate information injection into the Javascript context
+        # Base app states
+        self.javascript_model = JSAppModel()  # - object to facilitate information injection into the Javascript context
         self.application_mode = ApplicationMode.USER
         self.is_user_an_admin = check_administrator_privilege()
         self.current_user_page = UserPage.FILE_UPLOAD  # - current user mode page
@@ -137,6 +135,23 @@ class Model:
         """Introduce MVC modules to each other"""
         self.view = view
         self.controller = controller
+
+    # Admin page methods
+
+    def get_submitted_files_info(self) -> list[list[str]]:
+        """Return a list of submitted files' info"""
+        dirnames = os.popen(f'ls {self.SHAREDDIR_PATH}').read().split()
+        project_dirnames = [dirname for dirname in dirnames if dirname[:len("agmipglobalecon")] == "agmipglobalecon"]
+        files_info = []
+        for project_dirname in project_dirnames:
+            submissiondir_path = self.SHAREDDIR_PATH / project_dirname / ".submissions"
+            accepted_files = os.popen(f'ls {submissiondir_path} | grep .csv').read().split()
+            pending_files = os.popen(f'ls {submissiondir_path / ".pending"} | grep [0-9].csv').read().split()
+            for filename in accepted_files:
+                files_info.append([filename, project_dirname, "Accepted"])
+            for filename in pending_files:
+                files_info.append([filename, project_dirname, "Pending"])
+        return files_info
 
     # File upload page's methods
 
