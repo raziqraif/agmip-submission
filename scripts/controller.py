@@ -387,7 +387,7 @@ class Controller:
         if self.model.overridden_labels > 0:
             self.view.show_modal_dialog(
                 "Pending Submission Approval",
-                "Your data file was successfully submitted. However, since you requested to override some unknown"
-                " labels, your submission needs to be approved first. Inform Dominique (vandermd@purdue.edu) about this"
-                " request so he can begin reviewing.",
+                "Your data file has been submitted. However, the submission needs to be reviewed first"
+                " because some unknown labels are being overridden. Inform Dominique (vandermd@purdue.edu) about this"
+                " so he can begin the review process.",
             )

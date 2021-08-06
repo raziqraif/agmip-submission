@@ -62,7 +62,7 @@ class Model:
         self.INFOFILE_PATH = (  # - path of downloadeable info file
             self.WORKINGDIR_PATH / "AgMIP GlobalEcon Data Submission Info.zip"
         )
-        self.USER_GLOBALECON_PROJECTS = [(dirname[len("agmipglobalecon"):], dirname) for dirname in get_user_globalecon_project_dirnames()]  # - GlobalEcon projects the user is a part of
+        self.USER_GLOBALECON_PROJECTS = [(dirname, dirname) for dirname in get_user_globalecon_project_dirnames()]  # - GlobalEcon projects the user is a part of
         self.uploadedfile_name = ""
         self.associated_project_dirnames: list[str] = []  # - associated GlobalEcon projects for this submission
         # Data specification page's states
