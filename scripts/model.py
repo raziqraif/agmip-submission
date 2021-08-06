@@ -26,15 +26,15 @@ from .domain import (
 )
 
 
-def get_user_globalecon_projects() -> list[str]:
+def get_user_globalecon_project_dirnames() -> list[str]:
     "Return the list of AgMIP projects that the current user is in"
-    groups = str(os.popen("groups")).split(" ")
-    projects = [group for group in groups if "pr-agmipglobalecon" in group]
-    projects = [project[len("pr-")] for project in projects]
-    if len(projects) == 0:
+    groups = os.popen("groups").read().strip("\n").split(" ")
+    project_groups = [group for group in groups if "pr-agmipglobalecon" in group]
+    project_dirnames = [p_group[len("pr-"):] for p_group in project_groups]
+    if len(project_dirnames) == 0:
         # NOTE: This is just to make developing on local environment easier
-        projects = ["agmipglobaleconagclim50iv"]
-    return projects
+        project_dirnames = ["agmipglobaleconagclim50iv"]
+    return project_dirnames
 
 
 class Model:
@@ -62,9 +62,9 @@ class Model:
         self.INFOFILE_PATH = (  # - path of downloadeable info file
             self.WORKINGDIR_PATH / "AgMIP GlobalEcon Data Submission Info.zip"
         )
-        self.USER_GLOBALECON_PROJECTS = get_user_globalecon_projects()  # - GlobalEcon projects the user is a part of
+        self.USER_GLOBALECON_PROJECTS = [(dirname[len("agmipglobalecon"):], dirname) for dirname in get_user_globalecon_project_dirnames()]  # - GlobalEcon projects the user is a part of
         self.uploadedfile_name = ""
-        self.associated_projects: list[str] = []  # - associated GlobalEcon projects for this submission
+        self.associated_project_dirnames: list[str] = []  # - associated GlobalEcon projects for this submission
         # Data specification page's states
         # The states for this page have multiple dependencies, and changes to a state may trigger changes to
         # several other states. So, we only define 1 state as an instance attribute here, and will define the other
@@ -311,16 +311,16 @@ class Model:
 
     def submit_processed_file(self) -> None:
         """Submit processed file to the correct directory"""
-        for project in self.associated_projects: 
+        for project in self.associated_project_dirnames: 
             outputfile_dstpath = (
-                self.SHAREDDIR_PATH / project / ".submission" / "pending" / self.outputfile_path.name 
+                self.SHAREDDIR_PATH / project / ".submission" / ".pending" / self.outputfile_path.name 
                 if self.overridden_labels > 0 else 
                 self.SHAREDDIR_PATH / project / ".submission" / self.outputfile_path.name
             )
             shutil.copy(self.outputfile_path, outputfile_dstpath)
             # Submit a file detailing override request or create a new data cube
             if self.overridden_labels > 0:
-                requestinfo_dstpath = outputfile_dstpath.parent / outputfile_dstpath.stem / "_override_info.csv"
+                requestinfo_dstpath = outputfile_dstpath.parent / outputfile_dstpath.stem / "-override_info.csv"
                 with open(str(requestinfo_dstpath), "w+") as infofile:
                     for label_info in self.input_data_diagnosis.unknown_labels:
                         if label_info.override == True:

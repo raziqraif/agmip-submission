@@ -63,7 +63,7 @@ class Controller:
 
     def onchange_associated_projects(self, change: dict) -> None:
         """The selections for associated projects has changed"""
-        self.model.associated_projects = list(change["new"])
+        self.model.associated_project_dirnames = list(change["new"])
         self._reset_later_pages()
 
     def onclick_next_from_upage_1(self, widget: ui.Button) -> None:
@@ -71,7 +71,7 @@ class Controller:
         if len(self.model.uploadedfile_name) == 0:
             self.view.show_notification(Notification.INFO, Notification.PLEASE_UPLOAD)
             return
-        if len(self.model.associated_projects) == 0:
+        if len(self.model.associated_project_dirnames) == 0:
             self.view.show_notification(Notification.INFO, "Please select the associated projects")
             return
         self.model.current_upage = Page.DATA_SPECIFICATION
