@@ -260,7 +260,7 @@ class View:
                     </tbody>
                 </table>
             """
-            )
+            
             # NOTE: It is important for us to NOT remove user pages from DOM tree even when going into admin mode. Else,
             # the element targetting that we do in the Javascript context (e.g. for file upload) will no longer work
             self.app_body.children = [self.user_page_stepper, self.user_page_container, self.admin_page]
