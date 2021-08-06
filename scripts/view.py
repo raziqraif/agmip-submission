@@ -238,14 +238,15 @@ class View:
             self.user_page_container.add_class(CSS.DISPLAY_MOD__NONE)
             self.user_page_stepper.add_class(CSS.DISPLAY_MOD__NONE)
             table_rows = ""
+            cur_len = 0
             for row in self.model.get_submitted_files_info():
                 table_rows += "<tr>"
                 for colidx in range(len(row)):
                     field = row[colidx]
                     table_rows += f"<td>{field}</td>"
                 table_rows += "</tr>"
-            cur_len = len(table_rows)
-            for i in range(cur_len, 15):
+                cur_len += 1
+            for _ in range(cur_len, 15):
                 table_rows += "<tr><td>-</td><td>-</td><td>-</td><tr>"
             self.submissions_tbl = ui.HTML(
                 value=f"""
