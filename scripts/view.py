@@ -248,8 +248,7 @@ class View:
                 cur_len += 1
             for _ in range(cur_len, 15):
                 table_rows += "<tr><td>-</td><td>-</td><td>-</td></tr>"
-            self.submissions_tbl = ui.HTML(
-                value=f"""
+            self.submissions_tbl.value = f"""
                 <table class="table">
                     <thead>
                         <th style="width: 350px;">File</th>
