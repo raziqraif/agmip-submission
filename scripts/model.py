@@ -311,11 +311,11 @@ class Model:
 
     def submit_processed_file(self) -> None:
         """Submit processed file to the correct directory"""
-        for project in self.associated_project_dirnames: 
+        for project_dirname in self.associated_project_dirnames: 
             outputfile_dstpath = (
-                self.SHAREDDIR_PATH / project / ".submission" / ".pending" / self.outputfile_path.name 
+                self.SHAREDDIR_PATH / project_dirname / ".submissions" / ".pending" / self.outputfile_path.name 
                 if self.overridden_labels > 0 else 
-                self.SHAREDDIR_PATH / project / ".submission" / self.outputfile_path.name
+                self.SHAREDDIR_PATH / project_dirname / ".submissions" / self.outputfile_path.name
             )
             shutil.copy(self.outputfile_path, outputfile_dstpath)
             # Submit a file detailing override request or create a new data cube
