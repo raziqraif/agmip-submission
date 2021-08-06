@@ -244,6 +244,9 @@ class View:
                     field = row[colidx]
                     table_rows += f"<td>{field}</td>"
                 table_rows += "</tr>"
+            cur_len = len(table_rows)
+            for i in range(cur_len, 15):
+                table_rows += "<tr><td>-</td><td>-</td><td>-</td><tr>"
             self.submissions_tbl = ui.HTML(
                 value=f"""
                 <table class="table">
@@ -254,14 +257,6 @@ class View:
                     </thead>
                     <tbody>
                         {table_rows}
-                        {''' 
-                        <tr>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>-</td>
-                        <tr>
-                        ''' * (15 - len(table_rows))
-                        }
                     </tbody>
                 </table>
             """
