@@ -16,7 +16,13 @@ class VisualizationTab(Enum):
     GROWTH_TRENDS = 1
 
 
-class Page:
+class ApplicationMode:
+    """Enum for application mode"""
+    ADMIN = 0
+    USER = 1
+
+
+class UserPage:
     # TODO: Change this to enum
     """Namespace for the pages in this app"""
 

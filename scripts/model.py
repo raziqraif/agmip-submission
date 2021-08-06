@@ -12,9 +12,9 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 from pandas.core.groupby.generic import DataFrameGroupBy
 
-from .utils import Delimiter
+from .utils import ApplicationMode, Delimiter
 from .utils import JSAppModel
-from .utils import Page
+from .utils import UserPage
 from .utils import VisualizationTab
 from .domain import (
     InputDataEntity,
@@ -30,7 +30,7 @@ def get_user_globalecon_project_dirnames() -> list[str]:
     "Return the list of AgMIP projects that the current user is in"
     groups = os.popen("groups").read().strip("\n").split(" ")
     project_groups = [group for group in groups if "pr-agmipglobalecon" in group]
-    project_dirnames = [p_group[len("pr-"):] for p_group in project_groups]
+    project_dirnames = [p_group[len("pr-") :] for p_group in project_groups]
     if len(project_dirnames) == 0:
         # NOTE: This is just to make developing on local environment easier
         project_dirnames = ["agmipglobaleconagclim50iv"]
@@ -51,10 +51,11 @@ class Model:
         # MVC attributes
         self.view: View
         self.controller: Controller
-        # Base app states in user mode
-        self.javascript_model = JSAppModel()
-        self.current_upage = Page.FILE_UPLOAD  # - current user mode page
-        self.furthest_active_upage = Page.FILE_UPLOAD  # - furthest/last active user mode page
+        # Base app states 
+        self.javascript_model = JSAppModel()    # - object to facilitate information injection into the Javascript context
+        self.application_mode = ApplicationMode.USER
+        self.current_user_page = UserPage.FILE_UPLOAD  # - current user mode page
+        self.furthest_active_user_page = UserPage.FILE_UPLOAD  # - furthest/last active user mode page
         self.input_data_entity = InputDataEntity()  # - domain entity for input / uploaded data file
         self.input_data_diagnosis: InputDataDiagnosis = InputDataDiagnosis()  # - domain entity for input data diagnosis
         self.output_data_entity: OutputDataEntity = OutputDataEntity()  # - domain entity for output / processed data
@@ -62,7 +63,9 @@ class Model:
         self.INFOFILE_PATH = (  # - path of downloadeable info file
             self.WORKINGDIR_PATH / "AgMIP GlobalEcon Data Submission Info.zip"
         )
-        self.USER_GLOBALECON_PROJECTS = [(dirname, dirname) for dirname in get_user_globalecon_project_dirnames()]  # - GlobalEcon projects the user is a part of
+        self.USER_GLOBALECON_PROJECTS = [
+            (dirname, dirname) for dirname in get_user_globalecon_project_dirnames()
+        ]  # - GlobalEcon projects the user is a part of
         self.uploadedfile_name = ""
         self.associated_project_dirnames: list[str] = []  # - associated GlobalEcon projects for this submission
         # Data specification page's states
@@ -311,11 +314,11 @@ class Model:
 
     def submit_processed_file(self) -> None:
         """Submit processed file to the correct directory"""
-        for project_dirname in self.associated_project_dirnames: 
+        for project_dirname in self.associated_project_dirnames:
             outputfile_dstpath = (
-                self.SHAREDDIR_PATH / project_dirname / ".submissions" / ".pending" / self.outputfile_path.name 
-                if self.overridden_labels > 0 else 
-                self.SHAREDDIR_PATH / project_dirname / ".submissions" / self.outputfile_path.name
+                self.SHAREDDIR_PATH / project_dirname / ".submissions" / ".pending" / self.outputfile_path.name
+                if self.overridden_labels > 0
+                else self.SHAREDDIR_PATH / project_dirname / ".submissions" / self.outputfile_path.name
             )
             shutil.copy(self.outputfile_path, outputfile_dstpath)
             # Submit a file detailing override request or create a new data cube

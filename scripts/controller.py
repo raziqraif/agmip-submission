@@ -5,7 +5,7 @@ import shutil
 import ipywidgets as ui
 
 from .utils import VisualizationTab
-from .utils import Page
+from .utils import UserPage
 from .utils import Notification
 from .utils import CSS, Delimiter
 
@@ -30,9 +30,9 @@ class Controller:
 
     def _reset_later_pages(self) -> None:
         """Set the current page as the last/furthest active page"""
-        if self.model.furthest_active_upage == self.model.current_upage:
+        if self.model.furthest_active_user_page == self.model.current_user_page:
             return
-        self.model.furthest_active_upage = self.model.current_upage
+        self.model.furthest_active_user_page = self.model.current_user_page
         self.view.update_base_app()
 
     # File upload page callbacks
@@ -74,10 +74,10 @@ class Controller:
         if len(self.model.associated_project_dirnames) == 0:
             self.view.show_notification(Notification.INFO, "Please select the associated projects")
             return
-        self.model.current_upage = Page.DATA_SPECIFICATION
-        if self.model.furthest_active_upage == Page.FILE_UPLOAD:
+        self.model.current_user_page = UserPage.DATA_SPECIFICATION
+        if self.model.furthest_active_user_page == UserPage.FILE_UPLOAD:
             self.view.modify_cursor_style(CSS.CURSOR_MOD__WAIT)
-            self.model.furthest_active_upage = Page.DATA_SPECIFICATION
+            self.model.furthest_active_user_page = UserPage.DATA_SPECIFICATION
             error_message = self.model.init_data_specification_page_states(self.model.uploadedfile_name)
             self.view.update_data_specification_page()
             if error_message is not None:
@@ -241,7 +241,7 @@ class Controller:
 
     def onclick_previous_from_upage_2(self, widget: ui.Button) -> None:
         """'Previous' button on the data specification page was clicked"""
-        self.model.current_upage = Page.FILE_UPLOAD
+        self.model.current_user_page = UserPage.FILE_UPLOAD
         self.view.update_base_app()
     
     def onclick_next_from_upage_2(self, widget: ui.Button) -> None:
@@ -250,10 +250,10 @@ class Controller:
         if warning_message is not None:
             self.view.show_notification(Notification.WARNING, warning_message)
             return
-        self.model.current_upage = Page.INTEGRITY_CHECKING
-        if self.model.furthest_active_upage == Page.DATA_SPECIFICATION:
+        self.model.current_user_page = UserPage.INTEGRITY_CHECKING
+        if self.model.furthest_active_user_page == UserPage.DATA_SPECIFICATION:
             self.view.modify_cursor_style(CSS.CURSOR_MOD__WAIT)
-            self.model.furthest_active_upage = Page.INTEGRITY_CHECKING
+            self.model.furthest_active_user_page = UserPage.INTEGRITY_CHECKING
             self.model.init_integrity_checking_page_states()
             self.view.update_integrity_checking_page()
         self.view.update_base_app()
@@ -282,7 +282,7 @@ class Controller:
     
     def onclick_previous_from_upage_3(self, widget: ui.Button) -> None:
         """'Previous' button on the data specification page was clicked"""
-        self.model.current_upage = Page.DATA_SPECIFICATION
+        self.model.current_user_page = UserPage.DATA_SPECIFICATION
         self.view.update_base_app()
 
     def onclick_next_from_upage_3(self, widget: ui.Button) -> None:
@@ -291,10 +291,10 @@ class Controller:
         if warning_message is not None:
             self.view.show_notification(Notification.WARNING, warning_message)
             return
-        self.model.current_upage = Page.PLAUSIBILITY_CHECKING
-        if self.model.furthest_active_upage == Page.INTEGRITY_CHECKING:
+        self.model.current_user_page = UserPage.PLAUSIBILITY_CHECKING
+        if self.model.furthest_active_user_page == UserPage.INTEGRITY_CHECKING:
             self.view.modify_cursor_style(CSS.CURSOR_MOD__WAIT)
-            self.model.furthest_active_upage = Page.PLAUSIBILITY_CHECKING
+            self.model.furthest_active_user_page = UserPage.PLAUSIBILITY_CHECKING
             assert self.model.input_data_diagnosis is not None
             self.model.init_plausibility_checking_page_states(self.model.unknown_labels_overview_tbl)
             self.view.update_plausibility_checking_page()
@@ -375,7 +375,7 @@ class Controller:
 
     def onclick_previous_from_upage_4(self, widget: ui.Button) -> None:
         """The 'submit' button in the last page was clicked"""
-        self.model.current_upage = Page.INTEGRITY_CHECKING
+        self.model.current_user_page = UserPage.INTEGRITY_CHECKING
         self.view.update_base_app()
 
     def onclick_submit(self, widget: ui.Button) -> None:
@@ -387,7 +387,7 @@ class Controller:
         if self.model.overridden_labels > 0:
             self.view.show_modal_dialog(
                 "Pending Submission Approval",
-                "Your data file has been submitted. However, the submission needs to be reviewed first"
-                " because some unknown labels are being overridden. Inform Dominique (vandermd@purdue.edu) about this"
-                " so he can begin the review process.",
+                "Your file has been submitted, but it is being placed under review because it contains overridden "
+                "labels. Reach out to Dominique (vandermd@purdue.edu) about this submission so he can begin the " 
+                "review process.",
             )

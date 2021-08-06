@@ -195,9 +195,9 @@ class View:
         """Update the base app"""
         # Create helper variables
         NUM_OF_PAGES = len(self.page_container.children)
-        assert self.model.current_upage > 0 and self.model.current_upage <= NUM_OF_PAGES
-        assert self.model.furthest_active_upage > 0 and self.model.furthest_active_upage <= NUM_OF_PAGES
-        current_page_index = self.model.current_upage - 1
+        assert self.model.current_user_page > 0 and self.model.current_user_page <= NUM_OF_PAGES
+        assert self.model.furthest_active_user_page > 0 and self.model.furthest_active_user_page <= NUM_OF_PAGES
+        current_page_index = self.model.current_user_page - 1
         # Update visibility of pages and style of page stepper elements
         for page_index in range(0, NUM_OF_PAGES):
             # Get page and stepper element
@@ -214,7 +214,7 @@ class View:
                 page.add_class(CSS.DISPLAY_MOD__NONE)
                 stepper_element._dom_classes = (
                     (CSS.STEPPER_EL, CSS.STEPPER_EL__ACTIVE)
-                    if page_index < self.model.furthest_active_upage
+                    if page_index < self.model.furthest_active_user_page
                     else (CSS.STEPPER_EL, CSS.STEPPER_EL__INACTIVE)
                 )
 
@@ -368,9 +368,9 @@ class View:
                 checkbox = ui.Checkbox(indent=False, value=False, description="")
                 checkbox.observe(_get_checkbox_callback(row_index), "value")
                 self._unknown_labels_tbl_childrenpool += [
-                    ui.Box(children=[ui.Label(value="-")]),
-                    ui.Box(children=[ui.Label(value="-")]),
-                    ui.Box(children=[ui.Label(value="-")]),
+                    ui.Box(children=[ui.HTML(value="-")]),
+                    ui.Box(children=[ui.HTML(value="-")]),
+                    ui.Box(children=[ui.HTML(value="-")]),
                     ui.Box(children=[dropdown]),
                     ui.Box(children=[checkbox]),
                 ]
@@ -382,9 +382,9 @@ class View:
                 cell_wrapper.children[0]
                 for cell_wrapper in self._unknown_labels_tbl_childrenpool[cellpoolstartindex : cellpoolstartindex + 5]
             ]
-            assert isinstance(unknownlabel_w, ui.Label)
-            assert isinstance(associatedcolumn_w, ui.Label)
-            assert isinstance(closestmatch_w, ui.Label)
+            assert isinstance(unknownlabel_w, ui.HTML)
+            assert isinstance(associatedcolumn_w, ui.HTML)
+            assert isinstance(closestmatch_w, ui.HTML)
             assert isinstance(fix_w, ui.Dropdown)
             assert isinstance(override_w, ui.Checkbox)
             # Get the cell values for this row from model
@@ -396,11 +396,10 @@ class View:
             assert isinstance(fix, str)
             assert isinstance(override, bool)
             # Update cell widgets based on the retrieved values from model
-            unknownlabel_w.value = unknownlabel
-            unknownlabel_w.description = unknownlabel
-            unknownlabel_w.description_tooltip = unknownlabel
+            get_hoverable_html = lambda value: f"<span title={value}>{value}</span>"
+            unknownlabel_w.value = get_hoverable_html(unknownlabel)
             associatedcolumn_w.value = associatedcolumn
-            closestmatch_w.value = closestmatch
+            closestmatch_w.value = get_hoverable_html(closestmatch)
             fix_w.value = None
             if associatedcolumn == "-":
                 fix_w.options = [""]
@@ -944,11 +943,11 @@ class View:
         # - gridbox look like a table. @date Aug 3, 2021
         # -- create the table's header row
         self._unknown_labels_tbl_childrenpool = [
-            ui.Box(children=[ui.Label(value="Label")]),
-            ui.Box(children=[ui.Label(value="Associated column")]),
-            ui.Box(children=[ui.Label(value="Closest Match")]),
-            ui.Box(children=[ui.Label(value="Fix")]),
-            ui.Box(children=[ui.Label(value="Override")]),
+            ui.Box(children=[ui.HTML(value="Label")]),
+            ui.Box(children=[ui.HTML(value="Associated column")]),
+            ui.Box(children=[ui.HTML(value="Closest Match")]),
+            ui.Box(children=[ui.HTML(value="Fix")]),
+            ui.Box(children=[ui.HTML(value="Override")]),
         ]
         # -- create the table's content, row by row
         # -- each row is in the format of [label, label, label, dropdown, checkbox]. to prevent us from having to
@@ -976,9 +975,9 @@ class View:
             checkbox = ui.Checkbox(indent=False, value=False, description="")
             checkbox.observe(_get_checkbox_callback(row_index), "value")
             self._unknown_labels_tbl_childrenpool += [
-                ui.Box(children=[ui.Label(value="-")]),
-                ui.Box(children=[ui.Label(value="-")]),
-                ui.Box(children=[ui.Label(value="-")]),
+                ui.Box(children=[ui.HTML(value="-")]),
+                ui.Box(children=[ui.HTML(value="-")]),
+                ui.Box(children=[ui.HTML(value="-")]),
                 ui.Box(children=[dropdown]),
                 ui.Box(children=[checkbox]),
             ]
@@ -1238,4 +1237,10 @@ class View:
                 ),
             ),
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),
+        )
+
+    def _build_admin_page(self) -> ui.Box:
+        """Return an admin page"""
+        return ui.VBox(
+            children=[], layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center")
         )
