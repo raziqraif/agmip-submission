@@ -247,7 +247,7 @@ class View:
                 table_rows += "</tr>"
                 cur_len += 1
             for _ in range(cur_len, 15):
-                table_rows += "<tr><td>-</td><td>-</td><td>-</td><tr>"
+                table_rows += "<tr><td>-</td><td>-</td><td>-</td></tr>"
             self.submissions_tbl = ui.HTML(
                 value=f"""
                 <table class="table">
