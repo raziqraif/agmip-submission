@@ -136,7 +136,7 @@ class View:
         self._notification_timer.cancel()
         # Reset the notification's DOM classes
         # This is important because we implement a clickaway listener in JS which removes a DOM class from the
-        # notification's view without notifying the notification's model. So, we want to make sure that the DOM classes 
+        # notification's view without notifying the notification's model. So, we want to make sure that the DOM classes
         # maintained in both view and model are synchronized. (The view and model in this context refers to ipywidgets'
         # view and model)
         self.notification._dom_classes = (CSS.NOTIFICATION,)
@@ -195,9 +195,9 @@ class View:
         """Update the base app"""
         # Create helper variables
         NUM_OF_PAGES = len(self.page_container.children)
-        assert self.model.current_page > 0 and self.model.current_page <= NUM_OF_PAGES
-        assert self.model.furthest_active_page > 0 and self.model.furthest_active_page <= NUM_OF_PAGES
-        current_page_index = self.model.current_page - 1
+        assert self.model.current_upage > 0 and self.model.current_upage <= NUM_OF_PAGES
+        assert self.model.furthest_active_upage > 0 and self.model.furthest_active_upage <= NUM_OF_PAGES
+        current_page_index = self.model.current_upage - 1
         # Update visibility of pages and style of page stepper elements
         for page_index in range(0, NUM_OF_PAGES):
             # Get page and stepper element
@@ -214,7 +214,7 @@ class View:
                 page.add_class(CSS.DISPLAY_MOD__NONE)
                 stepper_element._dom_classes = (
                     (CSS.STEPPER_EL, CSS.STEPPER_EL__ACTIVE)
-                    if page_index < self.model.furthest_active_page
+                    if page_index < self.model.furthest_active_upage
                     else (CSS.STEPPER_EL, CSS.STEPPER_EL__INACTIVE)
                 )
 
@@ -225,7 +225,7 @@ class View:
         no_file_uploaded_widget = children_[0]
         file_uploaded_widget = children_[1]
         if self.model.uploadedfile_name != "":
-            # Show "No file was uploaded" 
+            # Show "No file was uploaded"
             no_file_uploaded_widget.add_class(CSS.DISPLAY_MOD__NONE)
             file_uploaded_widget.remove_class(CSS.DISPLAY_MOD__NONE)
             children: tuple[ui.Label, ui.Button] = file_uploaded_widget.children
@@ -245,7 +245,7 @@ class View:
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = True
         # Update input format specification widgets
         set_dropdown_options(
-            self.model_name_ddown, ("", *self.model.model_names), self.ctrl.onchange_model_name_dropdown
+            self.model_name_ddown, ("", *self.model.VALID_MODEL_NAMES), self.ctrl.onchange_model_name_dropdown
         )
         self.model_name_ddown.value = self.model.model_name
         set_dropdown_options(self.delimiter_ddown, ("", *Delimiter.get_views()), self.ctrl.onchange_delimiter_dropdown)
@@ -315,7 +315,7 @@ class View:
         self.accepted_rows_lbl.value = "{:,}".format(self.model.nrows_accepted)
         # Update the bad labels overview table
         _table_rows = ""
-        for row in self.model.bad_labels_table:
+        for row in self.model.bad_labels_overview_tbl:
             _table_rows += "<tr>"
             for colidx in range(len(row)):
                 field = row[colidx]
@@ -341,13 +341,13 @@ class View:
     def _update_unknown_labels_overview_table(self) -> None:
         """
         Update the unknown labels overview table
-        Refer to the documentation surrounding the initialization of this table to understand how it was built 
+        Refer to the documentation surrounding the initialization of this table to understand how it was built
         and how it needs to be updated. @date Aug 3, 2021
         """
         # Calculate helper variables
-        NCOLS = 5  
-        nrowsneeded = len(self.model.unknown_labels_table)
-        nrowssupported = int(   # We deduct NCOLS from the calculation to exclude the header row
+        NCOLS = 5
+        nrowsneeded = len(self.model.unknown_labels_overview_tbl)
+        nrowssupported = int(  # We deduct NCOLS from the calculation to exclude the header row
             (len(self._unknown_labels_tbl_childrenpool) - NCOLS) / NCOLS
         )
         # Enlarge the children pool if needed
@@ -388,7 +388,7 @@ class View:
             assert isinstance(fix_w, ui.Dropdown)
             assert isinstance(override_w, ui.Checkbox)
             # Get the cell values for this row from model
-            row = self.model.unknown_labels_table[row_index]
+            row = self.model.unknown_labels_overview_tbl[row_index]
             unknownlabel, associatedcolumn, closestmatch, fix, override = row
             assert isinstance(unknownlabel, str)
             assert isinstance(associatedcolumn, str)
@@ -405,15 +405,15 @@ class View:
             if associatedcolumn == "-":
                 fix_w.options = [""]
             elif associatedcolumn == "Scenario":
-                fix_w.options = ["", *self.model.valid_scenarios]
+                fix_w.options = ["", *self.model.VALID_SCENARIOS]
             elif associatedcolumn == "Region":
-                fix_w.options = ["", *self.model.valid_regions]
+                fix_w.options = ["", *self.model.VALID_REGIONS]
             elif associatedcolumn == "Variable":
-                fix_w.options = ["", *self.model.valid_variables]
+                fix_w.options = ["", *self.model.VALID_VARIABLES]
             elif associatedcolumn == "Item":
-                fix_w.options = ["", *self.model.valid_items]
+                fix_w.options = ["", *self.model.VALID_ITEMS]
             elif associatedcolumn == "Unit":
-                fix_w.options = ["", *self.model.valid_units]
+                fix_w.options = ["", *self.model.VALID_UNITS]
             else:
                 raise Exception("Unexpected associated column")
             fix_w.value = fix
@@ -477,19 +477,19 @@ class View:
         with self.valuetrends_viz_output:
             clear_output(wait=True)
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
-            if self.model.valuetrends_vis_groupedtable is not None:
+            if self.model.valuetrends_viz_table is not None:
                 # Make sure we have enough colors for all lines
                 # https://stackoverflow.com/a/35971096/16133077
-                num_plots = self.model.valuetrends_vis_groupedtable.ngroups
+                num_plots = self.model.valuetrends_viz_table.ngroups
                 axes.set_prop_cycle(plt.cycler("color", plt.cm.jet(np.linspace(0, 1, num_plots))))  # type: ignore
                 # Multi-line chart
                 # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top
-                for key, group in self.model.valuetrends_vis_groupedtable:
+                for key, group in self.model.valuetrends_viz_table:
                     axes = group.plot(
                         ax=axes,
                         kind="line",
-                        x=self.model.valuetrends_year_colname,
-                        y=self.model.valuetrends_value_colname,
+                        x=self.model.valuetrends_viz_table_year_colname,
+                        y=self.model.valuetrends_viz_table_value_colname,
                         label=key,
                     )
             axes.set_xlabel("Year")
@@ -504,14 +504,14 @@ class View:
         with self.growthtrends_viz_output:
             clear_output(wait=True)
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
-            if self.model.growthtrends_vis_groupedtable is not None:
+            if self.model.growthtrends_viztable is not None:
                 # Make sure we have enough colors for all lines
                 # https://stackoverflow.com/a/35971096/16133077
-                num_plots = self.model.growthtrends_vis_groupedtable.ngroups
+                num_plots = self.model.growthtrends_viztable.ngroups
                 axes.set_prop_cycle(plt.cycler("color", plt.cm.jet(np.linspace(0, 1, num_plots))))  # type: ignore
                 # Multi-line chart
                 # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top
-                for key, group in self.model.growthtrends_vis_groupedtable:
+                for key, group in self.model.growthtrends_viztable:
                     assert isinstance(group, DataFrame)
                     # group.sort_values([self.model.growthtrends_year_colname], inplace=True)
                     # growtrates_colname = "GrowthRates"
@@ -520,8 +520,8 @@ class View:
                     axes = group.plot(
                         ax=axes,
                         kind="line",
-                        x=self.model.growthtrends_year_colname,
-                        y=self.model.growthtrends_growthvalue_colname,
+                        x=self.model.growthtrends_viztable_year_colname,
+                        y=self.model.growthtrends_viztable_value_colname,
                         label=key,
                     )
             axes.set_xlabel("Year")
@@ -619,7 +619,7 @@ class View:
                     CSS.UA__BACKGROUND,
                 ),
                 ui.HTML(  # - invisible file uploader (HTML input[type="file"])
-                    # NOTE: this widget will be targeted from the Javascript context by using the CSS class name, 
+                    # NOTE: this widget will be targeted from the Javascript context by using the CSS class name,
                     # so do not remove the CSS class assignment
                     value=f"""
                     <input class="{CSS.UA__FILE_UPLOADER}" type="file" title="Click to browse" accept=".csv">
@@ -656,7 +656,7 @@ class View:
         self.uploaded_file_name_box.layout = ui.Layout(margin="0px 0px 24px 0px")
         # Create project selection widget
         # TODO: change this to only allow single selection
-        associatedprojects_select = ui.SelectMultiple(options=self.model.associated_projects_pool)
+        associatedprojects_select = ui.SelectMultiple(options=self.model.USER_GLOBALECON_PROJECTS)
         associatedprojects_select.observe(self.ctrl.onchange_associated_projects, "value")
         associatedprojects_select.layout = ui.Layout(margin="20px 0px 0px 0px", width="500px")
         associatedprojects_select.add_class(CSS.ASSOCIATED_PROJECT_SELECT)
@@ -676,8 +676,8 @@ class View:
                                 ui.HTML(  # --- info download button
                                     value=f"""
                                     <a
-                                        href="{str(self.model.samplefile_path)}" 
-                                        download="{str(self.model.samplefile_path.name)}"
+                                        href="{str(self.model.INFOFILE_PATH)}" 
+                                        download="{str(self.model.INFOFILE_PATH.name)}"
                                         class="{CSS.ICON_BUTTON}"
                                         style="line-height:16px; height:16px"
                                         title="Download a sample file"
@@ -760,7 +760,8 @@ class View:
         self.output_data_preview_tbl.add_class(CSS.PREVIEW_TABLE)
         # - create control widgets for page navigation
         previous = ui.Button(
-            description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
+            description="Previous",
+            layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px"),  # NOSONAR
         )
         previous.on_click(self.ctrl.onclick_previous_from_page_2)
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
@@ -901,8 +902,8 @@ class View:
         download_accepted_rows = ui.HTML(
             value=f"""
                 <a
-                    href="{str(self.model.acceptedfile_path)}" 
-                    download="{str(self.model.acceptedfile_path.name)}"
+                    href="{str(self.model.ACCEPTEDFILE_PATH)}" 
+                    download="{str(self.model.ACCEPTEDFILE_PATH.name)}"
                     class="{CSS.ICON_BUTTON}"
                     style="line-height:36px;"
                     title=""
@@ -1119,7 +1120,7 @@ class View:
         self.valuetrends_region_ddown.observe(self.ctrl.onchange_valuetrends_region, "value")
         self.valuetrends_variable_ddown = ui.Dropdown(layout=_ddown_layout, options=self.model.uploaded_variables)
         self.valuetrends_variable_ddown.observe(self.ctrl.onchange_valuetrends_variable, "value")
-        visualize_value_btn = ui.Button(description="Visualize", layout=ui.Layout(margin="24px 0px 0px 0px"))
+        visualize_value_btn = ui.Button(description="Visualize", layout=ui.Layout(margin="24px 0px 0px 0px"))  # NOSONAR
         visualize_value_btn.on_click(self.ctrl.onclick_visualize_value_trends)
         self.valuetrends_viz_output.layout = _viz_output_layout
         self.valuetrends_tabcontent = ui.VBox(
