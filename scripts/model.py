@@ -320,7 +320,7 @@ class Model:
             shutil.copy(self.outputfile_path, outputfile_dstpath)
             # Submit a file detailing override request or create a new data cube
             if self.overridden_labels > 0:
-                requestinfo_dstpath = outputfile_dstpath.parent / outputfile_dstpath.stem + "_Override_info.csv"
+                requestinfo_dstpath = outputfile_dstpath.parent / (outputfile_dstpath.stem + "_OverrideInfo.csv")
                 with open(str(requestinfo_dstpath), "w+") as infofile:
                     for label_info in self.input_data_diagnosis.unknown_labels:
                         if label_info.override == True:
