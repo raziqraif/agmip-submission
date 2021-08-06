@@ -26,6 +26,11 @@ from .domain import (
 )
 
 
+def check_administrator_privilege() -> bool:
+    """Return whether or not user can enter the admin mode"""
+    username = os.popen("id -un").read().strip("\n")
+    return username in ["raziq", "raziqraif", "lanzhao", "rcampbel"]
+
 def get_user_globalecon_project_dirnames() -> list[str]:
     "Return the list of AgMIP projects that the current user is in"
     groups = os.popen("groups").read().strip("\n").split(" ")
@@ -36,6 +41,9 @@ def get_user_globalecon_project_dirnames() -> list[str]:
         project_dirnames = ["agmipglobaleconagclim50iv"]
     return project_dirnames
 
+def get_submitted_files_info() -> list[list[str]]:
+    """Return a list of submitted files' info"""
+    
 
 class Model:
     WORKINGDIR_PATH = Path(__name__).parent.parent / "workingdir"  # <PROJECT_DIR>/workingdir
@@ -54,6 +62,7 @@ class Model:
         # Base app states 
         self.javascript_model = JSAppModel()    # - object to facilitate information injection into the Javascript context
         self.application_mode = ApplicationMode.USER
+        self.is_user_an_admin = check_administrator_privilege()
         self.current_user_page = UserPage.FILE_UPLOAD  # - current user mode page
         self.furthest_active_user_page = UserPage.FILE_UPLOAD  # - furthest/last active user mode page
         self.input_data_entity = InputDataEntity()  # - domain entity for input / uploaded data file
@@ -290,7 +299,7 @@ class Model:
         self.valuetrends_table = None
         self.growthtrends_table = None
 
-    def init_valuetrends_visualization_states(self) -> None:
+    def update_valuetrends_visualization_states(self) -> None:
         """
         Initialize states for value trends visualization
         @date Aug 5, 2021
@@ -301,7 +310,7 @@ class Model:
             self.valuetrends_scenario, self.valuetrends_region, self.valuetrends_variable
         )
 
-    def init_growthtrends_visualization_states(self) -> None:
+    def update_growthtrends_visualization_states(self) -> None:
         """
         Initialize states for value trends visualization
         @date Aug 5, 2021

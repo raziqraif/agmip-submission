@@ -4,7 +4,7 @@ import shutil
 
 import ipywidgets as ui
 
-from .utils import VisualizationTab
+from .utils import ApplicationMode, VisualizationTab
 from .utils import UserPage
 from .utils import Notification
 from .utils import CSS, Delimiter
@@ -34,6 +34,26 @@ class Controller:
             return
         self.model.furthest_active_user_page = self.model.current_user_page
         self.view.update_base_app()
+
+    # Base app callbacks
+
+    def onclick_user_mode_btn(self, widget: ui.Button) -> None:
+        """User mode button was clicked"""
+        assert self.model.application_mode == ApplicationMode.USER
+        if self.model.is_user_an_admin:
+            self.model.application_mode = ApplicationMode.ADMIN
+            self.view.modify_cursor_style(CSS.CURSOR_MOD__WAIT)
+            self.view.update_base_app()
+            self.view.modify_cursor_style(None)
+        else: 
+            self.view.show_notification(Notification.ERROR, "Your account does not have admin privileges")
+    
+    def onclick_admin_mode_btn(self, widget: ui.Button) -> None:
+        """Admin mode button was clicked"""
+        self.model.application_mode = ApplicationMode.USER
+        self.view.modify_cursor_style(CSS.CURSOR_MOD__WAIT)
+        self.view.update_base_app()
+        self.view.modify_cursor_style(None)
 
     # File upload page callbacks
 
@@ -334,7 +354,7 @@ class Controller:
             self.view.show_notification(Notification.WARNING, "Variable cannot be empty")
             return
         self.view.modify_cursor_style(CSS.CURSOR_MOD__PROGRESS)
-        self.model.init_valuetrends_visualization_states()
+        self.model.update_valuetrends_visualization_states()
         self.view.update_value_trends_chart()
         self.view.modify_cursor_style(None)
         self.view.show_notification(Notification.SUCCESS, "Visualized value trends")
@@ -368,7 +388,7 @@ class Controller:
             self.view.show_notification(Notification.WARNING, "Variable cannot be empty")
             return
         self.view.modify_cursor_style(CSS.CURSOR_MOD__PROGRESS)
-        self.model.init_growthtrends_visualization_states()
+        self.model.update_growthtrends_visualization_states()
         self.view.update_growth_trends_chart()
         self.view.modify_cursor_style(None)
         self.view.show_notification(Notification.SUCCESS, "Visualized growth trends")

@@ -215,11 +215,24 @@
     .rc-header-bar {
         background: var(--dark-blue);
         color: white;
+        justify-content: space-between;
         align-items: center;
         font-weight: 500;
         height: 56px;
-        padding: 0px 48px;
+        padding: 0px 32px 0px 48px;
         margin: 0px 0px;
+    }
+    .rc-header-bar .widget-html-content {
+        color: white
+    }
+    .rc-header-bar > * {
+        color: white
+    }
+    .rc-header-bar .widget-button {
+        width: auto;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0px 16px;
     }
 
     /* Stepper element */

@@ -9,8 +9,9 @@ from IPython.core.display import Javascript, clear_output, display
 from IPython.core.display import HTML
 from pandas.core.frame import DataFrame
 from pandas.core.groupby.generic import DataFrameGroupBy
+from traitlets.config.application import ApplicationError
 
-from .utils import CSS
+from .utils import ApplicationMode, CSS
 from .utils import Delimiter
 from .utils import JSAppModel
 from .utils import Notification
@@ -47,58 +48,67 @@ class View:
         self.ctrl: Controller = Controller()
 
         # Base app's widgets that need to be manipulated
-        self.app_container = ui.Box()
-        self.page_container = ui.Box()
-        self.page_stepper = ui.Box()
-        self.notification = ui.Box()
-        self._notification_timer = Timer(0.0, lambda _: None)
+        self.app_container: ui.Box
+        self.app_title: ui.HTML
+        self.app_header: ui.Box
+        self.app_body: ui.Box
+        self.user_mode_button: ui.Button
+        self.user_page_stepper: ui.Box
+        self.user_page_container: ui.Box
+        self.user_mode_btn: ui.Button
+        self.admin_mode_btn: ui.Button
+        self.admin_page: ui.Box
+        self.notification: ui.Box
+        self._notification_timer: Timer = Timer(0.0, lambda x: None)
+        # Admin page's widgets that need to be manipulated
+        self.submissions_tbl: ui.HTML
         # File upload page's widgets that need to be manipulated
-        self.ua_file_label = ui.Label()  # ua here stands for "upload area"
-        self.uploaded_file_name_box = ui.Box()
+        self.ua_file_label: ui.Label  # ua here stands for "upload area"
+        self.uploaded_file_name_box: ui.Box
         # Data specification page's widgets that need to be manipulated
         # - parsing widgets
-        self.model_name_ddown = ui.Dropdown()
-        self.delimiter_ddown = ui.Dropdown()
-        self.header_is_included_chkbox = ui.Checkbox()
-        self.lines_to_skip_txt = ui.Text()
-        self.scenarios_to_ignore_txt = ui.Textarea()
+        self.model_name_ddown: ui.Dropdown
+        self.delimiter_ddown: ui.Dropdown
+        self.header_is_included_chkbox: ui.Checkbox
+        self.lines_to_skip_txt: ui.Text
+        self.scenarios_to_ignore_txt: ui.Textarea
         # - column assignment widgets
-        self.model_name_lbl = ui.Label()
-        self.scenario_column_ddown = ui.Dropdown()
-        self.region_column_ddown = ui.Dropdown()
-        self.variable_column_ddown = ui.Dropdown()
-        self.item_column_ddown = ui.Dropdown()
-        self.unit_column_ddown = ui.Dropdown()
-        self.year_column_ddown = ui.Dropdown()
-        self.value_column_ddown = ui.Dropdown()
+        self.model_name_lbl: ui.Label
+        self.scenario_column_ddown: ui.Dropdown
+        self.region_column_ddown: ui.Dropdown
+        self.variable_column_ddown: ui.Dropdown
+        self.item_column_ddown: ui.Dropdown
+        self.unit_column_ddown: ui.Dropdown
+        self.year_column_ddown: ui.Dropdown
+        self.value_column_ddown: ui.Dropdown
         # - preview tables
-        self.input_data_preview_tbl = ui.GridBox()
-        self.output_data_preview_tbl = ui.GridBox()
+        self.input_data_preview_tbl: ui.GridBox
+        self.output_data_preview_tbl: ui.GridBox
         self._input_data_table_childrenpool: list[ui.Box] = []
         # Integrity checking page's widgets that need to be manipulated
-        self.duplicate_rows_lbl = ui.Label()
-        self.rows_w_struct_issues_lbl = ui.Label()
-        self.rows_w_ignored_scenario_lbl = ui.Label()
-        self.accepted_rows_lbl = ui.Label()
-        self.bad_labels_tbl = ui.HTML()
-        self.unknown_labels_tbl = ui.GridBox()
-        self._unknown_labels_tbl_childrenpool: list[ui.Box] = []
+        self.duplicate_rows_lbl: ui.Label
+        self.rows_w_struct_issues_lbl: ui.Label
+        self.rows_w_ignored_scenario_lbl: ui.Label
+        self.accepted_rows_lbl: ui.Label
+        self.bad_labels_tbl: ui.HTML
+        self.unknown_labels_tbl: ui.GridBox
+        self._unknown_labels_tbl_cell_pool: list[ui.Box] = []
         # Plausibility checking page's widgets that need to be manipulated
         # - visualization tab elements & tab contents
-        self.valuetrends_tabelement = ui.Box()
-        self.valuetrends_tabcontent = ui.Box()
-        self.growthtrends_tabelement = ui.Box()
-        self.growthtrends_tabcontent = ui.Box()
+        self.valuetrends_tabelement: ui.Box
+        self.valuetrends_tabcontent: ui.Box
+        self.growthtrends_tabelement: ui.Box
+        self.growthtrends_tabcontent: ui.Box
         # - value trends visualization widgets
-        self.valuetrends_scenario_ddown = ui.Dropdown()
-        self.valuetrends_region_ddown = ui.Dropdown()
-        self.valuetrends_variable_ddown = ui.Dropdown()
-        self.valuetrends_viz_output = ui.Output()
+        self.valuetrends_scenario_ddown: ui.Dropdown
+        self.valuetrends_region_ddown: ui.Dropdown
+        self.valuetrends_variable_ddown: ui.Dropdown
+        self.valuetrends_viz_output: ui.Output
         # - growth trends visualization widgets
-        self.growthtrends_scenario_ddown = ui.Dropdown()
-        self.growthtrends_region_ddown = ui.Dropdown()
-        self.growthtrends_variable_ddown = ui.Dropdown()
-        self.growthtrends_viz_output = ui.Output()
+        self.growthtrends_scenario_ddown: ui.Dropdown
+        self.growthtrends_region_ddown: ui.Dropdown
+        self.growthtrends_variable_ddown: ui.Dropdown
+        self.growthtrends_viz_output: ui.Output
 
     def intro(self, model: Model, ctrl: Controller) -> None:  # type: ignore # noqa
         """Introduce MVC modules to each other"""
@@ -194,15 +204,15 @@ class View:
     def update_base_app(self) -> None:
         """Update the base app"""
         # Create helper variables
-        NUM_OF_PAGES = len(self.page_container.children)
+        NUM_OF_PAGES = len(self.user_page_container.children)
         assert self.model.current_user_page > 0 and self.model.current_user_page <= NUM_OF_PAGES
         assert self.model.furthest_active_user_page > 0 and self.model.furthest_active_user_page <= NUM_OF_PAGES
         current_page_index = self.model.current_user_page - 1
         # Update visibility of pages and style of page stepper elements
         for page_index in range(0, NUM_OF_PAGES):
             # Get page and stepper element
-            page = self.page_container.children[page_index]
-            stepper_element = self.page_stepper.children[page_index]
+            page = self.user_page_container.children[page_index]
+            stepper_element = self.user_page_stepper.children[page_index]
             assert isinstance(page, ui.Box)
             assert isinstance(stepper_element, ui.Box)
             if page_index == current_page_index:
@@ -217,6 +227,19 @@ class View:
                     if page_index < self.model.furthest_active_user_page
                     else (CSS.STEPPER_EL, CSS.STEPPER_EL__INACTIVE)
                 )
+        # Update application mode
+        if self.model.application_mode == ApplicationMode.USER:
+            self.app_header.children = [self.app_title, self.user_mode_btn]
+            self.user_page_container.remove_class(CSS.DISPLAY_MOD__NONE)
+            self.user_page_stepper.remove_class(CSS.DISPLAY_MOD__NONE)
+            self.app_body.children = [self.user_page_stepper, self.user_page_container]
+        if self.model.application_mode == ApplicationMode.ADMIN:
+            self.app_header.children = [self.app_title, self.admin_mode_btn]
+            self.user_page_container.add_class(CSS.DISPLAY_MOD__NONE)
+            self.user_page_stepper.add_class(CSS.DISPLAY_MOD__NONE)
+            # NOTE: It is important for us to NOT remove user pages from DOM tree even when going into admin mode. Else,
+            # the element targetting that we do in the Javascript context (e.g. for file upload) will no longer work
+            self.app_body.children = [self.user_page_stepper, self.user_page_container, self.admin_page]
 
     def update_file_upload_page(self) -> None:
         """Update the file upload page"""
@@ -348,7 +371,7 @@ class View:
         NCOLS = 5
         nrowsneeded = len(self.model.unknown_labels_overview_tbl)
         nrowssupported = int(  # We deduct NCOLS from the calculation to exclude the header row
-            (len(self._unknown_labels_tbl_childrenpool) - NCOLS) / NCOLS
+            (len(self._unknown_labels_tbl_cell_pool) - NCOLS) / NCOLS
         )
         # Enlarge the children pool if needed
         if nrowsneeded > nrowssupported:
@@ -367,7 +390,7 @@ class View:
                 dropdown.observe(_get_dropdown_callback(row_index), "value")
                 checkbox = ui.Checkbox(indent=False, value=False, description="")
                 checkbox.observe(_get_checkbox_callback(row_index), "value")
-                self._unknown_labels_tbl_childrenpool += [
+                self._unknown_labels_tbl_cell_pool += [
                     ui.Box(children=[ui.HTML(value="-")]),
                     ui.Box(children=[ui.HTML(value="-")]),
                     ui.Box(children=[ui.HTML(value="-")]),
@@ -380,7 +403,7 @@ class View:
             cellpoolstartindex = (row_index * NCOLS) + NCOLS  #  we add NCOLS to account for header row
             unknownlabel_w, associatedcolumn_w, closestmatch_w, fix_w, override_w = [
                 cell_wrapper.children[0]
-                for cell_wrapper in self._unknown_labels_tbl_childrenpool[cellpoolstartindex : cellpoolstartindex + 5]
+                for cell_wrapper in self._unknown_labels_tbl_cell_pool[cellpoolstartindex : cellpoolstartindex + 5]
             ]
             assert isinstance(unknownlabel_w, ui.HTML)
             assert isinstance(associatedcolumn_w, ui.HTML)
@@ -418,7 +441,7 @@ class View:
             fix_w.value = fix
             override_w.value = override
         # Assign the required rows to the table
-        self.unknown_labels_tbl.children = self._unknown_labels_tbl_childrenpool[: (nrowsneeded + 1) * 5]
+        self.unknown_labels_tbl.children = self._unknown_labels_tbl_cell_pool[: (nrowsneeded + 1) * 5]
 
     def update_plausibility_checking_page(self) -> None:
         """Update the plausibility checking page"""
@@ -538,7 +561,8 @@ class View:
         notification_text = ui.Label(value="")
         self.notification = ui.HBox(children=(Notification.SUCCESS_ICON, notification_text))
         self.notification.add_class(CSS.NOTIFICATION)
-        # Create stepper widget
+        # Create user mode widgets
+        # - create stepper widget
         PAGE_TITLES = ["File Upload", "Data Specification", "Integrity Checking", "Plausibility Checking"]
         NUM_OF_PAGES = len(PAGE_TITLES)
         stepper_children = []
@@ -557,9 +581,9 @@ class View:
             stepper_element.add_class(CSS.STEPPER_EL)
             stepper_element.add_class(CSS.STEPPER_EL__CURRENT if page_index == 0 else CSS.STEPPER_EL__INACTIVE)
             stepper_children.append(stepper_element)
-        self.page_stepper = ui.HBox(children=stepper_children)
-        # Create app pages & page container
-        self.page_container = ui.Box(
+        self.user_page_stepper = ui.HBox(children=stepper_children)
+        # - create user pages & user page container
+        self.user_page_container = ui.Box(
             children=[
                 self._build_file_upload_page(),
                 self._build_data_specification_page(),
@@ -568,18 +592,29 @@ class View:
             ],
             layout=ui.Layout(flex="1", width="100%"),  # page container stores the current page
         )
-        # Hide all pages, except for the first one
-        for page in self.page_container.children[1:]:
+        for page in self.user_page_container.children[1:]:  # hide all pages, except for the first one
             page.add_class(CSS.DISPLAY_MOD__NONE)
+        # Create admin mode widgets
+        self.admin_page = self._build_admin_page()
+        # Create app header
+        self.user_mode_btn = ui.Button(description="User Mode")
+        self.user_mode_btn.on_click(self.ctrl.onclick_user_mode_btn)
+        self.admin_mode_btn = ui.Button(description="Admin Mode")
+        self.admin_mode_btn.on_click(self.ctrl.onclick_admin_mode_btn)
+        self.app_title = ui.HTML(value=APP_TITLE)
+        self.app_header = ui.Box(children=[self.app_title, self.user_mode_btn])
+        self.app_header.add_class(CSS.HEADER_BAR)
+        # Create app body
+        self.app_body = ui.VBox(  # vbox for app body
+            children=[self.user_page_stepper, self.user_page_container],  # - page stepper, page container
+            layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
+        )
         # Create the app
         app = ui.VBox(  # vbox for app container
             children=[
                 self.notification,  # - notification
-                CSS.assign_class(ui.HTML(value=APP_TITLE), CSS.HEADER_BAR),  # - app header bar
-                ui.VBox(  # - vbox for app body
-                    children=[self.page_stepper, self.page_container],  # -- page stepper, page container
-                    layout=ui.Layout(flex="1", align_items="center", padding="36px 48px"),
-                ),
+                self.app_header,  # - app header bar
+                self.app_body,  # - app body
             ],
         )
         app.add_class(CSS.APP)
@@ -917,7 +952,8 @@ class View:
         self.duplicate_rows_lbl = ui.Label(value="0")
         self.accepted_rows_lbl = ui.Label(value="0")
         # - create bad labels table
-        self.bad_labels_tbl.value = f"""
+        self.bad_labels_tbl = ui.HTML(
+            value=f"""
             <table>
                 <thead>
                     <th>Label</th>
@@ -936,13 +972,14 @@ class View:
                 </tbody>
             </table>
             """
+        )
         self.bad_labels_tbl.add_class(CSS.BAD_LABELS_TABLE)
         # - create unknown labels table
         # - this is an interactive table, so the build process is a little different. essentially, we are creating a
         # - gridbox with a grey background and populating it with a bunch of boxes with a white background, making the
         # - gridbox look like a table. @date Aug 3, 2021
         # -- create the table's header row
-        self._unknown_labels_tbl_childrenpool = [
+        self._unknown_labels_tbl_cell_pool = [
             ui.Box(children=[ui.HTML(value="Label")]),
             ui.Box(children=[ui.HTML(value="Associated column")]),
             ui.Box(children=[ui.HTML(value="Closest Match")]),
@@ -974,7 +1011,7 @@ class View:
             dropdown.observe(_get_dropdown_callback(row_index), "value")
             checkbox = ui.Checkbox(indent=False, value=False, description="")
             checkbox.observe(_get_checkbox_callback(row_index), "value")
-            self._unknown_labels_tbl_childrenpool += [
+            self._unknown_labels_tbl_cell_pool += [
                 ui.Box(children=[ui.HTML(value="-")]),
                 ui.Box(children=[ui.HTML(value="-")]),
                 ui.Box(children=[ui.HTML(value="-")]),
@@ -982,7 +1019,9 @@ class View:
                 ui.Box(children=[checkbox]),
             ]
         initial_nrows_in_table = 4
-        self.unknown_labels_tbl.children = self._unknown_labels_tbl_childrenpool[: initial_nrows_in_table * ncolumns]
+        self.unknown_labels_tbl = ui.GridBox(
+            children=self._unknown_labels_tbl_cell_pool[: initial_nrows_in_table * ncolumns]
+        )
         self.unknown_labels_tbl.add_class(CSS.UNKNOWN_LABELS_TABLE)
         # - create page navigation buttons
         next_ = ui.Button(description="Next", layout=ui.Layout(align_self="flex-end", justify_self="flex-end"))
@@ -1121,7 +1160,7 @@ class View:
         self.valuetrends_variable_ddown.observe(self.ctrl.onchange_valuetrends_variable, "value")
         visualize_value_btn = ui.Button(description="Visualize", layout=ui.Layout(margin="24px 0px 0px 0px"))  # NOSONAR
         visualize_value_btn.on_click(self.ctrl.onclick_visualize_value_trends)
-        self.valuetrends_viz_output.layout = _viz_output_layout
+        self.valuetrends_viz_output = ui.Output(layout=_viz_output_layout)
         self.valuetrends_tabcontent = ui.VBox(
             children=[
                 ui.GridBox(
@@ -1151,7 +1190,7 @@ class View:
         self.growthtrends_variable_ddown.observe(self.ctrl.onchange_growthtrends_variable, "value")
         visualize_growth_btn = ui.Button(description="Visualize", layout=ui.Layout(margin="24px 0px 0px 0px"))
         visualize_growth_btn.on_click(self.ctrl.onclick_visualize_growth_trends)
-        self.growthtrends_viz_output.layout = _viz_output_layout
+        self.growthtrends_viz_output = ui.Output(layout=_viz_output_layout)
         self.growthtrends_tabcontent = ui.VBox(
             children=[
                 ui.GridBox(
@@ -1241,6 +1280,37 @@ class View:
 
     def _build_admin_page(self) -> ui.Box:
         """Return an admin page"""
-        return ui.VBox(
-            children=[], layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center")
+        self.submissions_tbl = ui.HTML(
+            value=f"""
+            <table class="table">
+                <thead>
+                    <th style="width: 250px;">File</th>
+                    <th style="width: 200px;">Associated Project</th>
+                    <th style="width: 150px;">Status</th>
+                </thead>
+                <tbody>
+                    {''' 
+                    <tr>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    <tr>
+                    ''' * 15
+                    }
+                </tbody>
+            </table>
+        """
+        )
+        return ui.VBox(  # vbox for page
+            children=[
+                ui.VBox(
+                    children=[
+                ui.HTML(
+                    value='<h4 style="margin: 16px 0px;">Submission history</h4>'
+                ),  # - table title
+                self.submissions_tbl,],
+                layout=ui.Layout(align_items="flex-start")
+                )
+            ],
+            layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center", ),
         )
