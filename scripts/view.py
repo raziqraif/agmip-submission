@@ -237,6 +237,35 @@ class View:
             self.app_header.children = [self.app_title, self.admin_mode_btn]
             self.user_page_container.add_class(CSS.DISPLAY_MOD__NONE)
             self.user_page_stepper.add_class(CSS.DISPLAY_MOD__NONE)
+            table_rows = ""
+            for row in self.model.get_submitted_files_info():
+                table_rows += "<tr>"
+                for colidx in range(len(row)):
+                    field = row[colidx]
+                    table_rows += f"<td>{field}</td>"
+                table_rows += "</tr>"
+            self.submissions_tbl = ui.HTML(
+                value=f"""
+                <table class="table">
+                    <thead>
+                        <th style="width: 350px;">File</th>
+                        <th style="width: 200px;">Associated Project</th>
+                        <th style="width: 150px;">Status</th>
+                    </thead>
+                    <tbody>
+                        {table_rows}
+                        {''' 
+                        <tr>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        <tr>
+                        ''' * (15 - len(table_rows))
+                        }
+                    </tbody>
+                </table>
+            """
+            )
             # NOTE: It is important for us to NOT remove user pages from DOM tree even when going into admin mode. Else,
             # the element targetting that we do in the Javascript context (e.g. for file upload) will no longer work
             self.app_body.children = [self.user_page_stepper, self.user_page_container, self.admin_page]
@@ -1291,7 +1320,7 @@ class View:
             value=f"""
             <table class="table">
                 <thead>
-                    <th style="width: 250px;">File</th>
+                    <th style="width: 350px;">File</th>
                     <th style="width: 200px;">Associated Project</th>
                     <th style="width: 150px;">Status</th>
                 </thead>
