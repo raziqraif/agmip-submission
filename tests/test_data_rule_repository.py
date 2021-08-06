@@ -38,7 +38,7 @@ def test_partially_matching_queries():
 def test_minimum_and_maximum_variable_value():
     assert DataRuleRepository.query_variable_min_value("POPT", "million") > -1
     assert DataRuleRepository.query_variable_max_value("POPT", "million") > 1000
-    assert DataRuleRepository.query_variable_min_value("ECH4", "MtCO2e") >= 0
+    assert DataRuleRepository.query_variable_min_value("ECH4", "MtCO2e") == -math.inf
     assert DataRuleRepository.query_variable_max_value("ECH4", "MtCO2e") <= math.inf
     assert DataRuleRepository.query_variable_min_value("YILD", "dm t/ha") >= 0
     assert DataRuleRepository.query_variable_max_value("YILD", "fm t/ha") <= 1000
