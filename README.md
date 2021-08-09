@@ -34,7 +34,7 @@ The tool runs the agmip-submission.ipynb notebook. However, instead of storing m
 
 For modularity reasons, we also create several domain abstractions to handle domain-specific or heavy data processing logic. These abstractions reside in the domain.py module. The interaction between these modules is set up based on the following layered architecture. 
 
-<img width="601" alt="image" src="https://user-images.githubusercontent.com/42981908/128698708-0ec4e0cf-ca15-4941-b7ef-56a7a870abe7.png">
+<img width="731" alt="image" src="https://user-images.githubusercontent.com/42981908/128767707-0902448a-0a3e-4399-840b-60cb487d063c.png">
 
 Then, this application comes with a few test suites, which reside in the tests/ subdirectory. 
 
