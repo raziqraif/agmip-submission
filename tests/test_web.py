@@ -60,7 +60,7 @@ class TestFileUploadSuite:
         options.add_argument("--headless")
         self.driver = webdriver.Chrome(options=options)
         self.wait = WebDriverWait(self.driver, 20)  # Set explicit wait time to X seconds
-        self.driver.implicitly_wait(20)  # Set implicit wait time to X seconds
+        self.driver.implicitly_wait(15)  # Set implicit wait time to X seconds
         self.driver.get(nb_url())
         self._run_notebook()
 
@@ -113,7 +113,7 @@ class TestFileUploadSuite:
         # Make sure that file name is showing correctly on the page
         snackbar_label_locator = (
             By.XPATH,
-            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[2]/div/div[1]/div[3]/div[2]/div[2]/div',
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[2]/div[1]/div[1]/div[3]/div[2]/div'
         )
         self.wait.until(
             expected_conditions.text_to_be_present_in_element(snackbar_label_locator, Path(sample_file_spath).name)
@@ -129,7 +129,7 @@ class TestFileUploadSuite:
         self._test_valid_upload(sample_file_spath)
         self._test_click_removes_notification()
         remove_file_button: WebElement = self.driver.find_element_by_xpath(
-            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[2]/div/div[1]/div[3]/div[2]/div[2]/button'
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[2]/div[1]/div[1]/div[3]/div[2]/button'
         )
         remove_file_button.click()
         self._test_snackbar_invisible()
@@ -146,14 +146,20 @@ class TestFileUploadSuite:
         next_button.click()
         self._test_notification_appear_correctly(Notification.PLEASE_UPLOAD)
         # Verify that we're still on the file upload page
-        download_button: WebElement = self.driver.find_element_by_link_text("Download")
+        download_button: WebElement = self.driver.find_element_by_xpath(
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[2]/div[1]/div[1]/div[1]/div[2]/div/a'
+        )
         assert download_button.is_displayed()
 
     def test_3(self, sample_file_spath: str) -> None:
         """Test case: upload > next"""
         self._test_valid_upload(sample_file_spath)
+        first_project_option: WebElement = self.driver.find_element_by_xpath(
+            '/html/body/div[4]/div/div/div[1]/div[1]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[2]/div[1]/div[1]/div[5]/select/option'
+        )
+        first_project_option.click()
         next_button: WebElement = self.driver.find_element_by_xpath(
-            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[2]/div/div[2]/button'
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[2]/div[1]/div[2]/button'
         )
         next_button.click()
         # Check if we switched page
@@ -161,7 +167,7 @@ class TestFileUploadSuite:
         # Check if stepper element changes color appropriately
         page_1_stepper_element = (
             By.XPATH,
-            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[1]',
+            '//*[@id="notebook-container"]/div[2]/div[2]/div[2]/div[2]/div[3]/div/div[3]/div[1]/div[1]'
         )
         page_2_stepper_element = (
             By.XPATH,
