@@ -111,6 +111,7 @@ class CSS:
     FILENAME_SNACKBAR = "rc-filename-snackbar"
     HEADER_BAR = "rc-header-bar"
     ICON_BUTTON = "rc-icon-button"
+    ICON_BUTTON_MOD__RESTART_SUBMISSION = "rc-icon-button-mod--restart-submission"
     NOTIFICATION = "rc-notification"
     NOTIFICATION__ERROR = "rc-notification--error"
     NOTIFICATION__INFO = "rc-notification--info"

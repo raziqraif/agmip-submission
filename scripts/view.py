@@ -1232,6 +1232,11 @@ class View:
         )
         self.growthtrends_tabcontent.add_class(CSS.DISPLAY_MOD__NONE)
         # - create control widgets for page navigation, submission, and download
+        restart_submission = ui.Button(
+            icon="refresh", layout=ui.Layout(align_self="center", padding="0px 0px"), tooltip="Restart submission"
+        )
+        restart_submission._dom_classes = (CSS.ICON_BUTTON, CSS.ICON_BUTTON_MOD__RESTART_SUBMISSION)
+        restart_submission.on_click(self.ctrl.onclick_restart_submission)
         previous = ui.Button(
             description="Previous", layout=ui.Layout(align_self="flex-end", justify_self="flex-end", margin="0px 8px")
         )
@@ -1291,7 +1296,8 @@ class View:
                     layout=ui.Layout(width="900px", align_items="center", flex="1", justify_content="center"),
                 ),
                 ui.HBox(  # - hbox for navigation buttons
-                    children=[previous, submit], layout=ui.Layout(justify_content="flex-end", width="100%")
+                    children=[restart_submission, previous, submit],
+                    layout=ui.Layout(justify_content="flex-end", width="100%"),
                 ),
             ),
             layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center"),

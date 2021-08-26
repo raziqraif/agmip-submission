@@ -395,8 +395,16 @@ class Controller:
         self.view.modify_cursor_style(None)
         self.view.show_notification(Notification.SUCCESS, "Visualized growth trends")
 
+    def onclick_restart_submission(self, widget: ui.Button) -> None:
+        """The restart submission icon button was clicked"""
+        self.model.current_user_page = UserPage.FILE_UPLOAD
+        self.model.furthest_active_user_page = UserPage.FILE_UPLOAD
+        self.view.modify_cursor_style(CSS.CURSOR_MOD__WAIT)
+        self.view.update_base_app()
+        self.view.modify_cursor_style(None)
+
     def onclick_previous_from_upage_4(self, widget: ui.Button) -> None:
-        """The 'submit' button in the last page was clicked"""
+        """The 'previous' button in the last page was clicked"""
         self.model.current_user_page = UserPage.INTEGRITY_CHECKING
         self.view.update_base_app()
 
