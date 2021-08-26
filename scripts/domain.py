@@ -1146,7 +1146,7 @@ class DataRuleRepository:
     """
     Provide interfaces to interact with the spreadsheet that stores our data formatting rules
 
-    NOTE: It seems like the "proper" domain-driven design approach is to place a Repository object in a higher layer 
+    NOTE: It seems like the "proper" domain-driven approach is to place a Repository object in a higher layer 
     and use dependency inversion pattern to access it from the domain layer, but such complexity seems unnecessary 
     given the current project requirement.
     @date Aug 5, 2021

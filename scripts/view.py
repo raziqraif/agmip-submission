@@ -260,9 +260,9 @@ class View:
                     </tbody>
                 </table>
             """
-            
+
             # NOTE: It is important for us to NOT remove user pages from DOM tree even when going into admin mode. Else,
-            # the element targetting that we do in the Javascript context (e.g. for file upload) will no longer work
+            # the event handler registration that we do in the Javascript context (e.g. for file upload) will no longer work
             self.app_body.children = [self.user_page_stepper, self.user_page_container, self.admin_page]
 
     def update_file_upload_page(self) -> None:
@@ -1337,12 +1337,16 @@ class View:
             children=[
                 ui.VBox(
                     children=[
-                ui.HTML(
-                    value='<h4 style="margin: 16px 0px;">Submission history</h4>'
-                ),  # - table title
-                self.submissions_tbl,],
-                layout=ui.Layout(align_items="flex-start")
+                        ui.HTML(value='<h4 style="margin: 16px 0px;">Submission history</h4>'),  # - table title
+                        self.submissions_tbl,
+                    ],
+                    layout=ui.Layout(align_items="flex-start"),
                 )
             ],
-            layout=ui.Layout(flex="1", width="100%", align_items="center", justify_content="center", ),
+            layout=ui.Layout(
+                flex="1",
+                width="100%",
+                align_items="center",
+                justify_content="center",
+            ),
         )
