@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # Delay the evaluation of types
 from contextlib import redirect_stderr
 from copy import copy
 from copy import deepcopy
@@ -13,7 +13,7 @@ import os
 import pandas as pd
 from pandas import DataFrame
 from pathlib import Path
-from typing import Optional, List, Dict, Set, Union, Tuple
+from typing import Callable, Optional, List, Dict, Set, Union, Tuple
 
 from pandas.core.groupby.generic import DataFrameGroupBy
 
@@ -375,6 +375,8 @@ class InputDataDiagnosis:
     """
     A domain entity to represent an input data diagnosis. 
     This class stores diagnosis results and provides some diagnosis utility methods.
+
+    TODO: Consider abstracting some functionalities in this class into a Factory class and a Service class
     """
 
     _DOWNLOADDIR_PATH = WORKINGDIR_PATH / "downloads"
@@ -386,11 +388,13 @@ class InputDataDiagnosis:
     UNIT_COLNAME = "Unit"
     YEAR_COLNAME = "Year"
     VALUE_COLNAME = "Value"
-    # File destination paths of diagnosed rows 
+    # File destination paths for diagnosed rows 
     STRUCTISSUEROWS_DSTPATH = _DOWNLOADDIR_PATH / "Rows With Structural Issue.csv"
     DUPLICATESROWS_DSTPATH = _DOWNLOADDIR_PATH / "Duplicate Records.csv"
     IGNOREDSCENARIOROWS_DSTPATH = _DOWNLOADDIR_PATH / "Records With An Ignored Scenario.csv"
     ACCEPTEDROWS_DSTPATH = _DOWNLOADDIR_PATH / "Accepted Records.csv"
+    # File destination path for filtered output data
+    FILTERED_OUTPUT_DSTPATH = _DOWNLOADDIR_PATH / "Filtered Output Data.csv"
 
     def __init__(self) -> None:
         # Results of row checks
@@ -410,6 +414,48 @@ class InputDataDiagnosis:
         self._largest_ncolumns = 0
         # - row occurrence dictionary for duplicate checking
         self._row_occurence_dict: Dict[str, int] = {}
+    
+    def rediagnose_n_filter_output_data(self, output_entity: OutputDataEntity) -> bool:  # type: ignore
+        """
+        Re-diagnose and filter output data and store the result in the appropriate file. Return whether or not new 
+        issues were found after the re-diagnosis
+
+        Justification: If unknown variables or units were swapped with a valid label, their associated values were 
+        never checked against the acceptable range. So, we want to check and filter them here.
+        """
+        has_new_issues = False
+        is_fixed_unknown_variable_or_unit: Callable[[UnknownLabelInfo], bool] = (
+            lambda label_info: (label_info.associated_column == self.VARIABLE_COLNAME) or (label_info.associated_column == self.UNIT_COLNAME) and (label_info.fix != "")
+        )
+        fixed_variables_or_units = set(label_info.fix for label_info in self.unknown_labels if is_fixed_unknown_variable_or_unit(label_info))
+        # TODO: Reimplement using vectorization techniques for better performance
+        # TODO: Update files / attributes relating to accepted rows and rows with structural issue too
+        with open(output_entity.file_path, "r") as outputfile, open(self.FILTERED_OUTPUT_DSTPATH, "w+") as filteredoutputfile:
+            rows = outputfile.readlines()
+            variable_colidx = output_entity.processed_data.columns.tolist().index(output_entity.VARIABLE_COLNAME)
+            value_colidx = output_entity.processed_data.columns.tolist().index(output_entity.VALUE_COLNAME)
+            unit_colidx = output_entity.processed_data.columns.tolist().index(output_entity.UNIT_COLNAME)
+            for line in rows:
+                row = line.strip("\n ").split(",") 
+                if len(row) == 0: 
+                    continue
+                value_field = row[value_colidx]
+                variable_field = row[variable_colidx]
+                unit_field = row[unit_colidx]
+                # Log unaffected rows (their variable field were not fixed/modified) into the destination file
+                if variable_field not in fixed_variables_or_units:
+                    filteredoutputfile.write(line)
+                    continue
+                # Get min/max value for the given variable and unit
+                min_value = DataRuleRepository.query_variable_min_value(variable_field, unit_field)
+                max_value = DataRuleRepository.query_variable_max_value(variable_field, unit_field)
+                # Ignore rows with out-of-bound values
+                if float(value_field) < min_value or float(value_field) > max_value:
+                    has_new_issues = True
+                    continue
+                # Log row with acceptable value
+                filteredoutputfile.write(line)
+        return has_new_issues
 
     @classmethod
     def create(cls, input_entity: InputDataEntity) -> InputDataDiagnosis:
@@ -432,8 +478,6 @@ class InputDataDiagnosis:
         
         TODO: Reimplement this method with pandas for better performance (refer to the 
         _diagnosed_data_with_pandas_attempt() for existing attempt)
-
-        TODO: Consider abstracting some functionalities in this class into a Factory class and a Service class
         @date Aug 5, 2021
         """
         diagnosis = InputDataDiagnosis()
@@ -489,15 +533,15 @@ class InputDataDiagnosis:
                 diagnosis.nrows_accepted += 1
                 acceptedfile.write(line + "\n")
                 # Store found labels/fields
-                _quotes = '\'\"`'
-                scenario_fields.add(row[scenario_colidx].strip(_quotes))
-                region_fields.add(row[region_colidx].strip(_quotes))
-                variable_fields.add(row[variable_colidx].strip(_quotes))
-                item_fields.add(row[item_colidx].strip(_quotes))
-                unit_fields.add(row[unit_colidx].strip(_quotes))
-                year_fields.add(row[year_colidx].strip(_quotes))
+                _quotes_and_space = '\'\"` '
+                scenario_fields.add(row[scenario_colidx].strip(_quotes_and_space))
+                region_fields.add(row[region_colidx].strip(_quotes_and_space))
+                variable_fields.add(row[variable_colidx].strip(_quotes_and_space))
+                item_fields.add(row[item_colidx].strip(_quotes_and_space))
+                unit_fields.add(row[unit_colidx].strip(_quotes_and_space))
+                year_fields.add(row[year_colidx].strip(_quotes_and_space))
                 # Parse value
-                diagnosis._diagnose_value_field(row[value_colidx].strip(_quotes))
+                diagnosis._diagnose_value_field(row[value_colidx].strip(_quotes_and_space))
         # Diagnose all found fields 
         for scenario in scenario_fields:
             diagnosis._diagnose_scenario_field(scenario)
@@ -518,12 +562,6 @@ class InputDataDiagnosis:
         diagnosis.unknown_labels = list(set(diagnosis.unknown_labels))
         return diagnosis
 
-    def add_rows_with_structural_issue(self) -> None:
-        """
-        Update diagnosis based on cleaned/processed data
-        Reason: If unknown variables were fixed to a valid variable, its associated value was never compared against
-        """
-        pass
     # Private util methods for row checks
 
     def _diagnose_row(self, rownum: int, row: list[str], line: str, structissuefile: TextIOWrapper, ignoredscenfile: TextIOWrapper, duplicatesfile: TextIOWrapper) -> bool:
@@ -847,7 +885,7 @@ class InputDataDiagnosis:
         dataframe[region_colname] = dataframe[region_colname].apply(str)
         dataframe[variable_colname] = dataframe[variable_colname].apply(str)
         dataframe[item_colname] = dataframe[item_colname].apply(str)
-        dataframe[year_colname] = dataframe[year_colname].apply(str).apply(str)  # TODO: Will this affect performance?
+        dataframe[year_colname] = dataframe[year_colname].apply(str)  # TODO: Will this affect performance?
         dataframe[value_colname] = dataframe[value_colname].apply(str)
         dataframe[unit_colname] = dataframe[unit_colname].apply(str)
         # Filter records with structural issue
@@ -1106,6 +1144,44 @@ class OutputDataEntity:
         processed_data = processed_data[processed_data[cls.YEAR_COLNAME].apply(lambda x: x not in droppedyears)]
         processed_data = processed_data[processed_data[cls.UNIT_COLNAME].apply(lambda x: x not in droppedunits)]
         processed_data = processed_data[processed_data[cls.VALUE_COLNAME].apply(lambda x: x not in droppedvalues)]
+        # Create entity
+        output_entity = OutputDataEntity()
+        output_entity.processed_data = processed_data
+        output_entity.file_path = DOWNLOADDIR_PATH / (
+            Path(input_entity.file_path).stem + datetime.now().strftime("_%m%d%Y_%H%M%S").upper() + ".csv"
+        )
+        # Store processed data in a downloadable file
+        processed_data.to_csv(output_entity.file_path, header=False, index=False)
+        # Populate list of unique fields
+        cls._populate_unique_fields(output_entity)
+        # Return
+        return output_entity
+
+    @classmethod
+    def create_from_rediagnosed_n_filtered_output_data(cls, input_entity: InputDataEntity, input_data_diagnosis: InputDataDiagnosis) -> OutputDataEntity:
+        """Return an output data entity based by using existing output dataset that has been rediagnosed, and filtered"""
+        # Read from accepted rows destination file
+        processed_data = pd.read_csv(input_data_diagnosis.FILTERED_OUTPUT_DSTPATH, delimiter=input_entity.delimiter, header=None, dtype=object) # type: ignore
+        # Rename data frame columns 
+        processed_data.columns = [
+            cls.MODEL_COLNAME, 
+            cls.SCENARIO_COLNAME,
+            cls.REGION_COLNAME,
+            cls.VARIABLE_COLNAME,
+            cls.ITEM_COLNAME,
+            cls.UNIT_COLNAME,
+            cls.YEAR_COLNAME, 
+            cls.VALUE_COLNAME
+        ]
+        # Reassign column dtypes 
+        # Note: numeric columns are stored as str because we might have values like NA, N/A, #DIV/0! etc
+        processed_data[cls.SCENARIO_COLNAME] = processed_data[cls.SCENARIO_COLNAME].astype("category")  
+        processed_data[cls.REGION_COLNAME] = processed_data[cls.REGION_COLNAME].astype("category")  
+        processed_data[cls.VARIABLE_COLNAME] = processed_data[cls.VARIABLE_COLNAME].astype("category")  
+        processed_data[cls.ITEM_COLNAME] = processed_data[cls.ITEM_COLNAME].astype("category")
+        processed_data[cls.YEAR_COLNAME] = processed_data[cls.YEAR_COLNAME].apply(str)  # TODO: Will this affect performance?
+        processed_data[cls.VALUE_COLNAME] = processed_data[cls.VALUE_COLNAME].apply(str)
+        processed_data[cls.UNIT_COLNAME] = processed_data[cls.UNIT_COLNAME].astype("category")
         # Create entity
         output_entity = OutputDataEntity()
         output_entity.processed_data = processed_data

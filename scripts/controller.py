@@ -316,7 +316,9 @@ class Controller:
             self.view.modify_cursor_style(CSS.CURSOR_MOD__WAIT)
             self.model.furthest_active_user_page = UserPage.PLAUSIBILITY_CHECKING
             assert self.model.input_data_diagnosis is not None
-            self.model.init_plausibility_checking_page_states(self.model.unknown_labels_overview_tbl)
+            popup_message = self.model.init_plausibility_checking_page_states(self.model.unknown_labels_overview_tbl)
+            if popup_message:
+                self.view.show_modal_dialog("Re-Diagnose Result", popup_message)
             self.view.update_plausibility_checking_page()
             self.view.update_value_trends_chart()
             self.view.update_growth_trends_chart()

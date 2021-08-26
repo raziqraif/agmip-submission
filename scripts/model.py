@@ -12,7 +12,7 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 from pandas.core.groupby.generic import DataFrameGroupBy
 
-from .utils import ApplicationMode, Delimiter
+from .utils import ApplicationMode, Delimiter, Notification
 from .utils import JSAppModel
 from .utils import UserPage
 from .utils import VisualizationTab
@@ -71,7 +71,7 @@ class Model:
             self.WORKINGDIR_PATH / "AgMIP GlobalEcon Data Submission Info.zip"
         )
         self.USER_GLOBALECON_PROJECTS = [
-            (dirname, dirname) for dirname in get_user_globalecon_project_dirnames()
+            (dirname[len("agmipglobalecon"):], dirname) for dirname in get_user_globalecon_project_dirnames()
         ]  # - GlobalEcon projects the user is a part of
         self.uploadedfile_name = ""
         self.associated_project_dirnames: list[str] = []  # - associated GlobalEcon projects for this submission
@@ -270,11 +270,12 @@ class Model:
 
     # Plausibility checking page's methods
 
-    def init_plausibility_checking_page_states(self, unknown_labels_table: list[list[str | bool]]) -> None:
+    def init_plausibility_checking_page_states(self, unknown_labels_table: list[list[str | bool]]) -> str | None:
         """
-        Initialize plausibility checking states
+        Initialize plausibility checking states. Return a popup message or None
         @date Jul 26 2021
         """
+        popup_message = None
         # Pass unknown labels table back to input data diagnosis
         # NOTE: The table now contains the (fix or override) actions selected by the user
         # NOTE: Make sure to ignore dummy rows
@@ -293,6 +294,11 @@ class Model:
         )
         # Create output data based on information from input data and input data diagnosis
         self.output_data_entity = OutputDataEntity.create(self.input_data_entity, self.input_data_diagnosis)
+        if self.input_data_diagnosis.rediagnose_n_filter_output_data(self.output_data_entity):
+            self.output_data_entity = OutputDataEntity.create_from_rediagnosed_n_filtered_output_data(self.input_data_entity, self.input_data_diagnosis)
+            popup_message = "After fixing some unknown variable or unit fields, the application found more records " \
+                "that contain out-of-bound values. The application has filtered out these records from the output data " \
+                "but it does not have a feature to report these records yet."
         # Map attributes from output data entity to page states
         self.outputfile_path = self.output_data_entity.file_path
         self.uploaded_scenarios = ["", *self.output_data_entity.unique_scenarios]
@@ -313,6 +319,7 @@ class Model:
             self.growthtrends_variable = "PROD"
         self.valuetrends_table = None
         self.growthtrends_table = None
+        return popup_message
 
     def update_valuetrends_visualization_states(self) -> None:
         """
@@ -356,11 +363,12 @@ class Model:
             else:
                 submissiondir_path = outputfile_dstpath.parent
                 submission_files_wildcard = str(submissiondir_path / "*.csv")
-                # Print the content of all submission files, remove duplicates, and redirect the output to merged.csv
+                # Print the content of all csv files, remove duplicates, and redirect the output to merged.csv
+                # TODO: Ignore the content of existing merged.csv when printing
                 os.system(f"cat {submission_files_wildcard} | uniq > merged.csv")
 
     # Data specification page's properties
-    # NOTE: See the comment in contructor for the reasoning behind these properties.
+    # NOTE: See the comment in constructor for the reasoning behind these properties.
     # NOTE: Most property getters below can removed if we allow View to read from the domain layer directly. The same
     # holds true for most property setters below if we allow Controller to write to the domain layer directly. However,
     # exposing the domain entity to View and Controller could create unwanted dependencies.

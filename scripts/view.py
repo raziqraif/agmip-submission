@@ -37,7 +37,7 @@ class View:
     DATA_SPEC_PAGE_IS_BEING_UPDATED = (
         False  # to assert that a page update will not recursively trigger another page update
     )
-    # TODO: replace this with a proper test suite
+
     def __init__(self):
         # Import MVC classes here to prevent circular import problem
         from .controller import Controller
@@ -122,7 +122,7 @@ class View:
         display(HTML(filename="style.html"))
         display(self.app_container)
         # Embed Javascript app model in Javascript context
-        # TODO: Improve this code
+        # TODO: Move the serialization data / functionality to Model and remove JSAppModel class (to reduce the amount of abstractions)
         javascript_model: JSAppModel = self.model.javascript_model
         display(HTML(f"<script> APP_MODEL = {javascript_model.serialize()}</script>"))
         display(HTML(filename="script.html"))
@@ -287,7 +287,6 @@ class View:
 
     def update_data_specification_page(self):
         """Update the state of data specification page"""
-        # TODO: Replace this with a proper test suite
         assert self.DATA_SPEC_PAGE_IS_BEING_UPDATED != True
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = True
         # Update input format specification widgets
@@ -338,7 +337,7 @@ class View:
         self.input_data_preview_tbl.children = self._input_data_table_childrenpool[: table_content.size]
         self.input_data_preview_tbl.layout.grid_template_columns = f"repeat({number_of_columns}, 1fr)"
         # Update the output the data preview table
-        # TODO: implement this table with an ipywidgets HTML
+        # TODO: implement this table with an ipywidgets HTML instead of GridBox
         table_content = self.model.output_data_preview_content
         table_content = table_content.flatten()
         assert table_content.size == len(self.output_data_preview_tbl.children)
@@ -350,7 +349,6 @@ class View:
             assert isinstance(content_label, ui.Label)
             content_label.value = table_content[content_index]
             content_index += 1
-        # TODO: remove this after a proper test suite has been created
         self.DATA_SPEC_PAGE_IS_BEING_UPDATED = False
 
     def update_integrity_checking_page(self) -> None:
@@ -520,6 +518,7 @@ class View:
 
     def update_value_trends_chart(self) -> None:
         """Visualize value trends"""
+        # TODO: Fix legends possitioning issue
         with self.valuetrends_viz_output:
             clear_output(wait=True)
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
@@ -546,7 +545,7 @@ class View:
 
     def update_growth_trends_chart(self) -> None:
         """Visualize growth trends"""
-        # TODO: Complete this
+        # TODO: Fix legends possitioning issue
         with self.growthtrends_viz_output:
             clear_output(wait=True)
             _, axes = plt.subplots(figsize=(PLOT_HEIGHT, PLOT_WIDTH))  # size in inches
@@ -559,10 +558,6 @@ class View:
                 # https://stackoverflow.com/questions/29233283/plotting-multiple-lines-in-different-colors-with-pandas-dataframe?answertab=votes#tab-top
                 for key, group in self.model.growthtrends_table:
                     assert isinstance(group, DataFrame)
-                    # group.sort_values([self.model.growthtrends_year_colname], inplace=True)
-                    # growtrates_colname = "GrowthRates"
-                    # group[growtrates_colname] = 0.0
-                    # group[growtrates_colname].apply(lambda x: 100 * (pow(x/x.shift(1), 1/)))
                     axes = group.plot(
                         ax=axes,
                         kind="line",
@@ -581,7 +576,7 @@ class View:
         # Constants
         APP_TITLE = "AgMIP GlobalEcon Data Submission"
         # Create notification widget
-        # TODO: Make not. text an attribute
+        # TODO: Make notification text an attribute
         notification_text = ui.Label(value="")
         self.notification = ui.HBox(children=(Notification.SUCCESS_ICON, notification_text))
         self.notification.add_class(CSS.NOTIFICATION)
@@ -656,7 +651,7 @@ class View:
         # - remember the model id of hidden file label
         # - we will later inject this model id into the Javascript context, so that our Javascript code can find
         # - and manipulate the value of this hidden label  @ Aug 3, 2021
-        # TODO: remove the js model class
+        # TODO: Remove the JSAppModel class and move its functionality to Model (to reduce the amount of abstractions)
         javascript_model = self.model.javascript_model
         javascript_model.ua_file_label_model_id = self.ua_file_label.model_id
         # - create a box representing the upload area component
